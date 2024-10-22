@@ -45,6 +45,7 @@ class Database {
         racer_id TEXT,
         arrival_army_seed NUMBER,
         arrival_corps_seed NUMBER,
+        title TEXT,
         is_novice BOOLEAN,
         is_junior BOOLEAN,
         is_senior BOOLEAN,
@@ -108,7 +109,7 @@ class Database {
       )
       `,
       `
-      CREATE TABLE IF NOT EXISTS race_run (
+      CREATE TABLE IF NOT EXISTS  race_run (
         competition_id TEXT,
         race_id TEXT,
         run_id TEXT,
@@ -121,7 +122,7 @@ class Database {
         forerunner_b TEXT,
         forerunner_c TEXT,
         forerunner_d TEXT,
-        PRIMARY KEY (competition_id, race_id, run_number),
+        PRIMARY KEY (competition_id, race_id, run_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id)
       )
@@ -139,22 +140,23 @@ class Database {
       )
       `,
       `
-      CREATE TABLE IF NOT EXISTS race_results (
+      CREATE TABLE IF NOT EXISTS  race_results (
         competition_id TEXT,
         race_id TEXT,
         run_id TEXT,
         run_number INTEGER,
         racer_id TEXT,
         race_time TIME,
-        started BOOLEAN,
-        finished BOOLEAN,
-        disqualified BOOLEAN,
+        is_dns BOOLEAN,
+        is_dnf BOOLEAN,
+        is_dsq BOOLEAN,
         dsq_gate INTEGER,
         dsq_reason TEXT,
-        PRIMARY KEY (competition_id, race_id, run_number, racer_id),
+        PRIMARY KEY (competition_id, race_id, run_id, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id),
         FOREIGN KEY (racer_id) REFERENCES people(id)
+        FOREIGN KEY (run_id) REFERENCES race_run(run_id)
       )
       `,
       // `

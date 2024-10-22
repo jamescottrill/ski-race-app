@@ -30,6 +30,12 @@ export default function Sidebar() {
           <List component="div" disablePadding>
             <ListItem
               component={Link}
+              to={`/competition/${competitionId}/competitor/manage`}
+            >
+              <ListItemText primary="Manage" />
+            </ListItem>
+            <ListItem
+              component={Link}
               to={`/competition/${competitionId}/competitor/list`}
             >
               <ListItemText primary="View Competitors" />
@@ -39,6 +45,12 @@ export default function Sidebar() {
               to={`/competition/${competitionId}/competitor/new`}
             >
               <ListItemText primary="Register Competitor" />
+            </ListItem>
+            <ListItem
+              component={Link}
+              to={`/competition/${competitionId}/team/list`}
+            >
+              <ListItemText primary="View Teams" />
             </ListItem>
           </List>
         </Collapse>
@@ -60,18 +72,10 @@ export default function Sidebar() {
               component={Link}
               to={`/competition/${competitionId}/race`}
             >
-              <ListItemText primary="View Races" />
-            </ListItem>
-            <ListItem
-              component={Link}
-              to={`/competition/${competitionId}/race/manage`}
-            >
               <ListItemText primary="Manage Races" />
             </ListItem>
           </List>
         </Collapse>
-
-        {/* Add more primary sections here, like Events, etc. */}
       </List>
     </div>
   );

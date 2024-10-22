@@ -34,7 +34,7 @@ function CompetitionManagementPage() {
   };
 
   const handleManageRaces = () => {
-    navigate(`/competition/${competitionId}/race/manage`);
+    navigate(`/competition/${competitionId}/race`);
   };
 
   const handleViewRaceResults = () => {

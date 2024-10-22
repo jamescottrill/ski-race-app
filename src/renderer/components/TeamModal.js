@@ -24,10 +24,10 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
   const { competitionId } = useParams();
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: value,
+      [name]: checked,
     });
   };
 
@@ -48,7 +48,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
       const result = await window.api.select(checkQuery, checkParams);
       const teamCount = result[0].teamExists;
       if (teamCount > 0) {
-        onError({ message: 'A team with this name already exists.'});
+        onError({ message: 'A team with this name already exists.' });
         return;
       }
     } catch (error) {
@@ -113,7 +113,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
             <FormControlLabel
               control={
                 <Checkbox
-                  name="isCorps"
+                  name="isCorpsTeam"
                   checked={formData.isCorpsTeam}
                   onChange={handleChange}
                 />
@@ -125,7 +125,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
             <FormControlLabel
               control={
                 <Checkbox
-                  name="isReserve"
+                  name="isReserveTeam"
                   checked={formData.isReserveTeam}
                   onChange={handleChange}
                 />
@@ -137,7 +137,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
             <FormControlLabel
               control={
                 <Checkbox
-                  name="isCorps"
+                  name="isFemaleTeam"
                   checked={formData.isFemaleTeam}
                   onChange={handleChange}
                 />
@@ -149,7 +149,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
             <FormControlLabel
               control={
                 <Checkbox
-                  name="isCorps"
+                  name="isHCTeam"
                   checked={formData.isHCTeam}
                   onChange={handleChange}
                 />

@@ -36,23 +36,21 @@ export default function RaceLandingPage() {
     }
   };
 
-  const handleViewDetails = (raceId) => {
+  const handleEditRace = (raceId) => {
+    navigate(`/competition/${competitionId}/race/${raceId}/edit`);
+  };
+
+  const handleViewRace = (raceId) => {
     navigate(`/competition/${competitionId}/race/${raceId}`);
   };
+  //
+  // const handleViewResults = (raceId) => {
+  //   navigate(`/competition/${competitionId}/race/${raceId}/results`);
+  // };
 
-  const handleAddResults = (raceId) => {
-    navigate(
-      `/competition/${competitionId}/race/${raceId}/results/edit`,
-    );
-  };
-
-  const handleViewResults = (raceId) => {
-    navigate(`/competition/${competitionId}/race/${raceId}/results`);
-  };
-
-  const handleNewRace = ()=>{
+  const handleNewRace = () => {
     navigate(`/competition/${competitionId}/race/new`);
-  }
+  };
 
   useEffect(() => {
     fetchRaces();
@@ -103,26 +101,20 @@ export default function RaceLandingPage() {
                     <Button
                       variant="contained"
                       color="primary"
-                      onClick={() => handleViewDetails(race.id)}
+                      onClick={() => handleViewRace(race.id)}
                       className="mr-2"
                     >
-                      View Details
+                      View
                     </Button>
                     <Button
-                      variant="contained"
+                      variant="outlined"
                       color="secondary"
-                      onClick={() => handleAddResults(race.id)}
+                      onClick={() => handleEditRace(race.id)}
                       className="mr-2"
                     >
-                      Add Results
+                      Edit
                     </Button>
-                    <Button
-                      variant="contained"
-                      // color="default"
-                      onClick={() => handleViewResults(race.id)}
-                    >
-                      View Results
-                    </Button>
+
                   </TableCell>
                 </TableRow>
               ))}

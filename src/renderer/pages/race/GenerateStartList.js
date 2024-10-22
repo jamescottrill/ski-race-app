@@ -30,9 +30,9 @@ export default function GenerateStartList() {
 
   const fetchRaceDetails = async () => {
     const query = `
-      SELECT is_women_separate, randomise_top, randomise_top_women
+      SELECT women_separate--, randomise_top, randomise_top_women
       FROM races
-      WHERE id = ? AND competition_id = ?
+      WHERE race_id = ? AND competition_id = ?
     `;
     try {
       const result = await window.api.select(query, [raceId, competitionId]);
@@ -44,16 +44,86 @@ export default function GenerateStartList() {
     }
   };
 
+  const factorQuery = `factors AS( SELECT 'SL' AS type, 730 AS factor UNION ALL SELECT 'GS', 1010 UNION ALL SELECT 'SG', 1190 UNION ALL SELECT 'DH', 1250 UNION ALL SELECT 'AC', 1360 ),`;
+  const raceSeedQuery = `race_seed AS(
+                  SELECT race_id
+                       , racer_id
+                       , run_id
+                       , race_time
+                       , MIN(race_time) OVER(PARTITION BY race_id, run_id ORDER BY race_time DESC) AS min_time
+                  FROM race_results
+                  WHERE competition_id = ?
+                ),
+                all_results AS (
+                  SELECT racer_id
+                       , run_id
+                       , (race_time * f.factor) / min_time - factor AS seed_points
+                  FROM race_seed rs
+                         JOIN races r ON rs.race_id = r.race_id
+                         JOIN factors f ON r.race_type = f.type
+                )`;
+
   const fetchSeedList = async () => {
-    const query = `
-      SELECT p.id, p.first_name, p.last_name, p.gender, sl.seed_points
-      FROM seed_list sl
-      JOIN people p ON sl.racer_id = p.id
-      WHERE sl.competition_id = ? AND sl.version = ?
-      ORDER BY sl.seed_points ASC
-    `;
     try {
-      const result = await window.api.select(query, [competitionId, 1]); // Assuming version 1
+      const completedRaces = await window.api.select(
+        `
+        SELECT DISTINCT rr.race_id
+        FROM race_results rr
+        INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
+        WHERE rr.competition_id = ?
+          AND race_time IS NOT NULL
+          AND (NOT r.is_seeding OR r.is_seeding IS NULL)
+      `,
+        [competitionId],
+      );
+      const hasSeedingRace = await window.api
+        .select(
+          `
+            SELECT DISTINCT rr.race_id
+            FROM race_results rr
+            INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
+            WHERE rr.competition_id = ?
+              AND race_time IS NOT NULL
+              AND r.is_seeding
+          `,
+          [competitionId],
+        )
+        .then((results) => results.length > 0);
+
+      let query;
+      let params = [];
+      switch (completedRaces.length) {
+        case 0:
+          if (hasSeedingRace) {
+            query = `
+              SELECT racer_id, arrival_seed AS seed_points, first_name, last_name, cc.title, team
+              FROM competition_competitor cc
+                     JOIN people p ON cc.racer_id = p.id
+              WHERE competition_id = ?
+            `;
+            params = [competitionId];
+          } else {
+            query = `
+              WITH
+                ${factorQuery}
+                ${raceSeedQuery}
+              SELECT a.racer_id, first_name, last_name, p.title, gender, cc.team, MIN(seed_points)
+              FROM all_results a
+                     JOIN people p ON p.id = a.racer_id
+                     JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
+              GROUP BY 1,2,3,4
+            `;
+            params = [competitionId];
+          }
+          break;
+        case 1:
+          query = `
+              `;
+          // TODO:: Move title into competition_competitor table
+          params = [competitionId, competitionId];
+      }
+      const result = await window.api.select(query, params);
+      console.log(result);
       setSeedList(result);
     } catch (error) {
       console.error('Failed to fetch seed list:', error);
@@ -68,7 +138,9 @@ export default function GenerateStartList() {
   };
 
   const generateStartList = () => {
-    const activeCompetitors = seedList.filter((competitor) => !struckOutCompetitors[competitor.id]);
+    const activeCompetitors = seedList.filter(
+      (competitor) => !struckOutCompetitors[competitor.id],
+    );
     let menStartList = [];
     let womenStartList = [];
 
@@ -85,13 +157,29 @@ export default function GenerateStartList() {
       topMenCompetitors = shuffleArray(topMenCompetitors);
       topWomenCompetitors = shuffleArray(topWomenCompetitors);
 
-      menStartList = [...topMenCompetitors, ...activeCompetitors.filter((competitor) => competitor.gender === 'M').slice(raceDetails.randomise_top)];
-      womenStartList = [...topWomenCompetitors, ...activeCompetitors.filter((competitor) => competitor.gender === 'F').slice(raceDetails.randomise_top_women)];
+      menStartList = [
+        ...topMenCompetitors,
+        ...activeCompetitors
+          .filter((competitor) => competitor.gender === 'M')
+          .slice(raceDetails.randomise_top),
+      ];
+      womenStartList = [
+        ...topWomenCompetitors,
+        ...activeCompetitors
+          .filter((competitor) => competitor.gender === 'F')
+          .slice(raceDetails.randomise_top_women),
+      ];
     } else {
       // Combined start list
-      let topCompetitors = activeCompetitors.slice(0, raceDetails.randomise_top);
+      let topCompetitors = activeCompetitors.slice(
+        0,
+        raceDetails.randomise_top,
+      );
       topCompetitors = shuffleArray(topCompetitors);
-      menStartList = [...topCompetitors, ...activeCompetitors.slice(raceDetails.randomise_top)];
+      menStartList = [
+        ...topCompetitors,
+        ...activeCompetitors.slice(raceDetails.randomise_top),
+      ];
     }
 
     setStartList(menStartList);
@@ -109,7 +197,12 @@ export default function GenerateStartList() {
     `;
     try {
       for (let i = 0; i < list.length; i++) {
-        await window.api.insert(query, [competitionId, raceId, list[i].id, i + 1]);
+        await window.api.insert(query, [
+          competitionId,
+          raceId,
+          list[i].id,
+          i + 1,
+        ]);
       }
       alert(`${gender} start list saved successfully.`);
     } catch (error) {
@@ -125,7 +218,11 @@ export default function GenerateStartList() {
   return (
     <Container className="generate-start-list-page flex flex-col items-center justify-center min-h-screen bg-gray-50">
       <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-lg">
-        <Typography variant="h4" component="h1" className="mb-6 text-gray-800 font-bold text-center">
+        <Typography
+          variant="h4"
+          component="h1"
+          className="mb-6 text-gray-800 font-bold text-center"
+        >
           Generate Start List
         </Typography>
         <Typography variant="h6" component="h2" className="mb-4 text-gray-700">
@@ -136,7 +233,9 @@ export default function GenerateStartList() {
             <ListItem
               key={competitor.id}
               style={{
-                textDecoration: struckOutCompetitors[competitor.id] ? 'line-through' : 'none',
+                textDecoration: struckOutCompetitors[competitor.id]
+                  ? 'line-through'
+                  : 'none',
                 color: struckOutCompetitors[competitor.id] ? 'gray' : 'black',
               }}
             >
@@ -162,8 +261,14 @@ export default function GenerateStartList() {
 
         {startList && (
           <Paper elevation={1} className="p-4 mt-4">
-            <Typography variant="h6" component="h2" className="mb-4 text-gray-700">
-              {raceDetails.is_women_separate ? "Men's Start List" : 'Start List'}
+            <Typography
+              variant="h6"
+              component="h2"
+              className="mb-4 text-gray-700"
+            >
+              {raceDetails.is_women_separate
+                ? "Men's Start List"
+                : 'Start List'}
             </Typography>
             <List>
               {startList.map((competitor, index) => (
@@ -179,7 +284,11 @@ export default function GenerateStartList() {
 
         {womenStartList && (
           <Paper elevation={1} className="p-4 mt-4">
-            <Typography variant="h6" component="h2" className="mb-4 text-gray-700">
+            <Typography
+              variant="h6"
+              component="h2"
+              className="mb-4 text-gray-700"
+            >
               Women's Start List
             </Typography>
             <List>
