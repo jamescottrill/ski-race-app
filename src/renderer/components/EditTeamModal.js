@@ -12,12 +12,7 @@ import {
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
 
-export default function EditTeamModal({
-  open,
-  onClose,
-  onError,
-  teamId,
-}) {
+export default function EditTeamModal({ open, onClose, onError, teamId }) {
   const initialFormValues = {
     teamName: '',
     isCorpsTeam: false,
@@ -100,7 +95,7 @@ export default function EditTeamModal({
   };
 
   useEffect(() => {
-    if(teamId) {
+    if (teamId) {
       getTeam();
       fetchAvailableCompetitors();
       fetchTeamCompetitors();
@@ -129,9 +124,7 @@ export default function EditTeamModal({
 
     try {
       const result = await window.api.select(checkQuery, checkParams);
-      if (
-        result[0].teamExists > 0
-      ) {
+      if (result[0].teamExists > 0) {
         onError('A team with this name already exists.');
         return;
       }
@@ -160,22 +153,22 @@ export default function EditTeamModal({
     } catch (error) {
       console.error('Failed to update team:', error);
     }
-    await window.api.insert(`DELETE FROM competition_team_members WHERE competition_id = ? AND team_id = ?`, [competitionId, teamId]);
-    for(const competitor of formData.selectedCompetitors){
-      const query = `
+    await window.api.insert(
+      `DELETE FROM competition_team_members WHERE competition_id = ? AND team_id = ?`,
+      [competitionId, teamId],
+    );
+    const updates = [];
+    for (const competitor of formData.selectedCompetitors) {
+      let query = `
       INSERT INTO competition_team_members (competition_id, team_id, racer_id)
       VALUES (?, ?, ?)
     `;
-      const params = [
-        competitionId,
-        teamId,
-        competitor.id,
-      ];
-      await window.api.insert(query, params);
+      let params = [competitionId, teamId, competitor.id];
+      updates.push(window.api.insert(query, params));
     }
+    await Promise.all(updates);
 
-    console.log(formData.selectedCompetitors);
-    onClose({message: `${formData.teamName} was updated successfully`}); // Close the modal
+    onClose({ message: `${formData.teamName} was updated successfully` }); // Close the modal
   };
 
   return (

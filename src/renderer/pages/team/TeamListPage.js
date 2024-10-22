@@ -12,7 +12,6 @@ import {
   Button,
   Box,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { useBackButton } from '../../utils/navigation';
 import TeamModal from '../../components/TeamModal';
 import EditTeamModal from '../../components/EditTeamModal';
@@ -23,7 +22,6 @@ export default function TeamListPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
 
-  const navigate = useNavigate();
   const handleBack = useBackButton();
 
 
@@ -49,7 +47,6 @@ export default function TeamListPage() {
     }
   };
 
-
   useEffect(() => {
     fetchTeams();
   }, []);
@@ -74,44 +71,6 @@ export default function TeamListPage() {
     } catch (error) {
       console.error('Failed to create team:', error);
       // Handle error (e.g., display an error message)
-    }
-  };
-
-  const handleEditTeam = async (updatedTeamData) => {
-    try {
-      // 1. Update team data in the database
-      await window.api.insert(
-        `
-        UPDATE competition_team
-        SET
-          team_name = ?,
-          is_corps = ?,
-          is_female = ?,
-          is_reserve = ?,
-          is_hc = ?
-        WHERE team_id = ?
-      `,
-        [
-          updatedTeamData.teamName,
-          updatedTeamData.isCorps,
-          updatedTeamData.isFemale,
-          updatedTeamData.isReserve,
-          updatedTeamData.isHC,
-          updatedTeamData.teamId,
-        ],
-      );
-
-      const updatedTeams = teams.map((team) =>
-        team.team_id === updatedTeamData.teamId
-          ? { ...team, ...updatedTeamData }
-          : team,
-      );
-      setTeams(updatedTeams);
-      setIsEditModalOpen(false);
-      setSelectedTeam(null);
-    } catch (error) {
-      console.error('Failed to update team:', error);
-      // Handle error
     }
   };
 
