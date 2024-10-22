@@ -5,6 +5,8 @@ import EditCompetitorsPage from '../pages/competitor/EditCompetitorsPage';
 import EditCompetitorPage from '../pages/competitor/EditCompetitorPage';
 import RegisterCompetitorPage from '../pages/competitor/RegisterCompetitorPage';
 import ViewCompetitorsPage from '../pages/competitor/ViewCompetitorsPage';
+import UploadCompetitorsPage from '../pages/competitor/UploadCompetitorsPage';
+import TeamListPage from '../pages/team/TeamListPage';
 import Layout from '../components/Layout';
 
 function CompetitorRoutes() {
@@ -32,6 +34,14 @@ function CompetitorRoutes() {
       <Route
         path="competition/:competitionId/competitor/list"
         element={<Layout><ViewCompetitorsPage /></Layout>}
+      />
+      <Route
+        path="competition/:competitionId/competitor/bulk"
+        element={<Layout><UploadCompetitorsPage /></Layout>}
+      />
+      <Route
+        path="competition/:competitionId/team/list"
+        element={<Layout><TeamListPage /></Layout>}
       />
     </>
   );

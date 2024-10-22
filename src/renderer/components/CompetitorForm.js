@@ -128,7 +128,7 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor }) {
           country: result[0].country || 'GBR',
           serviceNumber: result[0].service_number || '',
           gender: result[0].gender || 'M',
-          team: result[0].team || '',
+          team: result[0].formData || '',
           arrivalSeed: result[0].arrival_seed || '',
           isJunior: result[0].is_junior || false,
           isSenior: result[0].is_senior || false,

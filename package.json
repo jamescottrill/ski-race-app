@@ -175,8 +175,8 @@
     "webpack-merge": "^5.10.0"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "SkiRaceResults",
+    "appId": "io.accessium.skiraceresults",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
@@ -185,6 +185,7 @@
       "package.json"
     ],
     "mac": {
+      "icon": "assets/icon.ico",
       "sign": ".erb/scripts/notarize.js",
       "notarize": false,
       "target": {
