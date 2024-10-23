@@ -87,7 +87,7 @@ function EditCompetitorPage() {
           </Select>
         </FormControl>
         {selectedCompetitorId && (
-          <CompetitorForm editMode competitorId={selectedCompetitorId} />
+          <CompetitorForm editMode competitorId={selectedCompetitorId} competitionId={competitionId} />
         )}
         <Button
           variant="contained"

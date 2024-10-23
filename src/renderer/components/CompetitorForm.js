@@ -16,8 +16,7 @@ import { v4 as uuid4 } from 'uuid';
 import AddIcon from '@mui/icons-material/Add';
 import TeamModal from './TeamModal';
 
-function CompetitorForm({ editMode, competitorId, existingCompetitor }) {
-  const { competitionId } = useParams();
+function CompetitorForm({ editMode, competitorId, existingCompetitor, competitionId }) {
   const navigate = useNavigate();
   const initialData = {
     firstName: '',
@@ -376,7 +375,6 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor }) {
               InputLabelProps={{
                 shrink: true,
               }}
-              required
               disabled={existingCompetitor}
             />
           </Grid>

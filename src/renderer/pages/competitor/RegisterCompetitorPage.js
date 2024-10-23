@@ -90,8 +90,9 @@ function RegisterCompetitorPage() {
             editMode
             competitorId={selectedCompetitorId}
             existingCompetitor
+            competitionId
           />
-        )) || <CompetitorForm editMode={false} />}
+        )) || <CompetitorForm editMode={false} competitionId={competitionId} />}
         <Button
           variant="contained"
           color="secondary"

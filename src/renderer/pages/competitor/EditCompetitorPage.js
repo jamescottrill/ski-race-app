@@ -33,7 +33,7 @@ function EditCompetitorPage() {
           Edit Competitor
         </Typography>
 
-        <CompetitorForm editMode competitorId={competitorId} />
+        <CompetitorForm editMode competitorId={competitorId} competitionId={competitionId} />
         <Button
           variant="contained"
           color="secondary"
