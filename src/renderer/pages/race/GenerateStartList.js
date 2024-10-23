@@ -9,7 +9,12 @@ import {
   ListItemText,
   Button,
   Checkbox,
+  Grid,
+  TextField, FormControlLabel
+
 } from '@mui/material';
+import { fetchSeedList } from '../../utils/FetchSeedList';
+import {useBackButton} from '../../utils/navigation';
 
 export default function GenerateStartList() {
   const { competitionId, raceId } = useParams();
@@ -23,14 +28,22 @@ export default function GenerateStartList() {
     randomise_top_women: 15,
   });
 
+  const handleBack = useBackButton();
+
+
   useEffect(() => {
     fetchRaceDetails();
-    fetchSeedList();
-  }, []);
+    getFetchSeedList();
+  }, [competitionId]);
+
+  const getFetchSeedList = async () => {
+    const seedlist = await fetchSeedList(competitionId);
+    setSeedList(seedlist);
+  };
 
   const fetchRaceDetails = async () => {
     const query = `
-      SELECT women_separate--, randomise_top, randomise_top_women
+      SELECT women_separate AS is_women_separate, 15 AS randomise_top, 5 AS randomise_top_women
       FROM races
       WHERE race_id = ? AND competition_id = ?
     `;
@@ -44,100 +57,45 @@ export default function GenerateStartList() {
     }
   };
 
-  const factorQuery = `factors AS( SELECT 'SL' AS type, 730 AS factor UNION ALL SELECT 'GS', 1010 UNION ALL SELECT 'SG', 1190 UNION ALL SELECT 'DH', 1250 UNION ALL SELECT 'AC', 1360 ),`;
-  const raceSeedQuery = `race_seed AS(
-                  SELECT race_id
-                       , racer_id
-                       , run_id
-                       , race_time
-                       , MIN(race_time) OVER(PARTITION BY race_id, run_id ORDER BY race_time DESC) AS min_time
-                  FROM race_results
-                  WHERE competition_id = ?
-                ),
-                all_results AS (
-                  SELECT racer_id
-                       , run_id
-                       , (race_time * f.factor) / min_time - factor AS seed_points
-                  FROM race_seed rs
-                         JOIN races r ON rs.race_id = r.race_id
-                         JOIN factors f ON r.race_type = f.type
-                )`;
+  // const factorQuery = `factors AS( SELECT 'SL' AS type, 730 AS factor UNION ALL SELECT 'GS', 1010 UNION ALL SELECT 'SG', 1190 UNION ALL SELECT 'DH', 1250 UNION ALL SELECT 'AC', 1360 ),`;
+  // const raceSeedQuery = `race_seed AS(
+  //                 SELECT race_id
+  //                      , racer_id
+  //                      , run_id
+  //                      , race_time
+  //                      , MIN(race_time) OVER(PARTITION BY race_id, run_id ORDER BY race_time DESC) AS min_time
+  //                 FROM race_results
+  //                 WHERE competition_id = ?
+  //               ),
+  //               all_results AS (
+  //                 SELECT racer_id
+  //                      , run_id
+  //                      , (race_time * f.factor) / min_time - factor AS seed_points
+  //                 FROM race_seed rs
+  //                        JOIN races r ON rs.race_id = r.race_id
+  //                        JOIN factors f ON r.race_type = f.type
+  //               )`;
 
-  const fetchSeedList = async () => {
-    try {
-      const completedRaces = await window.api.select(
-        `
-        SELECT DISTINCT rr.race_id
-        FROM race_results rr
-        INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
-        WHERE rr.competition_id = ?
-          AND race_time IS NOT NULL
-          AND (NOT r.is_seeding OR r.is_seeding IS NULL)
-      `,
-        [competitionId],
-      );
-      const hasSeedingRace = await window.api
-        .select(
-          `
-            SELECT DISTINCT rr.race_id
-            FROM race_results rr
-            INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
-            WHERE rr.competition_id = ?
-              AND race_time IS NOT NULL
-              AND r.is_seeding
-          `,
-          [competitionId],
-        )
-        .then((results) => results.length > 0);
-
-      let query;
-      let params = [];
-      switch (completedRaces.length) {
-        case 0:
-          if (hasSeedingRace) {
-            query = `
-              SELECT racer_id, arrival_seed AS seed_points, first_name, last_name, cc.title, team
-              FROM competition_competitor cc
-                     JOIN people p ON cc.racer_id = p.id
-              WHERE competition_id = ?
-            `;
-            params = [competitionId];
-          } else {
-            query = `
-              WITH
-                ${factorQuery}
-                ${raceSeedQuery}
-              SELECT a.racer_id, first_name, last_name, p.title, gender, cc.team, MIN(seed_points)
-              FROM all_results a
-                     JOIN people p ON p.id = a.racer_id
-                     JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
-              GROUP BY 1,2,3,4
-            `;
-            params = [competitionId];
-          }
-          break;
-        case 1:
-          query = `
-              `;
-          // TODO:: Move title into competition_competitor table
-          params = [competitionId, competitionId];
-      }
-      const result = await window.api.select(query, params);
-      console.log(result);
-      setSeedList(result);
-    } catch (error) {
-      console.error('Failed to fetch seed list:', error);
-    }
-  };
 
   const handleStrikeOut = (competitorId) => {
+    console.log(competitorId);
+    console.log(struckOutCompetitors);
     setStruckOutCompetitors((prev) => ({
       ...prev,
       [competitorId]: !prev[competitorId],
     }));
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setRaceDetails({
+      ...raceDetails,
+      [name]: parseInt(value, 10) || 0, // Parse value as integer, default to 0 if invalid
+    });
+  };
+
   const generateStartList = () => {
+
     const activeCompetitors = seedList.filter(
       (competitor) => !struckOutCompetitors[competitor.id],
     );
@@ -175,7 +133,11 @@ export default function GenerateStartList() {
         0,
         raceDetails.randomise_top,
       );
+      console.log(topCompetitors);
       topCompetitors = shuffleArray(topCompetitors);
+
+      console.log("Shuffling");
+      console.log(topCompetitors);
       menStartList = [
         ...topCompetitors,
         ...activeCompetitors.slice(raceDetails.randomise_top),
@@ -187,7 +149,7 @@ export default function GenerateStartList() {
   };
 
   const shuffleArray = (array) => {
-    return array.sort(() => Math.random() - 0.5);
+    return array.sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5);
   };
 
   const saveStartList = async (list, gender) => {
@@ -225,13 +187,47 @@ export default function GenerateStartList() {
         >
           Generate Start List
         </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleBack}
+          // className="over:bg-green-700 text-white py-2 px-4 rounded shadow-lg w-full mt-4"
+        >
+          Back
+        </Button>
+        <Grid container spacing={2} className="my-4">
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Top X to Randomise"
+              type="number"
+              variant="outlined"
+              fullWidth
+              name="randomise_top" // Update the name to match your state
+              value={raceDetails.randomise_top}
+              onChange={handleChange}
+            />
+          </Grid>
+          {raceDetails.is_women_separate && ( // Conditionally show the second input
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Top X Women to Randomise"
+                type="number"
+                variant="outlined"
+                fullWidth
+                name="randomise_top_women" // Update the name to match your state
+                value={raceDetails.randomise_top_women}
+                onChange={handleChange}
+              />
+            </Grid>
+          )}
+        </Grid>
         <Typography variant="h6" component="h2" className="mb-4 text-gray-700">
           Competitors
         </Typography>
         <List>
-          {seedList.map((competitor) => (
+          {seedList.map((competitor, i) => (
             <ListItem
-              key={competitor.id}
+              key={`sl-${competitor.id}`}
               style={{
                 textDecoration: struckOutCompetitors[competitor.id]
                   ? 'line-through'
@@ -239,12 +235,17 @@ export default function GenerateStartList() {
                 color: struckOutCompetitors[competitor.id] ? 'gray' : 'black',
               }}
             >
-              <Checkbox
-                checked={struckOutCompetitors[competitor.id] || false}
-                onChange={() => handleStrikeOut(competitor.id)}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={struckOutCompetitors[competitor.id] || false}
+                    onChange={() => handleStrikeOut(competitor.id)}
+                  />
+                }
+                label=""
               />
               <ListItemText
-                primary={`${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
+                primary={`${i+1}: ${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
                 secondary={`Seed: ${competitor.seed_points}`}
               />
             </ListItem>
@@ -274,7 +275,7 @@ export default function GenerateStartList() {
               {startList.map((competitor, index) => (
                 <ListItem key={competitor.id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
                   />
                 </ListItem>
               ))}
@@ -295,7 +296,7 @@ export default function GenerateStartList() {
               {womenStartList.map((competitor, index) => (
                 <ListItem key={competitor.id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
                   />
                 </ListItem>
               ))}

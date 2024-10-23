@@ -16,6 +16,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { v4 as uuid4 } from 'uuid';
 import PersonModal from './PersonModal'; // Import the PersonModal component
+import {useBackButton} from '../utils/navigation';
 
 function RaceForm({ editMode, raceId }) {
   const { competitionId } = useParams();
@@ -45,6 +46,8 @@ function RaceForm({ editMode, raceId }) {
   const [people, setPeople] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPersonField, setSelectedPersonField] = useState(null);
+  const handleBack = useBackButton();
+
 
   const fetchPeople = async () => {
     const query = `SELECT id, first_name, last_name FROM people`;
@@ -594,6 +597,14 @@ function RaceForm({ editMode, raceId }) {
               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
             >
               {editMode ? 'Update Race Details' : 'Save Race'}
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              className="text-white my-2 py-2 px-4 rounded shadow-lg w-full"
+              onClick={handleBack}
+            >
+              Back
             </Button>
           </Grid>
         </Grid>

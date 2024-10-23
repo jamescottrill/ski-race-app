@@ -38,7 +38,7 @@ function CompetitionManagementPage() {
   };
 
   const handleViewRaceResults = () => {
-    navigate(`/competition/${competitionId}/result`);
+    // navigate(`/competition/${competitionId}/result`);
   };
 
   const handleGenerateSeedList = () => {

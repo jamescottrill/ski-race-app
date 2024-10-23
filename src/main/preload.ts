@@ -4,6 +4,10 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels = 'ipc-example';
 
+contextBridge.exposeInMainWorld('electronAPI', {
+  savePDF: (buffer: any) => ipcRenderer.invoke('save-pdf', buffer),
+});
+
 const electronHandler = {
   ipcRenderer: {
     sendMessage(channel: Channels, ...args: unknown[]) {

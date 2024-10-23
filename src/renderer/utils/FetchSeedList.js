@@ -6,6 +6,8 @@ const raceMultipliers = {
   'Alpine Combined': 1360,
 };
 
+const DEFAULT_SEED_POINTS = 2000;
+
 const fetchSeedList = async (competitionId) => {
   try {
     // Fetch the race details to get the race type and multiplier
@@ -20,7 +22,6 @@ const fetchSeedList = async (competitionId) => {
     // Joining on race_results prevents created but not run races from being included
     // As soon as a race has a result it will impact the seed list.
     const raceResult = await window.api.select(raceQuery, [competitionId]);
-    console.log(raceResult);
     if (raceResult.length > 0) {
       const raceType = raceResult[0].race_type;
       const multiplier = raceMultipliers[raceType];
@@ -100,10 +101,12 @@ const fetchSeedList = async (competitionId) => {
     }
     // Fetch arrival seed points if no seeding race
     const seedQuery = `
-          SELECT p.id, p.first_name, p.last_name, p.title, t.team_name, COALESCE(arrival_army_seed, arrival_corps_seed, 2000) AS seed_points
+          SELECT p.id, p.first_name, p.last_name, p.title, p.service_number, p.gender
+               , COALESCE(t.team_name, '') AS team_name
+               , COALESCE(arrival_army_seed, arrival_corps_seed, arrival_seed, ${DEFAULT_SEED_POINTS}) AS seed_points
           FROM competition_competitor sl
           JOIN people p ON sl.racer_id = p.id
-          JOIN competition_team t ON sl.team = t.team_id
+          LEFT JOIN competition_team t ON sl.team = t.team_id
           WHERE sl.competition_id = ?
           ORDER BY seed_points ASC
         `;

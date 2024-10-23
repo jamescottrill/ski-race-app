@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -158,3 +158,16 @@ app
     });
   })
   .catch(console.log);
+
+ipcMain.handle('save-pdf', async (event, buffer) => {
+  const { filePath } = await dialog.showSaveDialog({
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+
+  if (filePath) {
+    const fs = require('fs');
+    fs.writeFileSync(filePath, buffer);
+    return filePath;
+  }
+  return null;
+});

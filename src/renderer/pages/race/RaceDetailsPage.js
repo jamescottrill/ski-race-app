@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Paper, Typography, Button, List, ListItem, ListItemText, Grid } from '@mui/material';
+import { useBackButton } from '../../utils/navigation';
 
 export default function RaceDetailsPage() {
   const { competitionId, raceId } = useParams();
   const [raceDetails, setRaceDetails] = useState(null);
+  const handleBack = useBackButton();
 
   useEffect(() => {
     fetchRaceDetails();
@@ -86,6 +88,14 @@ export default function RaceDetailsPage() {
                 className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded shadow-lg"
               >
                 Record Results
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                component={Link}
+                to={`/competition/${competitionId}/race`}
+              >
+                Back
               </Button>
             </div>
           </>
