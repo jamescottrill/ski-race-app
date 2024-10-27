@@ -10,7 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Button
+  Button,
 } from '@mui/material';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import pdfMake from 'pdfmake/build/pdfmake';
