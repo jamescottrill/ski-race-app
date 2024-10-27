@@ -1,0 +1,86 @@
+import pdfMake from 'pdfmake/build/pdfmake';
+// const { vfsFonts } = require('pdfmake/build/vfs_fonts');
+import { calculateCategory } from './CompetitorManagement';
+
+// pdfMake.vfs = vfsFonts.pdfMake.vfs;
+
+const startListPdf = (raceDetails, startList) => {
+
+  const docDefinition = {
+    content: [
+      { text: raceDetails.competition_name, style: 'header' },
+      { text: raceDetails.competition_description, style: 'subheader' },
+      { text: raceDetails.race_name, style: 'subheader' },
+      { text: 'Start List', style: 'subheader' },
+      {
+        columns: [
+          { width: 'auto', text: 'Venue: ' },
+          { width: 'auto', text: raceDetails.venue },
+          { width: '*', text: '' },
+          { width: 'auto', text: raceDetails.race_date },
+        ],
+        columnGap: 10,
+      },
+      {
+        columns: [
+          { width: 'auto', text: 'Course Name: ' },
+          { width: 'auto', text: raceDetails.course_name },
+        ],
+        columnGap: 10,
+      },
+      {
+        table: {
+          headerRows: 1,
+          widths: ['auto', 'auto', '*', '*', 'auto'],
+          body: [
+            [
+              { text: 'Start No', style: 'tableHeader' },
+              { text: 'Rank', style: 'tableHeader' },
+              { text: 'Name', style: 'tableHeader' },
+              { text: 'Team', style: 'tableHeader' },
+              { text: 'Class', style: 'tableHeader' },
+            ],
+            ...(startList || []).map((competitor, index) => [
+              index + 1,
+              competitor.title,
+              `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
+              competitor.team,
+              calculateCategory(competitor),
+            ]),
+          ],
+          layout: 'lightHorizontalLines',
+        },
+      },
+    ],
+    styles: {
+      header: { fontSize: 18, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
+      subheader: { fontSize: 15, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
+      title: { fontSize: 14, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
+      section: { fontSize: 12, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
+      text: { fontSize: 10, margin: [0, 2, 0, 2] },
+      tableHeader: {
+        bold: true,
+      },
+    },
+  };
+
+  const pdfDoc = pdfMake.createPdf(docDefinition);
+
+  // Use Electron's dialog to choose save location
+  pdfDoc.getBuffer((buffer) => {
+    window.electronAPI
+      .savePDF(buffer)
+      .then((filePath) => {
+        if (filePath) {
+          console.log('PDF saved successfully to:', filePath);
+        } else {
+          console.log('PDF save cancelled.');
+        }
+      })
+      .catch((err) => {
+        console.error('Error saving PDF:', err);
+      });
+  });
+};
+
+export { startListPdf };

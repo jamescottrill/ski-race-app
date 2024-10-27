@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useBackButton } from '../../utils/navigation';
+import { calculateCategory } from '../../utils/CompetitorManagement';
 
 export default function ViewCompetitorsPage() {
   const [competitors, setCompetitors] = useState([]);
@@ -44,36 +45,6 @@ export default function ViewCompetitorsPage() {
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
     }
-  };
-
-  const calculateCategory = (competitor) => {
-    let category = '';
-
-    // Gender prefix
-    if (competitor.gender === 'F') {
-      category += 'F';
-    }
-
-    // Age category
-    if (competitor.is_junior) {
-      category += 'J';
-    } else if (competitor.is_veteran) {
-      category += 'V';
-    } else {
-      category += 'S';
-    }
-
-    // Novice status
-    if (competitor.is_novice) {
-      category += 'N';
-    }
-
-    // Reserve status
-    if (competitor.is_reserve) {
-      category += 'R';
-    }
-
-    return category;
   };
 
   return (

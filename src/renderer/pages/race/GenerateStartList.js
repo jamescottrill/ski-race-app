@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import {useBackButton} from '../../utils/navigation';
+import {startListPdf} from '../../utils/StartListPdf';
 
 export default function GenerateStartList() {
   const { competitionId, raceId } = useParams();
@@ -22,6 +23,7 @@ export default function GenerateStartList() {
   const [struckOutCompetitors, setStruckOutCompetitors] = useState({});
   const [startList, setStartList] = useState(null);
   const [womenStartList, setWomenStartList] = useState(null);
+  const [startListExists, setStartListExists] = useState(false);
   const [raceDetails, setRaceDetails] = useState({
     is_women_separate: false,
     randomise_top: 15,
@@ -34,7 +36,9 @@ export default function GenerateStartList() {
   useEffect(() => {
     fetchRaceDetails();
     getFetchSeedList();
-  }, [competitionId]);
+    startListExistsFn();
+    getStartList();
+  }, [competitionId, raceId]);
 
   const getFetchSeedList = async () => {
     const seedlist = await fetchSeedList(competitionId);
@@ -43,9 +47,32 @@ export default function GenerateStartList() {
 
   const fetchRaceDetails = async () => {
     const query = `
-      SELECT women_separate AS is_women_separate, 15 AS randomise_top, 5 AS randomise_top_women
-      FROM races
+      SELECT
+        women_separate AS is_women_separate
+        , 15 AS randomise_top
+        , 5 AS randomise_top_women
+        , venue
+        , course_name
+        , weather
+        , snow
+        , temp_start
+        , temp_finish
+        , homologation
+        , start_altitude
+        , finish_altitude
+        , start_altitude - finish_altitude AS altitude_difference
+        , race_date
+        , race_name
+        , c.competition_name
+        , c.competition_description
+      FROM races r
+        LEFT JOIN people td ON r.tech_delegate = td.id
+        LEFT JOIN people cor ON r.chief_of_race = td.id
+        LEFT JOIN people rf ON r.referee = td.id
+        LEFT JOIN people ar ON r.asst_referee = td.id
+        LEFT JOIN competitions c ON r.competition_id = c.id
       WHERE race_id = ? AND competition_id = ?
+
     `;
     try {
       const result = await window.api.select(query, [raceId, competitionId]);
@@ -57,29 +84,45 @@ export default function GenerateStartList() {
     }
   };
 
-  // const factorQuery = `factors AS( SELECT 'SL' AS type, 730 AS factor UNION ALL SELECT 'GS', 1010 UNION ALL SELECT 'SG', 1190 UNION ALL SELECT 'DH', 1250 UNION ALL SELECT 'AC', 1360 ),`;
-  // const raceSeedQuery = `race_seed AS(
-  //                 SELECT race_id
-  //                      , racer_id
-  //                      , run_id
-  //                      , race_time
-  //                      , MIN(race_time) OVER(PARTITION BY race_id, run_id ORDER BY race_time DESC) AS min_time
-  //                 FROM race_results
-  //                 WHERE competition_id = ?
-  //               ),
-  //               all_results AS (
-  //                 SELECT racer_id
-  //                      , run_id
-  //                      , (race_time * f.factor) / min_time - factor AS seed_points
-  //                 FROM race_seed rs
-  //                        JOIN races r ON rs.race_id = r.race_id
-  //                        JOIN factors f ON r.race_type = f.type
-  //               )`;
+  const startListExistsFn = async () => {
+    let exists = false;
+    const query = `
+    SELECT
+      COUNT(*) AS ct
+    FROM race_competitor
+    WHERE competition_id = ? AND race_id = ?
+    `;
+    const values = [competitionId, raceId];
+    const result = await window.api.select(query, values);
+    if (result && result[0]) {
+      exists = result[0].ct > 0;
+    }
+    setStartListExists(exists);
+    getStartList();
+  };
 
+  const getStartList = async () =>{
+    const query = `
+    SELECT
+      p.id, p.first_name, p.last_name, rc.bib_number,
+      cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
+      cc.is_veteran, cc.is_female, cc.team
+      FROM race_competitor rc
+    INNER JOIN people p ON rc.racer_id = p.id
+    INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
+    WHERE rc.competition_id = ? AND rc.race_id = ?
+    `;
+    const results = await window.api.select(query, [competitionId, raceId]);
+    if (results) {
+      setStartList(results);
+    }
+  };
+
+  const generatePDF = () => {
+    startListPdf(raceDetails, startList, womenStartList);
+  };
 
   const handleStrikeOut = (competitorId) => {
-    console.log(competitorId);
-    console.log(struckOutCompetitors);
     setStruckOutCompetitors((prev) => ({
       ...prev,
       [competitorId]: !prev[competitorId],
@@ -133,11 +176,7 @@ export default function GenerateStartList() {
         0,
         raceDetails.randomise_top,
       );
-      console.log(topCompetitors);
       topCompetitors = shuffleArray(topCompetitors);
-
-      console.log("Shuffling");
-      console.log(topCompetitors);
       menStartList = [
         ...topCompetitors,
         ...activeCompetitors.slice(raceDetails.randomise_top),
@@ -177,7 +216,7 @@ export default function GenerateStartList() {
     if (womenStartList) saveStartList(womenStartList, 'Women');
   };
 
-  return (
+  const generateNewStartList = (
     <Container className="generate-start-list-page flex flex-col items-center justify-center min-h-screen bg-gray-50">
       <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-lg">
         <Typography
@@ -317,4 +356,73 @@ export default function GenerateStartList() {
       </Paper>
     </Container>
   );
+
+  const showStartList = (
+    <Container className="generate-start-list-page flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-lg">
+        <Typography
+          variant="h4"
+          component="h1"
+          className="mb-6 text-gray-800 font-bold text-center"
+        >
+          Start List
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleBack}
+          // className="over:bg-green-700 text-white py-2 px-4 rounded shadow-lg w-full mt-4"
+        >
+          Back
+        </Button>
+        {startList && (
+          <Paper elevation={1} className="p-4 mt-4">
+            {(raceDetails.is_women_separate ? true: false) &&
+            <Typography
+              variant="h6"
+              component="h2"
+              className="mb-4 text-gray-700"
+            >
+              Men's Start List
+            </Typography>
+            }
+            <List>
+              {startList.map((competitor, index) => (
+                <ListItem key={competitor.id}>
+                  <ListItemText
+                    primary={`${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+
+        {womenStartList && (
+          <Paper elevation={1} className="p-4 mt-4">
+            <Typography
+              variant="h6"
+              component="h2"
+              className="mb-4 text-gray-700"
+            >
+              Women's Start List
+            </Typography>
+            <List>
+              {womenStartList.map((competitor, index) => (
+                <ListItem key={competitor.id}>
+                  <ListItemText
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+        <Button variant="contained" onClick={generatePDF}>
+          Download PDF
+        </Button>
+      </Paper>
+    </Container>
+  );
+  return startListExists ? showStartList : generateNewStartList;
 }
