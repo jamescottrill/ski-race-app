@@ -122,7 +122,7 @@ class Database {
         forerunner_b TEXT,
         forerunner_c TEXT,
         forerunner_d TEXT,
-        PRIMARY KEY (competition_id, race_id, run_id),
+        PRIMARY KEY (competition_id, race_id, run_number),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id)
       )
@@ -152,11 +152,11 @@ class Database {
         is_dsq BOOLEAN,
         dsq_gate INTEGER,
         dsq_reason TEXT,
-        PRIMARY KEY (competition_id, race_id, run_id, racer_id),
+        PRIMARY KEY (competition_id, race_id, run_number, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id),
         FOREIGN KEY (racer_id) REFERENCES people(id)
-        FOREIGN KEY (run_id) REFERENCES race_run(run_id)
+        FOREIGN KEY (run_number) REFERENCES race_run(run_number)
       )
       `,
       // `
