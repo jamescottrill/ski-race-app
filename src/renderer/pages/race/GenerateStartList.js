@@ -221,8 +221,12 @@ export default function GenerateStartList() {
   };
 
   const handleSaveStartList = () => {
-    if (startList) saveStartList(startList, 'Men');
-    if (womenStartList) saveStartList(womenStartList, 'Women');
+    if (womenStartList) {
+      saveStartList(startList, 'Men\'s');
+      saveStartList(womenStartList, 'Women\'s');
+    } else{
+      saveStartList(startList, 'Congratulations, ');
+    }
   };
 
   const generateNewStartList = (
