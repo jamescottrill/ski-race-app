@@ -194,7 +194,11 @@ export default function GenerateStartList() {
   const saveStartList = async (list, gender) => {
     const query = `
       INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number)
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?, ?);
+    `;
+    const raceQuery = `
+      INSERT INTO race_results (competition_id, race_id, racer_id, run_number)
+      VALUES (?, ?, ?, 1);
     `;
     try {
       for (let i = 0; i < list.length; i++) {
@@ -203,6 +207,11 @@ export default function GenerateStartList() {
           raceId,
           list[i].id,
           i + 1,
+        ]);
+        await window.api.insert(raceQuery, [
+          competitionId,
+          raceId,
+          list[i].id,
         ]);
       }
       alert(`${gender} start list saved successfully.`);
