@@ -1,3 +1,4 @@
+// eslint-disable no-nested-ternary
 import React, { useEffect, useState } from 'react';
 import {
   Paper,
@@ -10,26 +11,39 @@ import {
   TextField,
   Select,
   MenuItem,
+  Button,
 } from '@mui/material';
 
-export default function RaceRun({ raceId, competitionId, runId }) {
+export default function RaceRun({
+  raceId,
+  competitionId,
+  runId,
+  edit = false,
+}) {
   const [data, setData] = useState([]);
 
   const initialData = async () => {
     const initQuery = `
     SELECT
-      rr.racer_id, rc.bib_number, rc.racer_id, p.first_name, p.last_name,
-      rr.race_time, rr.dsq_gate, rr.dsq_reason, rr.is_dnf, rr.is_dns, rr.is_dsq
-    FROM  race_results rr
-    INNER JOIN people p ON p.id = rr.racer_id
-    INNER JOIN race_competitor rc ON rc.race_id = rr.racer_id
-    WHERE rr.race_id = ? AND rr.competition_id = ? AND rr.run_id = ?
+      rr.racer_id, rc.bib_number, rr.racer_id
+      , p.first_name, p.last_name
+      , rr.race_time, rr.dsq_gate, rr.dsq_reason, rr.is_dnf, rr.is_dns, rr.is_dsq
+    FROM
+      race_results rr
+      INNER JOIN people p ON p.id = rr.racer_id
+      INNER JOIN race_competitor rc ON
+        rc.race_id = rr.race_id
+          AND rc.competition_id = rr.competition_id
+          AND rc.racer_id = rr.racer_id
+    WHERE rr.run_number = ? AND rr.race_id = ? AND rr.competition_id = ?
+    ORDER BY bib_number
     `;
-    const initParams = [raceId, competitionId, runId];
+    const initParams = [runId, raceId, competitionId];
     try {
       const results = await window.api.select(initQuery, initParams);
       const mapped = results.map((result) => {
         return {
+          id: `${result.racer_id}/${runId}`,
           bibNumber: result.bib_number,
           firstName: result.first_name,
           lastName: result.last_name,
@@ -40,12 +54,13 @@ export default function RaceRun({ raceId, competitionId, runId }) {
               ? 'DNF'
               : result.is_dsq
                 ? 'DSQ'
-                : 'Finished',
+                : result.race_time
+                  ? 'Finished'
+                  : '',
           gateDisqualified: result.dsq_gate,
           dsqReason: result.dsq_reason,
         };
       });
-      console.log(mapped);
       setData(mapped);
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
@@ -53,16 +68,17 @@ export default function RaceRun({ raceId, competitionId, runId }) {
   };
 
   const handleUpdatedField = async (key, value, racerId) => {
+    const racerUid = racerId.split('/')[0];
     const query = `
     UPDATE race_results
     SET ${key} = ?
-    WHERE race_id = ? AND competition_id = ? AND  racer_id = ? AND run_id = ?
+    WHERE race_id = ? AND competition_id = ? AND  racer_id = ? AND run_number = ?
     `;
-    const params = [value, raceId, competitionId, racerId, runId];
+    const params = [value, raceId, competitionId, racerUid, runId];
     try {
       await window.api.insert(query, params);
     } catch (error) {
-      console.error('Failed to create race:', error);
+      console.error('Failed to update result:', error);
     }
   };
 
@@ -70,10 +86,16 @@ export default function RaceRun({ raceId, competitionId, runId }) {
     const updatedData = data.map((row) =>
       row.id === id ? { ...row, raceTime: value } : row,
     );
+    const timeRegex = /^([0-5]?[0-9])(:|\.)?([0-5][0-9])\.?\d{0,2}$/;
+    if (!timeRegex.test(value)) return;
     setData(updatedData);
-    handleUpdatedField('race_time', value, raceId, competitionId, id);
+    handleUpdatedField('race_time', value, id);
+    if(!updatedData.is_dsq && !updatedData.is_dnf && !updatedData.is_dns) {
+      handleStatusChange(id, 'Finished');
+    }
     // }
   };
+
 
   const handleStatusChange = (id, value) => {
     const updatedData = data.map((row) =>
@@ -87,6 +109,7 @@ export default function RaceRun({ raceId, competitionId, runId }) {
         : row,
     );
     setData(updatedData);
+    const row = data.filter((r) => r.id === id)[0];
     if (value === 'DNS') {
       handleUpdatedField('is_dns', true, id);
       handleUpdatedField('is_dnf', false, id);
@@ -100,9 +123,9 @@ export default function RaceRun({ raceId, competitionId, runId }) {
       handleUpdatedField('is_dnf', false, id);
       handleUpdatedField('is_dsq', true, id);
     } else {
-      handleUpdatedField('is_dns', false, id);
-      handleUpdatedField('is_dnf', false, id);
-      handleUpdatedField('is_dsq', false, id);
+      if (row.is_dns) handleUpdatedField('is_dns', false, id);
+      if (row.is_dnf) handleUpdatedField('is_dnf', false, id);
+      if (row.is_dsq) handleUpdatedField('is_dsq', false, id);
     }
   };
 
@@ -122,10 +145,43 @@ export default function RaceRun({ raceId, competitionId, runId }) {
     handleUpdatedField('dsq_reason', value, id);
   };
 
-  // const handleSave = () => {
-  //   console.log('Saved data:', data);
-  //   // Implement save logic here, e.g., sending the data to a backend API or saving to a database
-  // };
+  const handleSaveResults = () => {
+    const completedRacers = data.filter((racer) => racer.status === 'Finished');
+    if (completedRacers.length === 0) {
+      alert('No completed racers found.');
+      return;
+    }
+    saveResults(completedRacers);
+  }
+
+  const saveResults = async (results) => {
+    const nextRun = runId + 1;
+    const dropQuery = `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
+    const dropParams = [competitionId, raceId, nextRun];
+    try {
+      await window.api.insert(dropQuery, dropParams);
+    } catch (error) {
+      console.error('Failed to delete previous results:', error);
+    }
+    const raceQuery = `
+      INSERT INTO race_results (competition_id, race_id, racer_id, run_number)
+      VALUES (?, ?, ?, ?);
+    `;
+    try {
+      for (let i = 0; i < results.length; i++) {
+        await window.api.insert(raceQuery, [
+          competitionId,
+          raceId,
+          results[i].id.split('/')[0],
+          nextRun
+        ]);
+      }
+      alert(`Results saved successfully.`);
+    } catch (error) {
+      console.error(`Failed to save results:`, error);
+    }
+
+  };
 
   useEffect(() => {
     initialData();
@@ -133,75 +189,92 @@ export default function RaceRun({ raceId, competitionId, runId }) {
 
   return (
     <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell align="center">Bib Number</TableCell>
-            <TableCell align="center">Competitor</TableCell>
-            <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
-            <TableCell align="center">Status</TableCell>
-            <TableCell align="center">Gate Disqualified</TableCell>
-            <TableCell align="center">Reason Disqualified</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((row) => (
-            <TableRow key={row.id}>
-              <TableCell align="center">{row.bib_number}</TableCell>
-              <TableCell align="center">
-                {row.last_name.toUpperCase()} {row.first_name}
-              </TableCell>
-              <TableCell align="center">
-                <TextField
-                  value={row.raceTime}
-                  onChange={(e) => handleTimeChange(row.id, e.target.value)}
-                  placeholder="MM:SS.SS"
-                  inputProps={{ min: 1 }}
-                />
-              </TableCell>
-              <TableCell align="center">
-                <Select
-                  value={row.status}
-                  onChange={(e) => handleStatusChange(row.id, e.target.value)}
-                  displayEmpty
-                >
-                  <MenuItem value="">
-                    <em>Finished</em>
-                  </MenuItem>
-                  <MenuItem value="DNS">DNS</MenuItem>
-                  <MenuItem value="DNF">DNF</MenuItem>
-                  <MenuItem value="DSQ">DSQ</MenuItem>
-                </Select>
-              </TableCell>
-              <TableCell align="center">
-                {row.status === 'DSQ' ? (
-                  <TextField
-                    type="number"
-                    value={row.gateDisqualified}
-                    onChange={(e) => handleGateChange(row.id, e.target.value)}
-                    placeholder="Gate #"
-                    inputProps={{ min: 1 }}
-                  />
-                ) : (
-                  '-'
-                )}
-              </TableCell>
-              <TableCell align="center">
-                {row.status === 'DSQ' ? (
-                  <TextField
-                    value={row.dsqReason}
-                    onChange={(e) => handleDsqReason(row.id, e.target.value)}
-                    placeholder="Missed Gate"
-                    inputProps={{ min: 1 }}
-                  />
-                ) : (
-                  '-'
-                )}
-              </TableCell>
+      {data.length > 0 && (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell align="center">Bib Number</TableCell>
+              <TableCell align="center">Competitor</TableCell>
+              <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
+              <TableCell align="center">Status</TableCell>
+              <TableCell align="center">Gate Disqualified</TableCell>
+              <TableCell align="center">Reason Disqualified</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {data.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell align="center">{row.bibNumber}</TableCell>
+                <TableCell align="center">
+                  {row.lastName.toUpperCase()} {row.firstName}
+                </TableCell>
+                <TableCell align="center">
+                  <TextField
+                    value={row.raceTime}
+                    onBlur={(e) => handleTimeChange(row.id, e.target.value)}
+                    placeholder="MM:SS.SS"
+                    inputProps={{className: 'race-time-input' }}
+                    type="text"
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <Select
+                    value={row.status}
+                    onChange={(e) => handleStatusChange(row.id, e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="Finished">
+                      <em>Finished</em>
+                    </MenuItem>
+                    <MenuItem value="DNS">DNS</MenuItem>
+                    <MenuItem value="DNF">DNF</MenuItem>
+                    <MenuItem value="DSQ">DSQ</MenuItem>
+                  </Select>
+                </TableCell>
+                <TableCell align="center">
+                  {row.status === 'DSQ' ? (
+                    <TextField
+                      type="number"
+                      value={row.gateDisqualified}
+                      onChange={(e) => handleGateChange(row.id, e.target.value)}
+                      placeholder="Gate #"
+                      inputProps={{ min: 1 }}
+                    />
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
+                <TableCell align="center">
+                  {row.status === 'DSQ' ? (
+                    <TextField
+                      value={row.dsqReason}
+                      onChange={(e) => handleDsqReason(row.id, e.target.value)}
+                      placeholder="Missed Gate"
+                      inputProps={{ min: 1 }}
+                    />
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveResults}
+            className="text-white py-2 px-4 rounded shadow-lg w-full"
+          >
+            Save Results
+          </Button>
+        </Table>
+      )}
+      {data.length === 0 && (
+        <div>
+          No Competitors found, make sure you've marked the previous run as
+          finished.
+        </div>
+      )}
     </TableContainer>
   );
 }

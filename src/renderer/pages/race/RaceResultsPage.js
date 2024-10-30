@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
 
-function CustomTabPanel(props) {
+function RaceRunTabPanel(props) {
   const { value, index, raceId, competitionId, ...other } = props;
 
   return (
@@ -14,7 +14,7 @@ function CustomTabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      <RaceRun runId="1" raceId={raceId} competitionId={competitionId} />
+      <RaceRun runId={index} raceId={raceId} competitionId={competitionId} edit={true} />
     </div>
   );
 }
@@ -74,11 +74,11 @@ export default function RaceResultsPage() {
           ))}
         </Tabs>
         {raceRuns.map((run) => (
-          <CustomTabPanel
+          <RaceRunTabPanel
             value={value}
             index={run.run_number}
             raceId={raceId}
-            competitionId={run.competitionId}
+            competitionId={run.competition_id}
           />
         ))}
       </Paper>
