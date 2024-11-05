@@ -84,8 +84,7 @@ export default function RaceLandingPage() {
                 <TableCell>Date</TableCell>
                 <TableCell>Venue</TableCell>
                 <TableCell>Number of Runs</TableCell>
-                <TableCell>Actions</TableCell>{' '}
-                {/* Actions column for buttons */}
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
