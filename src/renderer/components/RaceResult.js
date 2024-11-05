@@ -14,81 +14,46 @@ import {
   Button,
 } from '@mui/material';
 
-export default function RaceRun({
+export default function RaceResult({
   raceId,
   competitionId,
   runId,
   edit = false,
 }) {
   const [data, setData] = useState([]);
-
-  const convertRaceTime = (time) => {
-    if (!time) return '';
-    const minutes = Math.floor(time / 60)
-      .toString()
-      .padStart(2, '0');
-    const seconds = (time % 60).toString().split('.')[0].padStart(2, '0');
-    const milliseconds = (time.toString().split('.')[1] ?? '00').padEnd(2, '0');
-    return `${minutes}:${seconds}.${milliseconds}`;
-  };
-
-  const convertHumanTime = (time) => {
-    const minutes = parseInt(time.split(':')[0] ?? '0') * 60;
-    const seconds = parseFloat(time.split(':')[1] ?? '0');
-    return minutes + seconds;
-  };
+  const [runs, setRuns] = useState([1]);
 
   const initialData = async () => {
-    const initQuery = `
-    SELECT
-      rr.racer_id, rc.bib_number, rr.racer_id
-      , p.first_name, p.last_name
-      , rr.race_time, rr.dsq_gate, rr.dsq_reason, rr.is_dnf, rr.is_dns, rr.is_dsq
-    FROM
-      race_results rr
-      INNER JOIN people p ON p.id = rr.racer_id
-      INNER JOIN race_competitor rc ON
-        rc.race_id = rr.race_id
-          AND rc.competition_id = rr.competition_id
-          AND rc.racer_id = rr.racer_id
-    WHERE rr.run_number = ? AND rr.race_id = ? AND rr.competition_id = ?
-    ORDER BY bib_number
-    `;
-    const initParams = [runId, raceId, competitionId];
-    try {
-      const results = await window.api.select(initQuery, initParams);
+    let raceQuery;
+    let raceQueryValues;
+      raceQuery = `
+        SELECT
+            race_id
+            , racer_id
+            , race_time
+        FROM race_results rr
+        JOIN people p ON p.id = rr.racer_id
+        WHERE race_id = ?
+      `;
+      raceQueryValues = [raceId];
+    }
+    }
+    try{
+      const results = await window.api.select(raceQuery, raceQueryValues);
+    } catch (e){
+      console.error('Failed to fetch competitors:', error);
+    }
       const mapped = results.map((result) => {
         return {
-          id: `${result.racer_id}/${runId}`,
+          id: `${result.racer_id}/results`,
           bibNumber: result.bib_number,
           firstName: result.first_name,
           lastName: result.last_name,
-          raceTime: convertRaceTime(result.race_time),
-          status: result.is_dns
-            ? 'DNS'
-            : result.is_dnf
-              ? 'DNF'
-              : result.is_dsq
-                ? 'DSQ'
-                : result.race_time
-                  ? 'Finished'
-                  : '',
-          gateDisqualified: result.dsq_gate,
-          dsqReason: result.dsq_reason,
+          raceTime: result.race_time,
         };
       });
       setData(mapped);
-    } catch (error) {
-      console.error('Failed to fetch competitors:', error);
     }
-  };
-
-
-  const handleTimeChange = (id, value) => {
-    const updatedData = data.map((row) =>
-      row.id === id ? { ...row, raceTime: value } : row,
-    );
-    setData(updatedData);
   };
 
   const handleUpdatedField = async (key, value, racerId) => {
@@ -106,16 +71,30 @@ export default function RaceRun({
     }
   };
 
-  const handleStatusChange = (id, value, newData=undefined) => {
-    const nData = newData ?? data;
-    const updatedData = nData.map((row) =>
+  const handleTimeChange = (id, value) => {
+    const updatedData = data.map((row) =>
+      row.id === id ? { ...row, raceTime: value } : row,
+    );
+    const timeRegex = /^([0-5]?[0-9])(:|\.)?([0-5][0-9])\.?\d{0,2}$/;
+    if (!timeRegex.test(value)) return;
+    setData(updatedData);
+    handleUpdatedField('race_time', value, id);
+    if(!updatedData.is_dsq && !updatedData.is_dnf && !updatedData.is_dns) {
+      handleStatusChange(id, 'Finished');
+    }
+    // }
+  };
+
+
+  const handleStatusChange = (id, value) => {
+    const updatedData = data.map((row) =>
       row.id === id
         ? {
-          ...row,
-          status: value,
-          gateDisqualified: value === 'DSQ' ? row.gateDisqualified : '',
-          dsqReason: value === 'DSQ' ? row.dsqReason : '',
-        }
+            ...row,
+            status: value,
+            gateDisqualified: value === 'DSQ' ? row.gateDisqualified : '',
+            dsqReason: value === 'DSQ' ? row.dsqReason : '',
+          }
         : row,
     );
     setData(updatedData);
@@ -136,37 +115,6 @@ export default function RaceRun({
       if (row.is_dns) handleUpdatedField('is_dns', false, id);
       if (row.is_dnf) handleUpdatedField('is_dnf', false, id);
       if (row.is_dsq) handleUpdatedField('is_dsq', false, id);
-    }
-  };
-
-  const formatTime = (value) => {
-    if (value === '000000') return '';
-    const parts = value.match(/(\d{1,2}):?\.?(\d{2}):?\.?(\d{1,2})?/);
-    if (parts) {
-      console.log(parts);
-      const minutes = parts[1].padStart(2, '0');
-      const seconds = parts[2].padStart(2, '0');
-      const milliseconds = parts[3] ? parts[3].padEnd(2, '0') : '00';
-      return `${minutes}:${seconds}.${milliseconds}`;
-
-    }
-    return '';
-  };
-
-  const handleTimeBlur = (id, val) => {
-    let value = val.padStart(6, '0');
-    const timeRegex = /^([0-5]?[0-9])(:|\.)?([0-5][0-9])\.?\d{0,2}$/;
-    if (!timeRegex.test(value) && value !== '') return;
-    value = formatTime(value);
-    const updatedData = data.map((row) =>
-      row.id === id ? { ...row, raceTime: value } : row,
-    );
-    handleUpdatedField('race_time', convertHumanTime(value), id);
-    const row = data.filter((r) => r.id === id)[0];
-    if (row.status === '' && value !== '') {
-      handleStatusChange(id, 'Finished', updatedData);
-    } else {
-      setData(updatedData);
     }
   };
 
@@ -193,7 +141,7 @@ export default function RaceRun({
       return;
     }
     saveResults(completedRacers);
-  };
+  }
 
   const saveResults = async (results) => {
     const nextRun = runId + 1;
@@ -214,13 +162,14 @@ export default function RaceRun({
           competitionId,
           raceId,
           results[i].id.split('/')[0],
-          nextRun,
+          nextRun
         ]);
       }
       alert(`Results saved successfully.`);
     } catch (error) {
       console.error(`Failed to save results:`, error);
     }
+
   };
 
   useEffect(() => {
@@ -233,8 +182,12 @@ export default function RaceRun({
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell align="center">Bib Number</TableCell>
-              <TableCell align="center">Competitor</TableCell>
+              <TableCell align="center">Position</TableCell>
+              <TableCell align="center">Start Number</TableCell>
+              <TableCell align="center">Rank</TableCell>
+              <TableCell align="center">Name</TableCell>
+              <TableCell align="center">Team</TableCell>
+
               <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
               <TableCell align="center">Status</TableCell>
               <TableCell align="center">Gate Disqualified</TableCell>
@@ -251,10 +204,9 @@ export default function RaceRun({
                 <TableCell align="center">
                   <TextField
                     value={row.raceTime}
-                    onChange={(e) => handleTimeChange(row.id, e.target.value)}
-                    onBlur={(e) => handleTimeBlur(row.id, e.target.value)}
+                    onBlur={(e) => handleTimeChange(row.id, e.target.value)}
                     placeholder="MM:SS.SS"
-                    inputProps={{ className: 'race-time-input' }}
+                    inputProps={{className: 'race-time-input' }}
                     type="text"
                   />
                 </TableCell>
