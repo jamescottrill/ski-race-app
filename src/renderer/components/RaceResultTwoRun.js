@@ -8,10 +8,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
+  Select,
+  MenuItem,
+  Button,
 } from '@mui/material';
 import OtherResultTable from './DnsTable';
 
-export default function RaceResultOneRun({
+export default function RaceResultTwoRun({
   raceId,
   competitionId,
 }) {
@@ -19,6 +23,9 @@ export default function RaceResultOneRun({
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
   const [run1Dsq, setRun1Dsq] = useState([]);
+  const [run2Dnf, setRun2Dnf] = useState([]);
+  const [run2Dns, setRun2Dns] = useState([]);
+  const [run2Dsq, setRun2Dsq] = useState([]);
 
   const convertRaceTime = (time) => {
     if (!time) return '';
@@ -53,23 +60,43 @@ export default function RaceResultOneRun({
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
+               run2 AS (SELECT race_id,
+                               racer_id,
+                               ROUND(race_time, 2) AS race_time,
+                               COALESCE(is_dsq, FALSE) AS is_dsq,
+                               COALESCE(is_dnf, FALSE) AS is_dnf,
+                               COALESCE(is_dns, FALSE) AS is_dns,
+                               dsq_gate,
+                               dsq_reason
+                        FROM race_results rr
+                        WHERE TRUE
+                          AND run_number = 2
+                          AND race_id = ?),
                data AS (SELECT run1.racer_id,
                                run1.race_id,
                                run1.race_time                                                            AS run_1_time,
+                               run2.race_time                                                            AS run_2_time,
+                               ROUND(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999), 2) AS total_time,
                                run1.is_dns                                                               AS run_1_dns,
+                               run2.is_dns                                                               AS run_2_dns,
                                run1.is_dsq                                                               AS run_1_dsq,
+                               run2.is_dsq                                                               AS run_2_dsq,
                                run1.is_dnf                                                               AS run_1_dnf,
+                               run2.is_dnf                                                               AS run_2_dnf,
                                run1.dsq_gate                                                             AS run_1_dsq_gate,
+                               run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
+                               run2.dsq_reason                                                           AS run_2_dsq_reason,
                                p.first_name,
                                p.last_name,
                                cc.title,
                                rc.bib_number,
                                cc.team,
                                f.factor                                                                  AS factor,
-                               MIN(COALESCE(run1.race_time, 9999))
+                               MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS mintime
                         FROM run1
+                               LEFT JOIN run2 ON run1.racer_id = run2.racer_id
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id
@@ -77,16 +104,15 @@ export default function RaceResultOneRun({
                                JOIN factors f ON f.race = r.race_type)
           SELECT
             *,
-            ROUND((run_1_time - mintime) / run_1_time * factor, 2) AS seed_points,
-            RANK() OVER (ORDER BY run_1_time) AS position
+            ROUND((total_time - mintime) / total_time * factor, 2) AS seed_points,
+            RANK() OVER (ORDER BY total_time) AS position
           FROM data
-          ORDER BY run_1_time
+          ORDER BY total_time
         `;
     const raceQueryValues = [raceId, raceId];
     let results = [];
     try {
       results = await window.api.select(raceQuery, raceQueryValues);
-      console.log(results);
     } catch (e) {
       console.error('Failed to fetch competitors:', e);
       return;
@@ -97,12 +123,25 @@ export default function RaceResultOneRun({
         racerId: result.racer_id,
         raceId: result.raceId,
         run1Time: convertRaceTime(result.run_1_time),
+        run2Time: convertRaceTime(result.run_2_time),
         run1Dns: result.run_1_dns,
+        run2Dns: result.run_2_dns,
         run1Dsq: result.run_1_dsq,
+        run2Dsq: result.run_2_dsq,
         run1Dnf: result.run_1_dnf,
+        run2Dnf: result.run_2_dnf,
         run1DsqGate: result.run_1_dsq_gate,
+        run2DsqGate: result.run_2_dsq_gate,
         run1DsqReason: result.run_1_dsq_reason,
-        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq,
+        run2DsqReason: result.run_2_dsq_reason,
+        completed:
+          !result.run_1_dns &&
+          !result.run_1_dnf &&
+          !result.run_1_dsq &&
+          !result.run_2_dns &&
+          !result.run_2_dnf &&
+          !result.run_2_dsq,
+        totalTime: convertRaceTime(result.total_time),
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
@@ -113,37 +152,47 @@ export default function RaceResultOneRun({
       };
     });
 
-    const r1Dnf = mapped
-      .filter((e) => {
-        return e.run1Dnf;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
+    const r1Dnf = mapped.filter((e) => {
+      return e.run1Dnf;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });;
     setRun1Dnf(r1Dnf);
-    const r1Dns = mapped
-      .filter((e) => {
-        return e.run1Dns;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
+    const r1Dns = mapped.filter((e) => {
+      return e.run1Dns;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });
     setRun1Dns(r1Dns);
-    const r1Dsq = mapped
-      .filter((e) => {
-        return e.run1Dsq;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
+    const r1Dsq = mapped.filter((e) => {
+      return e.run1Dsq;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });
     setRun1Dsq(r1Dsq);
-    const r2Dnf = mapped
-      .filter((e) => {
-        return e.run2Dnf;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
+    const r2Dnf = mapped.filter((e) => {
+      return e.run2Dnf;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });
+    setRun2Dnf(r2Dnf);
+    const r2Dns = mapped.filter((e) => {
+      return e.run2Dns;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });
+    setRun2Dns(r2Dns);
+    const r2Dsq = mapped.filter((e) => {
+      return e.run2Dsq;
+    }).sort(function(a, b){
+      return a.bibNumber-b.bibNumber
+    });
+    setRun2Dsq(r2Dsq);
+    const finished = mapped.filter((e) => {
+      return e.completed;
+    }).sort(function(a, b){
+      return a.position-b.position
+    });
     setData(finished);
   };
 
@@ -164,6 +213,8 @@ export default function RaceResultOneRun({
                 <TableCell align="center">Name</TableCell>
                 <TableCell align="center">Team</TableCell>
                 <TableCell align="center">Time First Run</TableCell>
+                <TableCell align="center">Time Second Run</TableCell>
+                <TableCell align="center">Total Time</TableCell>
                 <TableCell align="center">Seed Points</TableCell>
               </TableRow>
             </TableHead>
@@ -178,6 +229,8 @@ export default function RaceResultOneRun({
                   </TableCell>
                   <TableCell align="center">{row.team}</TableCell>
                   <TableCell align="center">{row.run1Time}</TableCell>
+                  <TableCell align="center">{row.run2Time}</TableCell>
+                  <TableCell align="center">{row.totalTime}</TableCell>
                   <TableCell align="center">{row.seedPoints}</TableCell>
                 </TableRow>
               ))}
@@ -212,6 +265,30 @@ export default function RaceResultOneRun({
           <h1>DSQ Run 1</h1>
           <TableContainer>
             <OtherResultTable data={run1Dsq} />
+          </TableContainer>
+        </>
+      )}
+      {run2Dns.length > 0 && (
+        <>
+          <h1>DNS Run 2</h1>
+          <TableContainer>
+            <OtherResultTable data={run2Dns} />
+          </TableContainer>
+        </>
+      )}
+      {run2Dnf.length > 0 && (
+        <>
+          <h1>DNF Run 2</h1>
+          <TableContainer>
+            <OtherResultTable data={run2Dnf} />
+          </TableContainer>
+        </>
+      )}
+      {run2Dsq.length > 0 && (
+        <>
+          <h1>DSQ Run 2</h1>
+          <TableContainer>
+            <OtherResultTable data={run2Dsq} />
           </TableContainer>
         </>
       )}

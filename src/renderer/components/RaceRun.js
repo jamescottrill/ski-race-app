@@ -83,7 +83,6 @@ export default function RaceRun({
     }
   };
 
-
   const handleTimeChange = (id, value) => {
     const updatedData = data.map((row) =>
       row.id === id ? { ...row, raceTime: value } : row,
@@ -143,7 +142,6 @@ export default function RaceRun({
     if (value === '000000') return '';
     const parts = value.match(/(\d{1,2}):?\.?(\d{2}):?\.?(\d{1,2})?/);
     if (parts) {
-      console.log(parts);
       const minutes = parts[1].padStart(2, '0');
       const seconds = parts[2].padStart(2, '0');
       const milliseconds = parts[3] ? parts[3].padEnd(2, '0') : '00';
@@ -256,6 +254,7 @@ export default function RaceRun({
                     placeholder="MM:SS.SS"
                     inputProps={{ className: 'race-time-input' }}
                     type="text"
+                    disabled={!edit}
                   />
                 </TableCell>
                 <TableCell align="center">
@@ -263,6 +262,7 @@ export default function RaceRun({
                     value={row.status}
                     onChange={(e) => handleStatusChange(row.id, e.target.value)}
                     displayEmpty
+                    disabled={!edit}
                   >
                     <MenuItem value="Finished">
                       <em>Finished</em>
@@ -280,6 +280,7 @@ export default function RaceRun({
                       onChange={(e) => handleGateChange(row.id, e.target.value)}
                       placeholder="Gate #"
                       inputProps={{ min: 1 }}
+                      disabled={!edit}
                     />
                   ) : (
                     '-'
@@ -292,6 +293,7 @@ export default function RaceRun({
                       onChange={(e) => handleDsqReason(row.id, e.target.value)}
                       placeholder="Missed Gate"
                       inputProps={{ min: 1 }}
+                      disabled={!edit}
                     />
                   ) : (
                     '-'
@@ -305,6 +307,7 @@ export default function RaceRun({
             color="primary"
             onClick={handleSaveResults}
             className="text-white py-2 px-4 rounded shadow-lg w-full"
+            disabled={!edit}
           >
             Save Results
           </Button>

@@ -122,6 +122,7 @@ class Database {
         forerunner_b TEXT,
         forerunner_c TEXT,
         forerunner_d TEXT,
+        is_complete BOOLEAN,
         PRIMARY KEY (competition_id, race_id, run_number),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id)

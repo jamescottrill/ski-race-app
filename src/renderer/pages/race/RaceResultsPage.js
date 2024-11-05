@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
+import RaceResultTwoRun from '../../components/RaceResultTwoRun';
+import RaceResult from '../../components/RaceResult';
 
 function RaceRunTabPanel(props) {
-  const { value, index, raceId, competitionId, ...other } = props;
+  const { value, index, raceId, competitionId, edit, ...other } = props;
 
   return (
     <div
@@ -14,7 +16,33 @@ function RaceRunTabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      <RaceRun runId={index} raceId={raceId} competitionId={competitionId} edit={true} />
+      <RaceRun
+        runId={index}
+        raceId={raceId}
+        competitionId={competitionId}
+        edit={edit}
+      />
+    </div>
+  );
+}
+
+function RaceResultTabPanel(props) {
+  const { value, index, raceId, competitionId, runs, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {runs === 2 && (
+        <RaceResultTwoRun raceId={raceId} competitionId={competitionId} />
+      )}
+      {runs === 1 && (
+        <RaceResult raceId={raceId} competitionId={competitionId} />
+      )}
     </div>
   );
 }
@@ -22,7 +50,7 @@ function RaceRunTabPanel(props) {
 export default function RaceResultsPage() {
   const { competitionId, raceId } = useParams();
   const navigate = useNavigate();
-  const [value, setValue] = React.useState(1);
+  const [value, setValue] = React.useState('result');
   const [raceRuns, setRaceRuns] = React.useState([]);
 
   const handleChange = (event, newValue) => {
@@ -31,7 +59,7 @@ export default function RaceResultsPage() {
 
   const getNumberRuns = async () => {
     const numRunQuery = `
-    SELECT r.competition_id, r.race_id, run_id, run_number
+    SELECT r.competition_id, r.race_id, run_id, run_number, COALESCE(rr.is_complete, false) AS is_complete
     FROM race_run rr
     INNER JOIN races r
       ON r.race_id = rr.race_id
@@ -43,6 +71,11 @@ export default function RaceResultsPage() {
     try {
       const raceResults = await window.api.select(numRunQuery, params);
       setRaceRuns(raceResults);
+      const notCompleted = raceResults.filter((e) => {
+        return !e.is_complete;
+      });
+      if (notCompleted.length === 2) setValue(1);
+      if (notCompleted.length === 1) setValue(2);
     } catch (error) {
       console.error('Failed to fetch races:', error);
     }
@@ -65,13 +98,11 @@ export default function RaceResultsPage() {
         >
           Results
         </Typography>
-        <Tabs
-          onChange={handleChange}
-          value={value}
-        >
+        <Tabs onChange={handleChange} value={value}>
           {raceRuns.map((run) => (
             <Tab label={`Run ${run.run_number}`} value={run.run_number} />
           ))}
+          <Tab label="Results" value="result" />
         </Tabs>
         {raceRuns.map((run) => (
           <RaceRunTabPanel
@@ -79,8 +110,16 @@ export default function RaceResultsPage() {
             index={run.run_number}
             raceId={raceId}
             competitionId={run.competition_id}
+            edit={!run.is_complete}
           />
         ))}
+        <RaceResultTabPanel
+          value={value}
+          index="result"
+          raceId={raceId}
+          competitionId={competitionId}
+          runs={raceRuns.length}
+        />
       </Paper>
       <Button
         variant="contained"
