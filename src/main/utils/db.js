@@ -146,7 +146,7 @@ class Database {
         run_id TEXT,
         run_number INTEGER,
         racer_id TEXT,
-        race_time TIME,
+        race_time FLOAT,
         is_dns BOOLEAN,
         is_dnf BOOLEAN,
         is_dsq BOOLEAN,
@@ -155,7 +155,7 @@ class Database {
         PRIMARY KEY (competition_id, race_id, run_number, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id),
-        FOREIGN KEY (racer_id) REFERENCES people(id)
+        FOREIGN KEY (racer_id) REFERENCES people(id),
         FOREIGN KEY (run_number) REFERENCES race_run(run_number)
       )
       `,
