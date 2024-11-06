@@ -26,4 +26,56 @@ const tableStyles = {
   },
 };
 
-export { tableStyles };
+const dnfTable = (data) => {
+  return {
+    layout: 'lightHorizontalLines',
+    style: 'table',
+    table: {
+      headerRows: 1,
+      widths: ['auto', 'auto', 'auto', 'auto'],
+      body: [
+        [
+          { text: 'Start No', style: 'tableHeader' },
+          { text: 'Rank', style: 'tableHeader' },
+          { text: 'Name', style: 'tableHeader' },
+          { text: 'Team', style: 'tableHeader' },
+        ],
+        ...(data || []).map((competitor) => [
+          competitor.bibNumber,
+          competitor.title,
+          `${competitor.lastName.toUpperCase()} ${competitor.firstName}`,
+          competitor.team,
+        ]),
+      ],
+    },
+  };
+};
+
+const dsqTable = (data) => {
+  return {
+    layout: 'lightHorizontalLines',
+    style: 'table',
+    table: {
+      headerRows: 1,
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto'],
+      body: [
+        [
+          { text: 'Start No', style: 'tableHeader' },
+          { text: 'Rank', style: 'tableHeader' },
+          { text: 'Name', style: 'tableHeader' },
+          { text: 'Team', style: 'tableHeader' },
+          { text: 'Gate No.', style: 'tableHeader' },
+        ],
+        ...(data || []).map((competitor) => [
+          competitor.bibNumber,
+          competitor.title,
+          `${competitor.lastName.toUpperCase()} ${competitor.firstName}`,
+          competitor.team,
+          competitor.run2DsqGate,
+        ]),
+      ],
+    },
+  }
+}
+
+export { tableStyles, dnfTable, dsqTable };

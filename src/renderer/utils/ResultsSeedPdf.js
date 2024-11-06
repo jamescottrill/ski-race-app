@@ -2,7 +2,7 @@ import { calculateCategory } from './CompetitorManagement';
 import { getFormattedDate } from './DateUtils';
 import { tableStyles, dnfTable, dsqTable } from './PdfStyles';
 
-const resultsTwoPdf = (
+const resultsSeedPdf = (
   raceDetails,
   finished,
   dns1,
@@ -19,34 +19,8 @@ const resultsTwoPdf = (
     { text: 'Official Results', style: 'subheader' },
   ];
 
-  // const runDetailsSection = [
-  //   { text: 'First Run', style: 'subheaderLeft' },
-  //   {
-  //     columns: [
-  //       { text: 'Course Setter: ', bold: true },
-  //       { text: raceDetails.firstRun.courseSetter },
-  //       { text: 'Number of Gates: ', bold: true },
-  //       { text: raceDetails.firstRun.numberOfGates },
-  //       { text: 'Start Time: ', bold: true },
-  //       { text: raceDetails.firstRun.startTime },
-  //     ],
-  //   },
-  //   { text: 'Second Run', style: 'subheaderLeft', margin: [0, 10, 0, 0] },
-  //   {
-  //     columns: [
-  //       { text: 'Course Setter: ', bold: true },
-  //       { text: raceDetails.secondRun.courseSetter },
-  //       { text: 'Number of Gates: ', bold: true },
-  //       { text: raceDetails.secondRun.numberOfGates },
-  //       { text: 'Start Time: ', bold: true },
-  //       { text: raceDetails.secondRun.startTime },
-  //     ],
-  //   },
-  // ];
-
   const content = [
     ...header,
-    // ...runDetailsSection,
     {
       columns: [
         { width: 'auto', text: 'Venue: ' },
@@ -94,6 +68,8 @@ const resultsTwoPdf = (
           'auto',
           'auto',
           'auto',
+          'auto',
+          'auto',
         ],
         body: [
           [
@@ -106,7 +82,9 @@ const resultsTwoPdf = (
             { text: 'Time 1st Run', style: 'tableHeader' },
             { text: 'Time 2nd Run', style: 'tableHeader' },
             { text: 'Total Time', style: 'tableHeader' },
-            { text: 'Race Points', style: 'tableHeader' },
+            { text: 'Points 1st Run', style: 'tableHeader' },
+            { text: 'Points 2nd Run', style: 'tableHeader' },
+            { text: 'Best Seed Points', style: 'tableHeader' },
           ],
           ...(finished || []).map((competitor) => [
             competitor.position,
@@ -118,7 +96,9 @@ const resultsTwoPdf = (
             competitor.run1Time,
             competitor.run2Time,
             competitor.totalTime,
-            competitor.seedPoints,
+            competitor.points1,
+            competitor.points2,
+            competitor.finalSeed,
           ]),
         ],
       },
@@ -227,4 +207,4 @@ const resultsTwoPdf = (
   });
 };
 
-export { resultsTwoPdf };
+export { resultsSeedPdf };

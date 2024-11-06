@@ -4,6 +4,8 @@ import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
 import RaceResultTwoRun from '../../components/RaceResultTwoRun';
 import RaceResult from '../../components/RaceResult';
+import RaceResultSeed from '../../components/RaceResultSeed';
+import { getRaceDetails } from '../../utils/RaceDetails';
 
 function RaceRunTabPanel(props) {
   const { value, index, raceId, competitionId, edit, ...other } = props;
@@ -27,7 +29,7 @@ function RaceRunTabPanel(props) {
 }
 
 function RaceResultTabPanel(props) {
-  const { value, index, raceId, competitionId, runs, ...other } = props;
+  const { value, index, raceId, competitionId, runs, isSeed, ...other } = props;
 
   return (
     <div
@@ -37,7 +39,10 @@ function RaceResultTabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {runs === 2 && (
+      {runs === 2 && isSeed && (
+        <RaceResultSeed raceId={raceId} competitionId={competitionId} />
+      )}
+      {runs === 2 && !isSeed && (
         <RaceResultTwoRun raceId={raceId} competitionId={competitionId} />
       )}
       {runs === 1 && (
@@ -52,6 +57,7 @@ export default function RaceResultsPage() {
   const navigate = useNavigate();
   const [value, setValue] = React.useState('result');
   const [raceRuns, setRaceRuns] = React.useState([]);
+  const [raceDetails, setRaceDetails] = React.useState([]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -83,7 +89,11 @@ export default function RaceResultsPage() {
 
   useEffect(() => {
     getNumberRuns();
-  }, []);
+    getRaceDetails(raceId, competitionId).then((details) => {
+        setRaceDetails(details);
+      }
+    ).catch(console.error);
+  }, [raceId, competitionId]);
 
   return (
     <Container className="edit-race-page flex flex-col items-center justify-center w-full min-w-full min-h-screen ">
@@ -118,6 +128,7 @@ export default function RaceResultsPage() {
           index="result"
           raceId={raceId}
           competitionId={competitionId}
+          isSeed={raceDetails.is_seeding}
           runs={raceRuns.length}
         />
       </Paper>

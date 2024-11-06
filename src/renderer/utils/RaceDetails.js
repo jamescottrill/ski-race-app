@@ -2,6 +2,7 @@ const getRaceDetails = async (raceId, competitionId) => {
   const query = `
       SELECT
         women_separate AS is_women_separate
+        , is_seeding
         , 15 AS randomise_top
         , 5 AS randomise_top_women
         , venue
