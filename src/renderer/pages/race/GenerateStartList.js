@@ -10,12 +10,14 @@ import {
   Button,
   Checkbox,
   Grid,
-  TextField, FormControlLabel
-
+  TextField,
+  FormControlLabel,
 } from '@mui/material';
 import { fetchSeedList } from '../../utils/FetchSeedList';
-import {useBackButton} from '../../utils/navigation';
-import {startListPdf} from '../../utils/StartListPdf';
+import { useBackButton } from '../../utils/navigation';
+import { startListPdf } from '../../utils/StartListPdf';
+import { getRaceDetails } from '../../utils/RaceDetails';
+import { shuffleArray } from '../../utils/GenericUtils';
 
 export default function GenerateStartList() {
   const { competitionId, raceId } = useParams();
@@ -32,55 +34,30 @@ export default function GenerateStartList() {
 
   const handleBack = useBackButton();
 
-
-  useEffect(() => {
-    fetchRaceDetails();
-    getFetchSeedList();
-    startListExistsFn();
-    getStartList();
-  }, [competitionId, raceId]);
-
   const getFetchSeedList = async () => {
     const seedlist = await fetchSeedList(competitionId);
     setSeedList(seedlist);
   };
 
   const fetchRaceDetails = async () => {
-    const query = `
-      SELECT
-        women_separate AS is_women_separate
-        , 15 AS randomise_top
-        , 5 AS randomise_top_women
-        , venue
-        , course_name
-        , weather
-        , snow
-        , temp_start
-        , temp_finish
-        , homologation
-        , start_altitude
-        , finish_altitude
-        , start_altitude - finish_altitude AS altitude_difference
-        , race_date
-        , race_name
-        , c.competition_name
-        , c.competition_description
-      FROM races r
-        LEFT JOIN people td ON r.tech_delegate = td.id
-        LEFT JOIN people cor ON r.chief_of_race = td.id
-        LEFT JOIN people rf ON r.referee = td.id
-        LEFT JOIN people ar ON r.asst_referee = td.id
-        LEFT JOIN competitions c ON r.competition_id = c.id
-      WHERE race_id = ? AND competition_id = ?
+    const details = await getRaceDetails(raceId, competitionId);
+    setRaceDetails(details);
+  };
 
+  const getStartList = async () => {
+    const query = `
+    SELECT
+      p.id, p.first_name, p.last_name, rc.bib_number,
+      cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
+      cc.is_veteran, cc.is_female, cc.team
+      FROM race_competitor rc
+    INNER JOIN people p ON rc.racer_id = p.id
+    INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
+    WHERE rc.competition_id = ? AND rc.race_id = ?
     `;
-    try {
-      const result = await window.api.select(query, [raceId, competitionId]);
-      if (result && result[0]) {
-        setRaceDetails(result[0]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch race details:', error);
+    const results = await window.api.select(query, [competitionId, raceId]);
+    if (results) {
+      setStartList(results);
     }
   };
 
@@ -99,23 +76,6 @@ export default function GenerateStartList() {
     }
     setStartListExists(exists);
     getStartList();
-  };
-
-  const getStartList = async () =>{
-    const query = `
-    SELECT
-      p.id, p.first_name, p.last_name, rc.bib_number,
-      cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, cc.team
-      FROM race_competitor rc
-    INNER JOIN people p ON rc.racer_id = p.id
-    INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
-    WHERE rc.competition_id = ? AND rc.race_id = ?
-    `;
-    const results = await window.api.select(query, [competitionId, raceId]);
-    if (results) {
-      setStartList(results);
-    }
   };
 
   const generatePDF = () => {
@@ -138,12 +98,11 @@ export default function GenerateStartList() {
   };
 
   const generateStartList = () => {
-
     const activeCompetitors = seedList.filter(
       (competitor) => !struckOutCompetitors[competitor.id],
     );
     let menStartList = [];
-    let womenStartList = [];
+    let tmpWomenStartList = [];
 
     if (raceDetails.is_women_separate) {
       // Handle separate start lists for men and women
@@ -164,7 +123,7 @@ export default function GenerateStartList() {
           .filter((competitor) => competitor.gender === 'M')
           .slice(raceDetails.randomise_top),
       ];
-      womenStartList = [
+      tmpWomenStartList = [
         ...topWomenCompetitors,
         ...activeCompetitors
           .filter((competitor) => competitor.gender === 'F')
@@ -184,12 +143,15 @@ export default function GenerateStartList() {
     }
 
     setStartList(menStartList);
-    setWomenStartList(raceDetails.is_women_separate ? womenStartList : null);
+    setWomenStartList(raceDetails.is_women_separate ? tmpWomenStartList : null);
   };
 
-  const shuffleArray = (array) => {
-    return array.sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5);
-  };
+  useEffect(() => {
+    fetchRaceDetails().catch(console.error);
+    getFetchSeedList().catch(console.error);
+    startListExistsFn().catch(console.error);
+    getStartList().catch(console.error);
+  }, [competitionId, raceId]);
 
   const saveStartList = async (list, gender) => {
     const query = `
@@ -201,19 +163,20 @@ export default function GenerateStartList() {
       VALUES (?, ?, ?, 1);
     `;
     try {
-      for (let i = 0; i < list.length; i++) {
-        await window.api.insert(query, [
+      const promises = [];
+      let res;
+      for (let i = 0; i < list.length; i += 1) {
+        res = window.api.insert(query, [
           competitionId,
           raceId,
           list[i].id,
           i + 1,
         ]);
-        await window.api.insert(raceQuery, [
-          competitionId,
-          raceId,
-          list[i].id,
-        ]);
+        promises.push(res);
+        res = window.api.insert(raceQuery, [competitionId, raceId, list[i].id]);
+        promises.push(res);
       }
+      await Promise.all(promises);
       alert(`${gender} start list saved successfully.`);
     } catch (error) {
       console.error(`Failed to save ${gender} start list:`, error);
@@ -222,9 +185,9 @@ export default function GenerateStartList() {
 
   const handleSaveStartList = () => {
     if (womenStartList) {
-      saveStartList(startList, 'Men\'s');
-      saveStartList(womenStartList, 'Women\'s');
-    } else{
+      saveStartList(startList, "Men's");
+      saveStartList(womenStartList, "Women's");
+    } else {
       saveStartList(startList, 'Congratulations, ');
     }
   };
@@ -297,7 +260,7 @@ export default function GenerateStartList() {
                 label=""
               />
               <ListItemText
-                primary={`${i+1}: ${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
+                primary={`${i + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
                 secondary={`Seed: ${competitor.seed_points}`}
               />
             </ListItem>
@@ -342,7 +305,7 @@ export default function GenerateStartList() {
               component="h2"
               className="mb-4 text-gray-700"
             >
-              Women's Start List
+              Women&apos;s Start List
             </Typography>
             <List>
               {womenStartList.map((competitor, index) => (
@@ -390,15 +353,15 @@ export default function GenerateStartList() {
         </Button>
         {startList && (
           <Paper elevation={1} className="p-4 mt-4">
-            {(raceDetails.is_women_separate ? true: false) &&
-            <Typography
-              variant="h6"
-              component="h2"
-              className="mb-4 text-gray-700"
-            >
-              Men's Start List
-            </Typography>
-            }
+            {!!raceDetails.is_women_separate && (
+              <Typography
+                variant="h6"
+                component="h2"
+                className="mb-4 text-gray-700"
+              >
+                Men&apos;s Start List
+              </Typography>
+            )}
             <List>
               {startList.map((competitor, index) => (
                 <ListItem key={competitor.id}>
@@ -418,7 +381,7 @@ export default function GenerateStartList() {
               component="h2"
               className="mb-4 text-gray-700"
             >
-              Women's Start List
+              Women&apos;s Start List
             </Typography>
             <List>
               {womenStartList.map((competitor, index) => (

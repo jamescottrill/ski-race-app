@@ -1,11 +1,13 @@
 import pdfMake from 'pdfmake/build/pdfmake';
-// const { vfsFonts } = require('pdfmake/build/vfs_fonts');
 import { calculateCategory } from './CompetitorManagement';
+import { getFormattedDate } from './DateUtils';
+import { tableStyles } from './PdfStyles';
+
+// const { vfsFonts } = require('pdfmake/build/vfs_fonts');
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
 const startListPdf = (raceDetails, startList) => {
-
   const docDefinition = {
     content: [
       { text: raceDetails.competition_name, style: 'header' },
@@ -29,6 +31,8 @@ const startListPdf = (raceDetails, startList) => {
         columnGap: 10,
       },
       {
+        layout: 'lightHorizontalLines',
+        style: 'table',
         table: {
           headerRows: 1,
           widths: ['auto', 'auto', '*', '*', 'auto'],
@@ -48,33 +52,26 @@ const startListPdf = (raceDetails, startList) => {
               calculateCategory(competitor),
             ]),
           ],
-          layout: 'lightHorizontalLines',
         },
       },
     ],
-    styles: {
-      header: { fontSize: 18, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
-      subheader: { fontSize: 15, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
-      title: { fontSize: 14, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
-      section: { fontSize: 12, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
-      text: { fontSize: 10, margin: [0, 2, 0, 2] },
-      tableHeader: {
-        bold: true,
-      },
-    },
+    styles: tableStyles,
   };
 
   const pdfDoc = pdfMake.createPdf(docDefinition);
 
   // Use Electron's dialog to choose save location
   pdfDoc.getBuffer((buffer) => {
+    const formattedDate = getFormattedDate();
+    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
+    const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}.pdf`;
     window.electronAPI
-      .savePDF(buffer)
+      .savePDF(buffer, defaultFileName)
       .then((filePath) => {
         if (filePath) {
-          console.log('PDF saved successfully to:', filePath);
+          alert('PDF saved successfully to:', filePath);
         } else {
-          console.log('PDF save cancelled.');
+          alert('PDF save cancelled.');
         }
       })
       .catch((err) => {

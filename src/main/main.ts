@@ -16,6 +16,7 @@ import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
 const db = require('./utils/db');
+const fs = require('fs');
 
 class AppUpdater {
   constructor() {
@@ -160,15 +161,21 @@ app
   })
   .catch(console.log);
 
-ipcMain.handle('save-pdf', async (event, buffer) => {
+ipcMain.handle('save-pdf', async (event, buffer, defaultFileName) => {
   const { filePath } = await dialog.showSaveDialog({
-    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    title: 'Save PDF',
+    defaultPath: defaultFileName,
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
   });
 
   if (filePath) {
-    const fs = require('fs');
-    fs.writeFileSync(filePath, buffer);
-    return filePath;
+    try {
+      fs.writeFileSync(filePath, Buffer.from(buffer));
+      return filePath; // Return file path if saved successfully
+    } catch (err) {
+      console.error('Failed to save PDF:', err);
+      throw err; // Throw error to be caught in renderer
+    }
   }
-  return null;
+  return null; // Return null if the user cancels the dialog
 });

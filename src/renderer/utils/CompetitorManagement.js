@@ -159,6 +159,7 @@ const createCompetitor = async (formData, competitionId) => {
   } catch (error) {
     console.error('Failed to create competitor:', error);
   }
+  return false;
 };
 
 const calculateCategory = (competitor) => {
@@ -191,5 +192,4 @@ const calculateCategory = (competitor) => {
   return category;
 };
 
-
-export {updateCompetitor, calculateAgeCategory, createCompetitor, competitorExists, calculateCategory};
+export { updateCompetitor, calculateAgeCategory, createCompetitor, competitorExists, calculateCategory };

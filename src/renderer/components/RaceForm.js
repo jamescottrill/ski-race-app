@@ -16,7 +16,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { v4 as uuid4 } from 'uuid';
 import PersonModal from './PersonModal'; // Import the PersonModal component
-import {useBackButton} from '../utils/navigation';
+import { useBackButton } from '../utils/navigation';
 
 function RaceForm({ editMode, raceId }) {
   const { competitionId } = useParams();
@@ -47,7 +47,6 @@ function RaceForm({ editMode, raceId }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPersonField, setSelectedPersonField] = useState(null);
   const handleBack = useBackButton();
-
 
   const fetchPeople = async () => {
     const query = `SELECT id, first_name, last_name FROM people`;

@@ -5,7 +5,9 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 export type Channels = 'ipc-example';
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  savePDF: (buffer: any) => ipcRenderer.invoke('save-pdf', buffer),
+  savePDF: async (buffer: any, defaultFileName: string) => {
+    return await ipcRenderer.invoke('save-pdf', buffer, defaultFileName);
+  },
 });
 
 const electronHandler = {
@@ -39,27 +41,26 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('db-delete', query, params),
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-
+document.addEventListener('DOMContentLoaded', () => {
   // Event delegation for blur events on dynamically loaded inputs
-  document.addEventListener("blur", function (event) {
-    if(!event.target && !event.target.calssList) return;
-    if(!event.target.classList.contains('race-time-input')) return;
-    const input = event.target;
-    const value = input.value.padStart(6, '0');
-    if (value.length === 0) return;
-    const timeRegex = /^([0-5][0-9])(:|\.)?([0-5][0-9])(:|\.)?\d{0,2}$/;
-    if (!timeRegex.test(value)) {
-      input.focus();
-    } else {
-      return;
-    }
-  }, true);
+  document.addEventListener(
+    'blur',
+    function (event): void {
+      if (!event.target) return;
+      if (!event.target.classList) return;
+      if (!event.target.classList.contains('race-time-input')) return;
+      const input = event.target;
+      const value = input.value.padStart(6, '0');
+      if (value.length === 0) return;
+      const timeRegex = /^([0-5][0-9])(:|\.)?([0-5][0-9])(:|\.)?\d{0,2}$/;
+      if (!timeRegex.test(value)) {
+        input.focus();
+      } else {
+        return;
+      }
+    },
+    true,
+  );
 });
-
-
-
-
-
 
 export type ElectronHandler = typeof electronHandler;

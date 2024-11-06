@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { List, ListItem, ListItemText, Collapse } from '@mui/material';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
-import { Image } from '@mui/icons-material';
+// import { Image } from '@mui/icons-material';
 
 export default function Sidebar() {
   const { competitionId } = useParams(); // Get the current competitionId from the URL

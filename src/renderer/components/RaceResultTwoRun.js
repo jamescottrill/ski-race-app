@@ -8,17 +8,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
-  Select,
-  MenuItem,
   Button,
 } from '@mui/material';
 import OtherResultTable from './DnsTable';
+import { resultsTwoPdf } from '../utils/ResultsTwoPdf';
+import { getRaceDetails } from '../utils/RaceDetails';
+import { convertRaceTime } from '../utils/TimeUtils';
 
-export default function RaceResultTwoRun({
-  raceId,
-  competitionId,
-}) {
+export default function RaceResultTwoRun({ raceId, competitionId }) {
   const [data, setData] = useState([]);
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
@@ -26,16 +23,9 @@ export default function RaceResultTwoRun({
   const [run2Dnf, setRun2Dnf] = useState([]);
   const [run2Dns, setRun2Dns] = useState([]);
   const [run2Dsq, setRun2Dsq] = useState([]);
+  const [raceDetails, setRaceDetails] = useState([]);
 
-  const convertRaceTime = (time) => {
-    if (!time) return '';
-    const minutes = Math.floor(time / 60)
-      .toString()
-      .padStart(2, '0');
-    const seconds = (time % 60).toString().split('.')[0].padStart(2, '0');
-    const milliseconds = (time.toString().split('.')[1] ?? '00').padEnd(2, '0');
-    return `${minutes}:${seconds}.${milliseconds}`;
-  };
+
 
   const initialData = async () => {
     const raceQuery = `
@@ -152,53 +142,92 @@ export default function RaceResultTwoRun({
       };
     });
 
-    const r1Dnf = mapped.filter((e) => {
-      return e.run1Dnf;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });;
+    const r1Dnf = mapped
+      .filter((e) => {
+        return e.run1Dnf;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun1Dnf(r1Dnf);
-    const r1Dns = mapped.filter((e) => {
-      return e.run1Dns;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });
+    const r1Dns = mapped
+      .filter((e) => {
+        return e.run1Dns;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun1Dns(r1Dns);
-    const r1Dsq = mapped.filter((e) => {
-      return e.run1Dsq;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });
+    const r1Dsq = mapped
+      .filter((e) => {
+        return e.run1Dsq;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun1Dsq(r1Dsq);
-    const r2Dnf = mapped.filter((e) => {
-      return e.run2Dnf;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });
+    const r2Dnf = mapped
+      .filter((e) => {
+        return e.run2Dnf;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun2Dnf(r2Dnf);
-    const r2Dns = mapped.filter((e) => {
-      return e.run2Dns;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });
+    const r2Dns = mapped
+      .filter((e) => {
+        return e.run2Dns;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun2Dns(r2Dns);
-    const r2Dsq = mapped.filter((e) => {
-      return e.run2Dsq;
-    }).sort(function(a, b){
-      return a.bibNumber-b.bibNumber
-    });
+    const r2Dsq = mapped
+      .filter((e) => {
+        return e.run2Dsq;
+      })
+      .sort(function (a, b) {
+        return a.bibNumber - b.bibNumber;
+      });
     setRun2Dsq(r2Dsq);
-    const finished = mapped.filter((e) => {
-      return e.completed;
-    }).sort(function(a, b){
-      return a.position-b.position
-    });
+    const finished = mapped
+      .filter((e) => {
+        return e.completed;
+      })
+      .sort(function (a, b) {
+        return a.position - b.position;
+      });
     setData(finished);
   };
 
+  const initRaceDetails = async () => {
+    const details = await getRaceDetails(raceId, competitionId);
+    setRaceDetails(details);
+  };
+
   useEffect(() => {
-    initialData();
-  }, []);
+    // const init = async () => {
+    //   await initialData();
+    //   await initRaceDetails();
+    // };
+    initialData().catch(console.error);
+    initRaceDetails().catch(console.error);
+    // init();
+    // init().catch(console.error);
+  }, [raceId, competitionId]);
+
+  const generatePDF = () => {
+    resultsTwoPdf(
+      raceDetails,
+      data,
+      run1Dns,
+      run1Dnf,
+      run1Dsq,
+      run2Dns,
+      run2Dnf,
+      run2Dsq,
+    );
+  };
 
   return (
     <>
@@ -292,6 +321,9 @@ export default function RaceResultTwoRun({
           </TableContainer>
         </>
       )}
+      <Button variant="contained" onClick={generatePDF}>
+        Download PDF
+      </Button>
     </>
   );
 }

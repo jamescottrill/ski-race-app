@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@mui/material';
 import OtherResultTable from './DnsTable';
+import { convertRaceTime} from '../utils/TimeUtils';
 
 export default function RaceResultOneRun({
   raceId,
@@ -19,16 +20,6 @@ export default function RaceResultOneRun({
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
   const [run1Dsq, setRun1Dsq] = useState([]);
-
-  const convertRaceTime = (time) => {
-    if (!time) return '';
-    const minutes = Math.floor(time / 60)
-      .toString()
-      .padStart(2, '0');
-    const seconds = (time % 60).toString().split('.')[0].padStart(2, '0');
-    const milliseconds = (time.toString().split('.')[1] ?? '00').padEnd(2, '0');
-    return `${minutes}:${seconds}.${milliseconds}`;
-  };
 
   const initialData = async () => {
     const raceQuery = `
