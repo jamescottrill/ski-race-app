@@ -68,16 +68,15 @@ export default function RaceResultOneRun({
                                JOIN factors f ON f.race = r.race_type)
           SELECT
             *,
-            ROUND((run_1_time - mintime) / run_1_time * factor, 2) AS seed_points,
+            ROUND((run_1_time - mintime) / mintime * factor, 2) AS seed_points,
             RANK() OVER (ORDER BY run_1_time) AS position
           FROM data
           ORDER BY run_1_time
         `;
-    const raceQueryValues = [raceId, raceId];
+    const raceQueryValues = [raceId];
     let results = [];
     try {
       results = await window.api.select(raceQuery, raceQueryValues);
-      console.log(results);
     } catch (e) {
       console.error('Failed to fetch competitors:', e);
       return;
@@ -128,12 +127,12 @@ export default function RaceResultOneRun({
         return a.bibNumber - b.bibNumber;
       });
     setRun1Dsq(r1Dsq);
-    const r2Dnf = mapped
+    const finished = mapped
       .filter((e) => {
-        return e.run2Dnf;
+        return e.completed;
       })
       .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
+        return a.position - b.position;
       });
     setData(finished);
   };

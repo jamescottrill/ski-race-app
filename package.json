@@ -95,6 +95,8 @@
     "@mui/icons-material": "^5.16.7",
     "@mui/material": "^5.16.7",
     "@types/pdfmake": "^0.2.9",
+    "danfojs": "^1.1.2",
+    "dataframe-js": "^1.4.4",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",

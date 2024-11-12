@@ -94,7 +94,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                JOIN factors f ON f.race = r.race_type)
           SELECT
             *,
-            ROUND((total_time - mintime) / total_time * factor, 2) AS seed_points,
+            ROUND((total_time - mintime) / mintime * factor, 2) AS seed_points,
             RANK() OVER (ORDER BY total_time) AS position
           FROM data
           ORDER BY total_time

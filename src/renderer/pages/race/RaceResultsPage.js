@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
@@ -8,7 +8,7 @@ import RaceResultSeed from '../../components/RaceResultSeed';
 import { getRaceDetails } from '../../utils/RaceDetails';
 
 function RaceRunTabPanel(props) {
-  const { value, index, raceId, competitionId, edit, ...other } = props;
+  const { value, index, raceId, competitionId, edit, totalRuns, ...other } = props;
 
   return (
     <div
@@ -23,13 +23,14 @@ function RaceRunTabPanel(props) {
         raceId={raceId}
         competitionId={competitionId}
         edit={edit}
+        totalRuns={totalRuns}
       />
     </div>
   );
 }
 
 function RaceResultTabPanel(props) {
-  const { value, index, raceId, competitionId, runs, isSeed, ...other } = props;
+  const { value, index, raceId, competitionId, runs, isSeed } = props;
 
   return (
     <div
@@ -37,7 +38,6 @@ function RaceResultTabPanel(props) {
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
-      {...other}
     >
       {runs === 2 && isSeed && (
         <RaceResultSeed raceId={raceId} competitionId={competitionId} />
@@ -75,13 +75,14 @@ export default function RaceResultsPage() {
     `;
     const params = [raceId, competitionId];
     try {
-      const raceResults = await window.api.select(numRunQuery, params);
-      setRaceRuns(raceResults);
-      const notCompleted = raceResults.filter((e) => {
+      const numRuns = await window.api.select(numRunQuery, params);
+      setRaceRuns(numRuns);
+      const notCompleted = numRuns.filter((e) => {
         return !e.is_complete;
       });
       if (notCompleted.length === 2) setValue(1);
-      if (notCompleted.length === 1) setValue(2);
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 2) setValue(2);
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 1) setValue(1);
     } catch (error) {
       console.error('Failed to fetch races:', error);
     }
@@ -89,10 +90,11 @@ export default function RaceResultsPage() {
 
   useEffect(() => {
     getNumberRuns();
-    getRaceDetails(raceId, competitionId).then((details) => {
+    const getDetails = async () => {
+      const details = await getRaceDetails(raceId, competitionId)
         setRaceDetails(details);
-      }
-    ).catch(console.error);
+    };
+    getDetails();
   }, [raceId, competitionId]);
 
   return (
@@ -121,6 +123,7 @@ export default function RaceResultsPage() {
             raceId={raceId}
             competitionId={run.competition_id}
             edit={!run.is_complete}
+            totalRuns={raceRuns.length}
           />
         ))}
         <RaceResultTabPanel

@@ -35,7 +35,12 @@ export default function GenerateStartList() {
   const handleBack = useBackButton();
 
   const getFetchSeedList = async () => {
-    const seedlist = await fetchSeedList(competitionId);
+    let completedRaces;
+    completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training`, [competitionId]);
+    if (completedRaces.length > 3) {
+      completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding`, [competitionId]);
+    }
+    const seedlist = await fetchSeedList(competitionId, completedRaces.map((e)=>e.raceId));
     setSeedList(seedlist);
   };
 
@@ -58,6 +63,7 @@ export default function GenerateStartList() {
     const results = await window.api.select(query, [competitionId, raceId]);
     if (results) {
       setStartList(results);
+      console.log(results);
     }
   };
 
@@ -141,7 +147,7 @@ export default function GenerateStartList() {
         ...activeCompetitors.slice(raceDetails.randomise_top),
       ];
     }
-
+    console.log(menStartList);
     setStartList(menStartList);
     setWomenStartList(raceDetails.is_women_separate ? tmpWomenStartList : null);
   };
@@ -169,11 +175,15 @@ export default function GenerateStartList() {
         res = window.api.insert(query, [
           competitionId,
           raceId,
-          list[i].id,
+          list[i].racer_id,
           i + 1,
         ]);
         promises.push(res);
-        res = window.api.insert(raceQuery, [competitionId, raceId, list[i].id]);
+        res = window.api.insert(raceQuery, [
+          competitionId,
+          raceId,
+          list[i].racer_id,
+        ]);
         promises.push(res);
       }
       await Promise.all(promises);

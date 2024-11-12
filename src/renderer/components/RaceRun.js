@@ -1,4 +1,4 @@
-// eslint-disable no-nested-ternary
+/* eslint-disable no-nested-ternary */
 import React, { useEffect, useState } from 'react';
 import {
   Paper,
@@ -19,6 +19,7 @@ export default function RaceRun({
   raceId,
   competitionId,
   runId,
+  totalRuns,
   edit = false,
 }) {
   const [data, setData] = useState([]);
@@ -168,6 +169,12 @@ export default function RaceRun({
 
   const saveResults = async (results) => {
     const nextRun = runId + 1;
+    const completeQuery = `UPDATE race_run SET is_complete = true WHERE race_id = ? AND run_number = ?`;
+    await window.api.select(completeQuery, [raceId, runId]);
+    if (runId === totalRuns) {
+      window.alert('All results saved.');
+      return;
+    }
     const dropQuery = `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
     const dropParams = [competitionId, raceId, nextRun];
     try {
@@ -180,14 +187,17 @@ export default function RaceRun({
       VALUES (?, ?, ?, ?);
     `;
     try {
-      for (let i = 0; i < results.length; i++) {
-        await window.api.insert(raceQuery, [
+      const promises = [];
+      results.forEach((result) => {
+        const res = window.api.insert(raceQuery, [
           competitionId,
           raceId,
-          results[i].id.split('/')[0],
-          nextRun,
+          result.id.split('/')[0],
+          nextRun
         ]);
-      }
+        promises.push(res);
+      })
+      const complete = await Promise.all(promises);
       alert(`Results saved successfully.`);
     } catch (error) {
       console.error(`Failed to save results:`, error);

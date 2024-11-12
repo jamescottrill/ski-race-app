@@ -66,8 +66,8 @@ const seedResults = `
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
-                             ROUND((run_1_time - min1time) / run_1_time * factor, 2) AS seed_1,
-                             ROUND((run_2_time - min2time) / run_2_time * factor, 2) AS seed_2
+                             ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_1,
+                             ROUND((run_2_time - min2time) / min2time * factor, 2) AS seed_2
                       FROM data),
           final AS(
             SELECT
@@ -96,14 +96,14 @@ const seedingPoints = `
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
+                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
                run2 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
+                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 2
@@ -120,6 +120,7 @@ const seedingPoints = `
                                    OVER (ORDER BY run1.race_id)                                          AS min2time
                         FROM run1
                                LEFT JOIN run2 ON run1.racer_id = run2.racer_id
+                               JOIN races r ON run1.race_id = r.race_id
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
@@ -127,12 +128,15 @@ const seedingPoints = `
                              ROUND((run_2_time - min2time) / run_2_time * factor, 2) AS seed_2
                       FROM data)
             SELECT
-              racer_id,
+              s.racer_id,
               race_id,
               CASE
                 WHEN NOT seed_1 AND NOT seed_2 THEN NULL
-                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) THEN seed_1 ELSE seed_2 END AS overall_seed
-            FROM seeds
+                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < cc.arrival_seed THEN seed_1
+                WHEN COALESCE(seed_2, 999999) < cc.arrival_seed THEN seed_2
+                ELSE arrival_seed END AS seed_point
+            FROM seeds s
+            JOIN competition_competitor cc ON cc.racer_id = s.racer_id
         `;
 
 export { seedResults, seedingPoints };

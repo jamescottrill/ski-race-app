@@ -1,3 +1,8 @@
+/* eslint-disable camelcase, prefer-destructuring, @typescript-eslint/no-unused-vars, no-case-declarations  */
+import * as dfd from 'danfojs';
+import { seedPointsOneRun, seedPointsTwoRun } from '../queries/SeedPoints';
+import { seedingPoints } from '../queries/SeedResults';
+
 const raceMultipliers = {
   Downhill: 1250,
   Slalom: 730,
@@ -8,113 +13,127 @@ const raceMultipliers = {
 
 const DEFAULT_SEED_POINTS = 2000;
 
-const fetchSeedList = async (competitionId) => {
-  try {
-    // Fetch the race details to get the race type and multiplier
-    const raceQuery = `
-        SELECT DISTINCT r.race_id, race_type, is_seeding
-        FROM races r
-        INNER JOIN race_results rr
-          ON r.race_id = rr.race_id AND
-             r.competition_id = rr.competition_id
-        WHERE r.competition_id = ?
-      `;
-    // Joining on race_results prevents created but not run races from being included
-    // As soon as a race has a result it will impact the seed list.
-    const raceResult = await window.api.select(raceQuery, [competitionId]);
-    if (raceResult.length > 0) {
-      const raceType = raceResult[0].race_type;
-      const multiplier = raceMultipliers[raceType];
-
-      // Fetch run details for the race
-      const runQuery = `
-          SELECT run_number, race_time, is_training
-          FROM race_results rr
-          INNER JOIN races r
-          ON r.race_id = rr.race_id
-          WHERE rr.competition_id = ? AND rr.race_id = ? AND r.is_training = 0
-        `;
-      const runResult = await window.api.select(runQuery, [
-        competitionId,
-        raceResult[0].id,
-      ]);
-
-      // Fetch the winner's time for each run
-      const winnerQuery = `
-          SELECT run_number, MIN(race_time) AS winner_time
-          FROM race_results rr
-          INNER JOIN races r
-          ON r.race_id = rr.race_id
-          WHERE rr.competition_id = ? AND rr.race_id = ? AND r.is_training = 0
-          GROUP BY run_number
-        `;
-      const winnerResult = await window.api.select(winnerQuery, [
-        competitionId,
-        raceResult[0].id,
-      ]);
-
-      let calculatedSeedList;
-
-      if (raceResult[0].is_seeding) {
-        // For seeding races, calculate seed points for each run and pick the best (closest to 0)
-        const seedPointsByRun = runResult.map((run) => {
-          const winnerTime = winnerResult.find(
-            (w) => w.run_number === run.run_number,
-          ).winner_time;
-          const seedPoints = (run.race_time - winnerTime) * multiplier;
-          return { run_number: run.run_number, seed_points: seedPoints };
-        });
-
-        const bestSeedPoints = Math.min(
-          ...seedPointsByRun.map((sp) => sp.seed_points),
-        );
-
-        calculatedSeedList = seedPointsByRun.map((run, index) => ({
-          id: run.id,
-          first_name: run.first_name,
-          last_name: run.last_name,
-          title: run.title,
-          seed_points: bestSeedPoints,
-        }));
-      } else {
-        // For non-seeding races, sum the times of all runs and then calculate seed points
-        const totalTime = runResult.reduce(
-          (acc, run) => acc + run.race_time,
-          0,
-        );
-        const winnerTimeSum = winnerResult.reduce(
-          (acc, winner) => acc + winner.winner_time,
-          0,
-        );
-        const seedPoints = (totalTime - winnerTimeSum) * multiplier;
-
-        calculatedSeedList = runResult.map((competitor) => ({
-          id: competitor.id,
-          first_name: competitor.first_name,
-          last_name: competitor.last_name,
-          title: competitor.title,
-          seed_points: seedPoints,
-        }));
-      }
-
-      return calculatedSeedList;
-    }
-    // Fetch arrival seed points if no seeding race
-    const seedQuery = `
-          SELECT p.id, p.first_name, p.last_name, p.title, p.service_number, p.gender
-               , COALESCE(t.team_name, '') AS team_name
-               , COALESCE(arrival_army_seed, arrival_corps_seed, arrival_seed, ${DEFAULT_SEED_POINTS}) AS seed_points
-          FROM competition_competitor sl
-          JOIN people p ON sl.racer_id = p.id
-          LEFT JOIN competition_team t ON sl.team = t.team_id
-          WHERE sl.competition_id = ?
-          ORDER BY seed_points ASC
-        `;
-    const seedResult = await window.api.select(seedQuery, [competitionId]);
-    return seedResult;
-  } catch (error) {
-    console.error('Failed to fetch seed list:', error);
+const calculateRacerSeedPoints = (row, df) => {
+  // Extract all UUID keys (assuming UUIDs are non-standard alphanumeric)
+  const racePoints = Object.keys(row)
+    .filter((key) => key !== 'racer_id' && key !== 'seed_points') // Filter out racer_id and seed_points
+    .map((key) => row[key]);
+  const numRaces = racePoints.length;
+  let finalSeedPoints;
+  switch (numRaces) {
+    case 1:
+      finalSeedPoints = racePoints[0];
+      break;
+    case 2:
+      // Seeding after the first Championship Race: better of initial points and first race
+      finalSeedPoints = Math.min(racePoints[0], racePoints[1]);
+      break;
+    case 3:
+      // Seeding after the second Championship Race: sum of the best two divided by 2
+      // Seeding after the third championship Race: sum of the best two divided by 2, Initial Seed Points Dropped
+      const bestTwo = racePoints.sort((a, b) => a - b).slice(0, 2);
+      finalSeedPoints = (bestTwo[0] + bestTwo[1]) / 2;
+      break;
+    case 4:
+      // Seeding after the fourth Championship Race: sum of the best three divided by 3
+      const bestThree4 = racePoints.sort((a, b) => a - b).slice(0, 3);
+      finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
+      break;
+    case 5:
+      // Seeding after the fifth Championship Race: sum of the best three divided by 3
+      const bestThree5 = racePoints.sort((a, b) => a - b).slice(0, 3);
+      finalSeedPoints = (bestThree5[0] + bestThree5[1] + bestThree5[2]) / 3;
+      break;
+    default:
+      // Seeding after the fifth or more races: sum of the best (n - 2) divided by (n - 2)
+      const bestNMinusTwo = racePoints
+        .sort((a, b) => a - b)
+        .slice(0, numRaces - 2);
+      finalSeedPoints =
+        bestNMinusTwo.reduce((acc, val) => acc + val, 0) / bestNMinusTwo.length;
+      break;
   }
+  row.seed_points = finalSeedPoints;
+  return row;
+};
+
+const calculateTotalSeedPoints = async (dataFrame) => {};
+
+const fetchSeedList = async (competitionId, raceIds) => {
+  const people = await window.api.select(
+    'SELECT rc.*, p.first_name, p.last_name, p.title, p.dob, p.gender FROM race_competitor rc LEFT JOIN people p ON rc.racer_id = p.id WHERE competition_id = ?',
+    [competitionId],
+  );
+  const peopleDf = new dfd.DataFrame(people);
+  const raceTypePromises = [];
+  raceIds.forEach((race) => {
+    const raceType = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns FROM races WHERE race_id = ? AND competition_id = ?`;
+    const results = window.api.select(raceType, [race, competitionId]);
+    raceTypePromises.push(results);
+  });
+  const resultsPromise = [];
+  const raceTypes = await Promise.all(raceTypePromises);
+  raceTypes.forEach((raceType) => {
+    let query;
+    let values;
+    if (raceType[0].isSeeding) {
+      query = seedingPoints;
+      values = [raceType[0].raceId, raceType[0].raceId];
+    } else if (raceType[0].numRuns === 1) {
+      query = seedPointsOneRun;
+      values = [raceType[0].raceId];
+    } else if (raceType[0].numRuns === 2) {
+      query = seedPointsTwoRun;
+      values = [raceType[0].raceId, raceType[0].raceId];
+    }
+    const results = window.api.select(query, values);
+    resultsPromise.push(results);
+  });
+
+  const seedPointResults = await Promise.all(resultsPromise);
+  // Step 3: Process results into a dataframe.
+  const seedData = [];
+  seedPointResults.forEach((raceResults) => {
+    raceResults.forEach(({ race_id, racer_id, seed_point }) => {
+      seedData.push({ race_id, racer_id, seed_point });
+    });
+  });
+  if (seedData.length === 0) return [];
+  const df = new dfd.DataFrame(seedData);
+  // Step 4: Pivot the data manually
+  const uniqueRacers = [...new Set(df.racer_id.values)];
+  const uniqueRaces = [...new Set(df.race_id.values)];
+
+  // Create an initial structure for the result
+  const pivotData = uniqueRacers.map((racerId) => {
+    const row = { racer_id: racerId };
+    uniqueRaces.forEach((raceId) => {
+      row[raceId] = null; // Initialize with null values
+    });
+    row.seed_points = 0;
+    return row;
+  });
+
+  // Fill in the seed points for each racer and race
+  df.values.forEach(([race_id, racer_id, seed_point]) => {
+    const row = pivotData.find((row) => row.racer_id === racer_id);
+    if (row) {
+      row[race_id] = seed_point;
+    }
+  });
+  const pivotDf = new dfd.DataFrame(pivotData);
+  const totalSeed = pivotData.map((x) => {
+    return calculateRacerSeedPoints(x, pivotDf);
+  });
+  const totalSeedDf = new dfd.DataFrame(totalSeed);
+  const finalResults = dfd.merge({
+    left: peopleDf,
+    right: totalSeedDf,
+    on: ['racer_id'],
+    how: 'left',
+  });
+  finalResults.sortValues('seed_points', { inplace: true, ascending: true });
+  return dfd.toJSON(finalResults);
 };
 
 export { fetchSeedList, raceMultipliers };
