@@ -72,6 +72,7 @@ export default function RaceResultsPage() {
       AND r.competition_id = rr.competition_id
       AND rr.run_number <= r.number_runs
     WHERE rr.race_id = ? AND rr.competition_id = ?
+    ORDER BY rr.run_number
     `;
     const params = [raceId, competitionId];
     try {

@@ -36,9 +36,9 @@ export default function GenerateStartList() {
 
   const getFetchSeedList = async () => {
     let completedRaces;
-    completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training`, [competitionId]);
+    completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training ORDER BY r.race_date ASC`, [competitionId]);
     if (completedRaces.length > 3) {
-      completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding`, [competitionId]);
+      completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding ORDER BY r.race_date ASC`, [competitionId]);
     }
     const seedlist = await fetchSeedList(competitionId, completedRaces.map((e)=>e.raceId));
     setSeedList(seedlist);
@@ -52,7 +52,7 @@ export default function GenerateStartList() {
   const getStartList = async () => {
     const query = `
     SELECT
-      p.id, p.first_name, p.last_name, rc.bib_number,
+      p.id AS racer_id, p.first_name, p.last_name, rc.bib_number,
       cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
       cc.is_veteran, cc.is_female, cc.team
       FROM race_competitor rc
@@ -105,7 +105,7 @@ export default function GenerateStartList() {
 
   const generateStartList = () => {
     const activeCompetitors = seedList.filter(
-      (competitor) => !struckOutCompetitors[competitor.id],
+      (competitor) => !struckOutCompetitors[competitor.racer_id],
     );
     let menStartList = [];
     let tmpWomenStartList = [];
@@ -232,7 +232,7 @@ export default function GenerateStartList() {
               onChange={handleChange}
             />
           </Grid>
-          {raceDetails.is_women_separate && ( // Conditionally show the second input
+          {raceDetails.is_women_separate !== 0 && ( // Conditionally show the second input
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Top X Women to Randomise"
@@ -252,26 +252,26 @@ export default function GenerateStartList() {
         <List>
           {seedList.map((competitor, i) => (
             <ListItem
-              key={`sl-${competitor.id}`}
+              key={`sl-${competitor.racer_id}`}
               style={{
-                textDecoration: struckOutCompetitors[competitor.id]
+                textDecoration: struckOutCompetitors[competitor.racer_id]
                   ? 'line-through'
                   : 'none',
-                color: struckOutCompetitors[competitor.id] ? 'gray' : 'black',
+                color: struckOutCompetitors[competitor.racer_id] ? 'gray' : 'black',
               }}
             >
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={struckOutCompetitors[competitor.id] || false}
-                    onChange={() => handleStrikeOut(competitor.id)}
+                    checked={struckOutCompetitors[competitor.racer_id] || false}
+                    onChange={() => handleStrikeOut(competitor.racer_id)}
                   />
                 }
                 label=""
               />
               <ListItemText
                 primary={`${i + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
-                secondary={`Seed: ${competitor.seed_points}`}
+                secondary={`Seed: ${competitor.seed_points.toFixed(2)}`}
               />
             </ListItem>
           ))}
@@ -298,9 +298,9 @@ export default function GenerateStartList() {
             </Typography>
             <List>
               {startList.map((competitor, index) => (
-                <ListItem key={competitor.id}>
+                <ListItem key={competitor.racer_id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points.toFixed(2)})`}
                   />
                 </ListItem>
               ))}
@@ -319,9 +319,9 @@ export default function GenerateStartList() {
             </Typography>
             <List>
               {womenStartList.map((competitor, index) => (
-                <ListItem key={competitor.id}>
+                <ListItem key={competitor.racer_id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points.toFixed(2)})`}
                   />
                 </ListItem>
               ))}
@@ -374,7 +374,7 @@ export default function GenerateStartList() {
             )}
             <List>
               {startList.map((competitor, index) => (
-                <ListItem key={competitor.id}>
+                <ListItem key={competitor.racer_id}>
                   <ListItemText
                     primary={`${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
                   />
@@ -395,9 +395,9 @@ export default function GenerateStartList() {
             </Typography>
             <List>
               {womenStartList.map((competitor, index) => (
-                <ListItem key={competitor.id}>
+                <ListItem key={competitor.racer_id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points})`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points.toFixed(2)})`}
                   />
                 </ListItem>
               ))}

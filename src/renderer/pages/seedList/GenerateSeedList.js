@@ -18,11 +18,9 @@ import {
   ListItemText,
   MenuItem,
 } from '@mui/material';
-import DataFrame from 'dataframe-js';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import { useBackButton } from '../../utils/navigation';
 import { generatePDF } from '../../pdfs/SeedList';
-import * as dfd from 'danfojs';
 
 export default function SeedListPage() {
   const [seedList, setSeedList] = useState([]);
@@ -32,30 +30,70 @@ export default function SeedListPage() {
   const handleBack = useBackButton();
 
   const seedListPdf = () => {
-    generatePDF(seedList);
+    const sRaces = races.filter((e) => selectedRaces.includes(e.id));
+    generatePDF(seedList, sRaces);
   };
 
   const completedRaces = async () => {
-    const query = `SELECT race_id AS id, race_name AS text FROM races WHERE competition_id = ? AND NOT is_training`;
+    /*
+    Races need to be ordered by date ascending so they can be passed to the
+    seed point calculator and used to identify previous results in the case of
+    not enough results.
+     */
+    const query = `
+        SELECT
+          DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate, r.is_seeding AS isSeeding
+        FROM race_run rr
+          INNER JOIN races r ON r.race_id = rr.race_id
+        WHERE rr.competition_id = ? AND NOT r.is_training AND rr.is_complete
+        ORDER BY r.race_date ASC`;
     const results = await window.api.select(query, [competitionId]);
     setRaces(results);
-    setSelectedRaces(results.map((e) => e.id));
+    if (results.length > 3) {
+      setSelectedRaces(results.filter((e) => !e.isSeeding).map((e) => e.id));
+    } else {
+      setSelectedRaces(results.map((e) => e.id));
+    }
+    return results;
   };
 
   useEffect(() => {
     const fetchList = async () => {
-      await completedRaces();
-      const data = await fetchSeedList(competitionId, selectedRaces);
+      const initialRaces = await completedRaces();
+      let data;
+      if (initialRaces.length > 3) {
+        data = await fetchSeedList(
+          competitionId,
+          initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
+        );
+      } else {
+        data = await fetchSeedList(
+          competitionId,
+          initialRaces.map((e) => e.id),
+        );
+      }
       setSeedList(data);
     };
     fetchList();
   }, [competitionId]);
 
   const handleChange = (event) => {
+    console.log("CHANGED");
     const { value } = event.target;
     setSelectedRaces(value);
     const refreshData = async (sRaces) => {
-      const data = await fetchSeedList(competitionId, sRaces);
+      const fRaces = races.filter((e) => sRaces.includes(e.id));
+      let data;
+      try {
+        data = await fetchSeedList(
+          competitionId,
+          fRaces.map((e) => e.id),
+        );
+        console.log("done");
+      } catch (e) {
+        console.error(e);
+      }
+      console.log(data);
       setSeedList(data);
     };
     refreshData(value);
@@ -122,16 +160,22 @@ export default function SeedListPage() {
                 <TableBody>
                   {seedList.map((competitor, index) => (
                     <TableRow key={competitor.id}>
-                      <TableCell align="center">{index + 1}</TableCell>
+                      <TableCell align="center">
+                        {competitor.position}
+                      </TableCell>
                       <TableCell align="left">{competitor.title}</TableCell>
                       <TableCell align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
                       <TableCell align="left">{competitor.team_name}</TableCell>
-                        {races
-                          .filter((e) => selectedRaces.includes(e.id))
-                          .map((e) => (
-                            <TableCell align="center">{competitor[e.id]}</TableCell>
-                          ))}
-                    <TableCell align="center">{competitor.seed_points}</TableCell>
+                      {races
+                        .filter((e) => selectedRaces.includes(e.id))
+                        .map((e) => (
+                          <TableCell align="center">
+                            {competitor[e.id]}
+                          </TableCell>
+                        ))}
+                      <TableCell align="center">
+                        {competitor.seed_points.toFixed(2)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

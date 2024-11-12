@@ -45,7 +45,8 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
                                dsq_gate,
-                               dsq_reason
+                               dsq_reason,
+                               competition_id
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 1
@@ -89,7 +90,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                LEFT JOIN run2 ON run1.racer_id = run2.racer_id
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
-                               JOIN competition_competitor cc ON cc.racer_id = p.id
+                               JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type)
           SELECT

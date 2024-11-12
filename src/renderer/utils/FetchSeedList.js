@@ -13,40 +13,176 @@ const raceMultipliers = {
 
 const DEFAULT_SEED_POINTS = 2000;
 
-const calculateRacerSeedPoints = (row, df) => {
+const getPreviousSeedList = async (competitionId, raceIds, numRaces) => {
+  let races;
+  if (numRaces === 3) {
+    // In this case, getting the previous number of races, we may need to add the seeding race back in.
+    races = raceIds.slice(0, numRaces - 1);
+    if (sR.length > 0) {
+      races.unshift(sR[0].race_id);
+    }
+  } else {
+    races = raceIds.slice(0, numRaces - 1);
+  }
+  const res = await fetchSeedList(competitionId, races);
+  return res;
+};
+
+const calculateRacerSeedPoints = async (
+  row,
+  raceIds,
+  competitionId,
+  seedResultDf,
+) => {
   // Extract all UUID keys (assuming UUIDs are non-standard alphanumeric)
   const racePoints = Object.keys(row)
     .filter((key) => key !== 'racer_id' && key !== 'seed_points') // Filter out racer_id and seed_points
     .map((key) => row[key]);
   const numRaces = racePoints.length;
+  const nonNullRaces = racePoints.filter((x) => x !== null);
   let finalSeedPoints;
   switch (numRaces) {
     case 1:
-      finalSeedPoints = racePoints[0];
+      finalSeedPoints = nonNullRaces[0];
       break;
     case 2:
-      // Seeding after the first Championship Race: better of initial points and first race
-      finalSeedPoints = Math.min(racePoints[0], racePoints[1]);
+      // Seeding after the first Championship Race: better of initial points and first race.
+      // Initial points includes both the arrival seed points and the results of the seeding race
+      // This means that initial seed points will never be null, so we can apply Math.min safely
+      finalSeedPoints = Math.min.apply(Math, nonNullRaces);
       break;
     case 3:
       // Seeding after the second Championship Race: sum of the best two divided by 2
       // Seeding after the third championship Race: sum of the best two divided by 2, Initial Seed Points Dropped
-      const bestTwo = racePoints.sort((a, b) => a - b).slice(0, 2);
+      if (nonNullRaces.length < 2) {
+        /*
+        If the competitor has failed to complete 2 races (i.e. only has initial, or only has 1st)
+        we need to use the penalty points. This is explained below:
+        The competitor’s position on the current seed list will be matched to the race
+        points awarded to the competitor who finished in that position in the race. To these
+        race points will be added a penalty of 20% or 10 points whichever is the greater. This
+        will give them race points for the race (or first run in the Seeding Giant Slalom race). A
+        competitor whose seed position is below the number of the last finisher in the race will
+        be awarded either the same race points as the last finisher plus a penalty of 20%, or
+        his own seed points, whichever are greater.
+        There is also an exception for competitors who do not start due to injury: - this hasn't been coded yet…
+        If a competitor does not start in any one race, either through sickness,
+        injury, reasons beyond his control, or the ruling of the Race Jury (e.g. Rule 704.8.3), his
+        position on the current seed list will be matched to the race points awarded to the competitor
+        who finished in that position in the race. A competitor will not be allowed to take advantage
+        of this rule more than once at any meeting.
+        Rule 704.8.3 - Didn't complete a DH training run.
+         */
+        // eslint-disable-next-line no-use-before-define
+        // const previousSeedList = await getPreviousSeedList(
+        //   competitionId,
+        //   raceIds,
+        //   3,
+        // );
+        const previousRaces = raceIds.slice(0, 2);
+        const sR = await window.api.select(
+          `SELECT race_id FROM races WHERE competition_id = ? AND is_seeding LIMIT 1`,
+          [competitionId],
+        );
+        const sRId = sR[0].race_id;
+        if (!raceIds.includes(sRId)) {
+          previousRaces.unshift(sRId);
+        }
+        console.log("previousRaces.length");
+        console.log(previousRaces);
+        console.log(previousRaces.length);
+        const previousSeedList = await fetchSeedList(competitionId, previousRaces);
+        console.log(previousSeedList);
+        const competitorRanking = previousSeedList.findIndex(
+          (x) => x.racer_id === row.racer_id,
+        );
+        for (let i = 0; i < raceIds.length; i++) {
+          const raceId = raceIds[i];
+          const hasResult = row[raceId] !== null;
+          if (hasResult) {
+            continue;
+          }
+          const sortedDf = seedResultDf
+            .sortValues(raceId, { inplace: false, ascending: true })
+            .column(raceId)
+            .dropNa();
+          let sPoints = dfd.toJSON(sortedDf)[raceId][competitorRanking];
+          if (!sPoints) {
+            sPoints =
+              dfd.toJSON(sortedDf)[raceId][
+                dfd.toJSON(sortedDf)[raceId].length - 1
+              ] * 1.2;
+            const userSeed = previousSeedList.find((x) => x.racer_id === row.racer_id);
+            const userSeedPoints = userSeed.seed_points;
+            if (sPoints < userSeedPoints) {
+              sPoints = userSeedPoints;
+            }
+          } else {
+            sPoints *= 1.2;
+            if (sPoints < 10) {
+              sPoints = 10;
+            }
+          }
+          nonNullRaces.push(sPoints);
+          row[raceId] = `${sPoints}*`;
+          break;
+        }
+      }
+      const bestTwo = nonNullRaces.sort((a, b) => a - b).slice(0, 2);
       finalSeedPoints = (bestTwo[0] + bestTwo[1]) / 2;
       break;
     case 4:
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
-      const bestThree4 = racePoints.sort((a, b) => a - b).slice(0, 3);
+      if (nonNullRaces.length < 3) {
+        const previousSeedList = await getPreviousSeedList(
+          competitionId,
+          raceIds,
+          4,
+        );
+        const competitorRanking = previousSeedList.findIndex(
+          (x) => x.racer_id === row.racer_id,
+        );
+        for (let i = 0; i < raceIds.length; i++) {
+          const raceId = raceIds[i];
+          const hasResult = row[raceId] !== null;
+          if (hasResult) {
+            continue;
+          }
+          const sortedDf = seedResultDf
+            .sortValues(raceId, { inplace: false, ascending: true })
+            .column(raceId)
+            .dropNa();
+          let sPoints = dfd.toJSON(sortedDf)[raceId][competitorRanking];
+          if (!sPoints) {
+            sPoints = dfd.toJSON(sortedDf)[raceId].pop() * 1.2;
+            const userSeedPoints = previousSeedList.find(
+              (x) => x.racer_id === row.racer_id,
+            ).seed_points;
+            if (sPoints < userSeedPoints) {
+              sPoints = userSeedPoints;
+            }
+          } else {
+            sPoints *= 1.2;
+            if (sPoints < 10) {
+              sPoints = 10;
+            }
+          }
+          nonNullRaces.push(sPoints);
+          row[raceId] = `${sPoints}*`;
+          break;
+        }
+      }
+      const bestThree4 = nonNullRaces.sort((a, b) => a - b).slice(0, 3);
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
       break;
     case 5:
       // Seeding after the fifth Championship Race: sum of the best three divided by 3
-      const bestThree5 = racePoints.sort((a, b) => a - b).slice(0, 3);
+      const bestThree5 = nonNullRaces.sort((a, b) => a - b).slice(0, 3);
       finalSeedPoints = (bestThree5[0] + bestThree5[1] + bestThree5[2]) / 3;
       break;
     default:
       // Seeding after the fifth or more races: sum of the best (n - 2) divided by (n - 2)
-      const bestNMinusTwo = racePoints
+      const bestNMinusTwo = nonNullRaces
         .sort((a, b) => a - b)
         .slice(0, numRaces - 2);
       finalSeedPoints =
@@ -57,20 +193,26 @@ const calculateRacerSeedPoints = (row, df) => {
   return row;
 };
 
-const calculateTotalSeedPoints = async (dataFrame) => {};
-
-const fetchSeedList = async (competitionId, raceIds) => {
+const getPeople = async (competitionId) => {
   const people = await window.api.select(
-    'SELECT rc.*, p.first_name, p.last_name, p.title, p.dob, p.gender FROM race_competitor rc LEFT JOIN people p ON rc.racer_id = p.id WHERE competition_id = ?',
+    'SELECT cc.*, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON cc.racer_id = p.id WHERE competition_id = ?',
     [competitionId],
   );
-  const peopleDf = new dfd.DataFrame(people);
+  return new dfd.DataFrame(people);
+};
+
+const fetchSeedList = async (competitionId, raceIds) => {
+  const peopleDf = await getPeople(competitionId);
   const raceTypePromises = [];
   raceIds.forEach((race) => {
     const raceType = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns FROM races WHERE race_id = ? AND competition_id = ?`;
     const results = window.api.select(raceType, [race, competitionId]);
     raceTypePromises.push(results);
   });
+  if (raceIds.length === 0) {
+    const query = `SELECT cc.arrival_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ?`;
+    return window.api.select(query, [competitionId]);
+  }
   const resultsPromise = [];
   const raceTypes = await Promise.all(raceTypePromises);
   raceTypes.forEach((raceType) => {
@@ -122,9 +264,24 @@ const fetchSeedList = async (competitionId, raceIds) => {
     }
   });
   const pivotDf = new dfd.DataFrame(pivotData);
-  const totalSeed = pivotData.map((x) => {
-    return calculateRacerSeedPoints(x, pivotDf);
-  });
+
+  async function processArray(array) {
+    const result = await Promise.all(
+      array.map(async (x) => {
+        const res = await calculateRacerSeedPoints(
+          x,
+          raceIds,
+          competitionId,
+          pivotDf,
+        );
+        return res;
+      }),
+    );
+    return result;
+  }
+
+  const totalSeed = await processArray(pivotData);
+
   const totalSeedDf = new dfd.DataFrame(totalSeed);
   const finalResults = dfd.merge({
     left: peopleDf,
@@ -133,7 +290,22 @@ const fetchSeedList = async (competitionId, raceIds) => {
     how: 'left',
   });
   finalResults.sortValues('seed_points', { inplace: true, ascending: true });
-  return dfd.toJSON(finalResults);
+  console.log(finalResults);
+  // Add position as a column to deal with ties
+  const ranks = [];
+  let rank = 1;
+  let previousValue = 0;
+
+  finalResults.seed_points.values.forEach((value, index) => {
+    if (value !== previousValue) {
+      rank = index + 1;
+    }
+    ranks.push(rank);
+    previousValue = value;
+  });
+
+  const withPostition = finalResults.addColumn('position', ranks);
+  return dfd.toJSON(withPostition);
 };
 
 export { fetchSeedList, raceMultipliers };

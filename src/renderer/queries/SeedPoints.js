@@ -26,12 +26,12 @@ const seedPointsOneRun = `
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
-                             ROUND((run_1_time - min1time) / run_1_time * factor, 2) AS seed_points
+                             ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_point
                       FROM data)
             SELECT
               racer_id,
               race_id,
-              seed_points
+              seed_point
             FROM seeds
 `;
 
@@ -78,7 +78,7 @@ WITH factors AS (SELECT 730 AS factor, 'SL' AS race
             SELECT
               racer_id,
               race_id,
-              CASE WHEN run_1_time AND run_2_time THEN seed END AS seed_points
+              CASE WHEN run_1_time AND run_2_time THEN seed END AS seed_point
             FROM seeds
 `;
 

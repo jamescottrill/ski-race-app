@@ -39,37 +39,42 @@ export default function RaceResultOneRun({
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
                                dsq_gate,
-                               dsq_reason
+                               dsq_reason,
+                               competition_id
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
                data AS (SELECT run1.racer_id,
                                run1.race_id,
-                               run1.race_time                                                            AS run_1_time,
-                               run1.is_dns                                                               AS run_1_dns,
-                               run1.is_dsq                                                               AS run_1_dsq,
-                               run1.is_dnf                                                               AS run_1_dnf,
-                               run1.dsq_gate                                                             AS run_1_dsq_gate,
-                               run1.dsq_reason                                                           AS run_1_dsq_reason,
+                               run1.race_time AS run_1_time,
+                               run1.is_dns AS run_1_dns,
+                               run1.is_dsq AS run_1_dsq,
+                               run1.is_dnf AS run_1_dnf,
+                               run1.dsq_gate AS run_1_dsq_gate,
+                               run1.dsq_reason AS run_1_dsq_reason,
                                p.first_name,
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               cc.team,
-                               f.factor                                                                  AS factor,
+                               ct.team_name AS team,
+                               f.factor AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
-                                   OVER (ORDER BY run1.race_id)                                          AS mintime
+                                   OVER (ORDER BY run1.race_id) AS mintime
                         FROM run1
-                               JOIN people p ON p.id = run1.racer_id
-                               JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
-                               JOIN competition_competitor cc ON cc.racer_id = p.id
-                               JOIN races r ON r.race_id = run1.race_id
-                               JOIN factors f ON f.race = r.race_type)
+                               LEFT JOIN people p ON p.id = run1.racer_id
+                               LEFT JOIN race_competitor rc ON run1.race_id = rc.race_id
+                                                                 AND run1.racer_id = rc.racer_id
+                               LEFT JOIN competition_competitor cc ON cc.racer_id = run1.racer_id AND cc.competition_id = run1.competition_id
+                               LEFT JOIN races r ON r.race_id = run1.race_id
+                               LEFT JOIN factors f ON f.race = r.race_type
+                               LEFT JOIN competition_team ct ON ct.team_id = cc.team
+
+                        )
           SELECT
             *,
             ROUND((run_1_time - mintime) / mintime * factor, 2) AS seed_points,
-            RANK() OVER (ORDER BY run_1_time) AS position
+            RANK() OVER (ORDER BY run_1_time NULLS LAST) AS position
           FROM data
           ORDER BY run_1_time
         `;
@@ -77,6 +82,7 @@ export default function RaceResultOneRun({
     let results = [];
     try {
       results = await window.api.select(raceQuery, raceQueryValues);
+      console.log(results);
     } catch (e) {
       console.error('Failed to fetch competitors:', e);
       return;
@@ -102,7 +108,7 @@ export default function RaceResultOneRun({
         position: result.position,
       };
     });
-
+    console.log(mapped);
     const r1Dnf = mapped
       .filter((e) => {
         return e.run1Dnf;

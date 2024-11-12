@@ -37,10 +37,11 @@ export default function ViewCompetitorsPage() {
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id
       LEFT JOIN competition_team ct ON cc.competition_id = ct.competition_id AND ct.team_id = cc.team
+      WHERE cc.competition_id = ?
     `;
 
     try {
-      const result = await window.api.select(query);
+      const result = await window.api.select(query, [competitionId]);
       setCompetitors(result);
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
