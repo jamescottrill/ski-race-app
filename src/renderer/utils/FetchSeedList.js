@@ -88,11 +88,7 @@ const calculateRacerSeedPoints = async (
         if (!raceIds.includes(sRId)) {
           previousRaces.unshift(sRId);
         }
-        console.log("previousRaces.length");
-        console.log(previousRaces);
-        console.log(previousRaces.length);
         const previousSeedList = await fetchSeedList(competitionId, previousRaces);
-        console.log(previousSeedList);
         const competitorRanking = previousSeedList.findIndex(
           (x) => x.racer_id === row.racer_id,
         );
@@ -290,7 +286,6 @@ const fetchSeedList = async (competitionId, raceIds) => {
     how: 'left',
   });
   finalResults.sortValues('seed_points', { inplace: true, ascending: true });
-  console.log(finalResults);
   // Add position as a column to deal with ties
   const ranks = [];
   let rank = 1;

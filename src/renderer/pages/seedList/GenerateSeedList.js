@@ -78,7 +78,6 @@ export default function SeedListPage() {
   }, [competitionId]);
 
   const handleChange = (event) => {
-    console.log("CHANGED");
     const { value } = event.target;
     setSelectedRaces(value);
     const refreshData = async (sRaces) => {
@@ -89,11 +88,9 @@ export default function SeedListPage() {
           competitionId,
           fRaces.map((e) => e.id),
         );
-        console.log("done");
       } catch (e) {
         console.error(e);
       }
-      console.log(data);
       setSeedList(data);
     };
     refreshData(value);
