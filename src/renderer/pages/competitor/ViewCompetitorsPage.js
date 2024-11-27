@@ -9,7 +9,7 @@ import {
   Paper,
   Typography,
   Container,
-  Button
+  Button,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useBackButton } from '../../utils/navigation';
@@ -22,7 +22,6 @@ export default function ViewCompetitorsPage() {
   const handleBack = useBackButton();
   const navigate = useNavigate();
   const handleEditClick = (competitorId) => {
-    console.log(`/competition/${competitionId}/competitor/${competitorId}/edit`);
     navigate(`/competition/${competitionId}/competitor/${competitorId}/edit`);
   };
 
@@ -49,58 +48,63 @@ export default function ViewCompetitorsPage() {
   };
 
   return (
-    <Container className="view-competitors-page flex flex-col items-center justify-center min-h-screen  w-full max-w-full">
-      <Typography variant="h4" component="h1" className="mb-6 text-gray-800 font-bold text-center">
-        Competitors
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell>Gender</TableCell>
-              <TableCell>Date of Birth</TableCell>
-              <TableCell>Service Number</TableCell>
-              <TableCell>Country</TableCell>
-              <TableCell>Team</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {competitors.map((competitor, index) => (
-              <TableRow key={index}>
-                <TableCell>{competitor.first_name}</TableCell>
-                <TableCell>{competitor.last_name}</TableCell>
-                <TableCell>{competitor.gender}</TableCell>
-                <TableCell>{competitor.dob}</TableCell>
-                <TableCell>{competitor.service_number}</TableCell>
-                <TableCell>{competitor.country}</TableCell>
-                <TableCell>{competitor.team}</TableCell>
-                <TableCell>{calculateCategory(competitor)}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleEditClick(competitor.id)}
-                  >
-                    Edit
-                  </Button>
-                </TableCell> {/* Edit button */}
+    <Container className="view-competitors-page m-4 flex flex-col items-center justify-center max-w-full">
+      <Paper elevation={3} className="p-8 rounded-lg shadow-lg max-w-full">
+        <Typography
+          variant="h4"
+          component="h1"
+          className="mb-6 text-gray-800 font-bold text-center"
+        >
+          Competitors
+        </Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>First Name</TableCell>
+                <TableCell>Last Name</TableCell>
+                <TableCell>Gender</TableCell>
+                <TableCell>Date of Birth</TableCell>
+                <TableCell>Service Number</TableCell>
+                <TableCell>Team</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Button
-        variant="contained"
-        color="secondary"
-        onClick={handleBack}
-        className="text-white py-2 px-4 rounded shadow-lg w-full"
-      >
-        Back
-      </Button>
+            </TableHead>
+            <TableBody>
+              {competitors.map((competitor, index) => (
+                <TableRow key={index}>
+                  <TableCell>{competitor.first_name}</TableCell>
+                  <TableCell>{competitor.last_name}</TableCell>
+                  <TableCell>{competitor.gender}</TableCell>
+                  <TableCell>{competitor.dob}</TableCell>
+                  <TableCell>{competitor.service_number}</TableCell>
+                  <TableCell>{competitor.team}</TableCell>
+                  <TableCell>{calculateCategory(competitor)}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleEditClick(competitor.id)}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>{' '}
+                  {/* Edit button */}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleBack}
+          className="text-white py-2 px-4 rounded shadow-lg"
+        >
+          Back
+        </Button>
+      </Paper>
     </Container>
   );
 }
