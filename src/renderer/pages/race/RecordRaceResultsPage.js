@@ -9,6 +9,28 @@ import { getRaceDetails } from '../../utils/RaceDetails';
 import RaceTeamResultTwoRun from '../../components/RaceTeamResultTwoRun';
 import RaceTeamResultOneRun from '../../components/RaceTeamResult';
 
+function RaceRunTabPanel(props) {
+  const { value, index, raceId, competitionId, edit, totalRuns, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      <RaceRun
+        runId={index}
+        raceId={raceId}
+        competitionId={competitionId}
+        edit={edit}
+        totalRuns={totalRuns}
+      />
+    </div>
+  );
+}
+
 function RaceResultTabPanel(props) {
   const { value, index, raceId, competitionId, runs, isSeed } = props;
 
@@ -51,7 +73,7 @@ function TeamResultTabPanel(props) {
   );
 }
 
-export default function RaceResultsPage() {
+export default function RecordRaceResultsPage() {
   const { competitionId, raceId } = useParams();
   const navigate = useNavigate();
   const [value, setValue] = React.useState('result');
@@ -111,11 +133,24 @@ export default function RaceResultsPage() {
           Results
         </Typography>
         <Tabs onChange={handleChange} value={value}>
+          {raceRuns.map((run) => (
+            <Tab label={`Run ${run.run_number}`} value={run.run_number} />
+          ))}
           <Tab label="Results" value="result" />
           {raceDetails.is_team &&(
             <Tab label="Team Results" value="teamResult" />
           )}
         </Tabs>
+        {raceRuns.map((run) => (
+          <RaceRunTabPanel
+            value={value}
+            index={run.run_number}
+            raceId={raceId}
+            competitionId={run.competition_id}
+            edit={!run.is_complete}
+            totalRuns={raceRuns.length}
+          />
+        ))}
         <RaceResultTabPanel
           value={value}
           index="result"
@@ -124,7 +159,7 @@ export default function RaceResultsPage() {
           isSeed={raceDetails.is_seeding}
           runs={raceRuns.length}
         />
-        {raceDetails.is_team && (<TeamResultTabPanel
+        {raceDetails.is_team !== 0 && (<TeamResultTabPanel
             value={value}
             index="teamResult"
             raceId={raceId}

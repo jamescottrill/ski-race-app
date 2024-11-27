@@ -26,6 +26,30 @@ const tableStyles = {
   },
 };
 
+const teamTableLayout = {
+  hLineWidth: function (i, node) {
+    const body = node.table.body[i];
+    if (body && body.length > 0) {
+      return node.table.body[i][0].text === '' ? 0 : 1;
+    }
+    return 1
+  },
+  vLineWidth: function () {
+    // No vertical lines
+    return 0;
+  },
+  hLineColor: function (i) {
+    // Custom colour for the first horizontal line
+    return i === 1 ? 'black' : '#aaa';
+  },
+  paddingLeft: function (i) {
+    return i === 0 ? 0 : 8;
+  },
+  paddingRight: function (i, node) {
+    return (i === node.table.widths.length - 1) ? 0 : 8;
+  },
+};
+
 const dnfTable = (data) => {
   return {
     layout: 'lightHorizontalLines',
@@ -78,4 +102,4 @@ const dsqTable = (data) => {
   }
 }
 
-export { tableStyles, dnfTable, dsqTable };
+export { tableStyles, teamTableLayout, dnfTable, dsqTable };

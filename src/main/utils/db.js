@@ -11,6 +11,7 @@ class Database {
           this.initializeDatabase(); // Initialize the database when the connection is established
         } else {
           console.error('Could not connect to database:', err.message);
+          alert(err.message);
         }
       });
   }
@@ -134,6 +135,7 @@ class Database {
         race_id TEXT,
         racer_id TEXT,
         bib_number INTEGER,
+        seed_points FLOAT,
         PRIMARY KEY (competition_id, race_id, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (race_id) REFERENCES races(race_id),
@@ -181,8 +183,8 @@ class Database {
         if (err) {
           console.log(query);
           console.error('Error creating table:', err.message);
+          alert(err.message);
         } else {
-
           console.log('Table created or already exists.');
         }
       });

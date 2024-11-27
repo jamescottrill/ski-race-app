@@ -13,7 +13,11 @@ import {
   MenuItem,
   Button,
 } from '@mui/material';
-import {convertRaceTime, convertHumanTime, formatTime} from '../utils/TimeUtils';
+import {
+  convertRaceTime,
+  convertHumanTime,
+  formatTime,
+} from '../utils/TimeUtils';
 
 export default function RaceRun({
   raceId,
@@ -91,16 +95,16 @@ export default function RaceRun({
     }
   };
 
-  const handleStatusChange = (id, value, newData=undefined) => {
+  const handleStatusChange = (id, value, newData = undefined) => {
     const nData = newData ?? data;
     const updatedData = nData.map((row) =>
       row.id === id
         ? {
-          ...row,
-          status: value,
-          gateDisqualified: value === 'DSQ' ? row.gateDisqualified : '',
-          dsqReason: value === 'DSQ' ? row.dsqReason : '',
-        }
+            ...row,
+            status: value,
+            gateDisqualified: value === 'DSQ' ? row.gateDisqualified : '',
+            dsqReason: value === 'DSQ' ? row.dsqReason : '',
+          }
         : row,
     );
     setData(updatedData);
@@ -123,7 +127,6 @@ export default function RaceRun({
       if (row.is_dsq) handleUpdatedField('is_dsq', false, id);
     }
   };
-
 
   const handleTimeBlur = (id, val) => {
     let value = val.padStart(6, '0');
@@ -193,10 +196,10 @@ export default function RaceRun({
           competitionId,
           raceId,
           result.id.split('/')[0],
-          nextRun
+          nextRun,
         ]);
         promises.push(res);
-      })
+      });
       const complete = await Promise.all(promises);
       alert(`Results saved successfully.`);
     } catch (error) {
@@ -211,80 +214,88 @@ export default function RaceRun({
   return (
     <TableContainer component={Paper}>
       {data.length > 0 && (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center">Bib Number</TableCell>
-              <TableCell align="center">Competitor</TableCell>
-              <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
-              <TableCell align="center">Status</TableCell>
-              <TableCell align="center">Gate Disqualified</TableCell>
-              <TableCell align="center">Reason Disqualified</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell align="center">{row.bibNumber}</TableCell>
-                <TableCell align="center">
-                  {row.lastName.toUpperCase()} {row.firstName}
-                </TableCell>
-                <TableCell align="center">
-                  <TextField
-                    value={row.raceTime}
-                    onChange={(e) => handleTimeChange(row.id, e.target.value)}
-                    onBlur={(e) => handleTimeBlur(row.id, e.target.value)}
-                    placeholder="MM:SS.SS"
-                    inputProps={{ className: 'race-time-input' }}
-                    type="text"
-                    disabled={!edit}
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <Select
-                    value={row.status}
-                    onChange={(e) => handleStatusChange(row.id, e.target.value)}
-                    displayEmpty
-                    disabled={!edit}
-                  >
-                    <MenuItem value="Finished">
-                      <em>Finished</em>
-                    </MenuItem>
-                    <MenuItem value="DNS">DNS</MenuItem>
-                    <MenuItem value="DNF">DNF</MenuItem>
-                    <MenuItem value="DSQ">DSQ</MenuItem>
-                  </Select>
-                </TableCell>
-                <TableCell align="center">
-                  {row.status === 'DSQ' ? (
-                    <TextField
-                      type="number"
-                      value={row.gateDisqualified}
-                      onChange={(e) => handleGateChange(row.id, e.target.value)}
-                      placeholder="Gate #"
-                      inputProps={{ min: 1 }}
-                      disabled={!edit}
-                    />
-                  ) : (
-                    '-'
-                  )}
-                </TableCell>
-                <TableCell align="center">
-                  {row.status === 'DSQ' ? (
-                    <TextField
-                      value={row.dsqReason}
-                      onChange={(e) => handleDsqReason(row.id, e.target.value)}
-                      placeholder="Missed Gate"
-                      inputProps={{ min: 1 }}
-                      disabled={!edit}
-                    />
-                  ) : (
-                    '-'
-                  )}
-                </TableCell>
+        <>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">Bib Number</TableCell>
+                <TableCell align="center">Competitor</TableCell>
+                <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
+                <TableCell align="center">Status</TableCell>
+                <TableCell align="center">Gate Disqualified</TableCell>
+                <TableCell align="center">Reason Disqualified</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
+            </TableHead>
+            <TableBody>
+              {data.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell align="center">{row.bibNumber}</TableCell>
+                  <TableCell align="center">
+                    {row.lastName.toUpperCase()} {row.firstName}
+                  </TableCell>
+                  <TableCell align="center">
+                    <TextField
+                      value={row.raceTime}
+                      onChange={(e) => handleTimeChange(row.id, e.target.value)}
+                      onBlur={(e) => handleTimeBlur(row.id, e.target.value)}
+                      placeholder="MM:SS.SS"
+                      inputProps={{ className: 'race-time-input' }}
+                      type="text"
+                      disabled={!edit}
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Select
+                      value={row.status}
+                      onChange={(e) =>
+                        handleStatusChange(row.id, e.target.value)
+                      }
+                      displayEmpty
+                      disabled={!edit}
+                    >
+                      <MenuItem value="Finished">
+                        <em>Finished</em>
+                      </MenuItem>
+                      <MenuItem value="DNS">DNS</MenuItem>
+                      <MenuItem value="DNF">DNF</MenuItem>
+                      <MenuItem value="DSQ">DSQ</MenuItem>
+                    </Select>
+                  </TableCell>
+                  <TableCell align="center">
+                    {row.status === 'DSQ' ? (
+                      <TextField
+                        type="number"
+                        value={row.gateDisqualified}
+                        onChange={(e) =>
+                          handleGateChange(row.id, e.target.value)
+                        }
+                        placeholder="Gate #"
+                        inputProps={{ min: 1 }}
+                        disabled={!edit}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    {row.status === 'DSQ' ? (
+                      <TextField
+                        value={row.dsqReason}
+                        onChange={(e) =>
+                          handleDsqReason(row.id, e.target.value)
+                        }
+                        placeholder="Missed Gate"
+                        inputProps={{ min: 1 }}
+                        disabled={!edit}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <Button
             variant="contained"
             color="primary"
@@ -294,7 +305,7 @@ export default function RaceRun({
           >
             Save Results
           </Button>
-        </Table>
+        </>
       )}
       {data.length === 0 && (
         <div>

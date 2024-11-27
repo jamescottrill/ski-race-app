@@ -8,23 +8,27 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
+  TableRow
 } from '@mui/material';
 import OtherResultTable from './DnsTable';
 import { convertRaceTime } from '../utils/TimeUtils';
-import { resultsPdf } from '../utils/ResultsPdf';
+import { resultsTeamPdf } from '../utils/ResultsTeamPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 
-export default function RaceResultOneRun({ raceId, competitionId }) {
-  const [raceDetails, setRaceDetails] = useState([]);
+
+export default function RaceTeamResultOneRun({
+  raceId,
+  competitionId,
+}) {
   const [data, setData] = useState([]);
-  const [run1Dnf, setRun1Dnf] = useState([]);
-  const [run1Dns, setRun1Dns] = useState([]);
-  const [run1Dsq, setRun1Dsq] = useState([]);
+  const [raceDetails, setRaceDetails] = useState([]);
+
+  const initRaceDetails = async () => {
+    const details = await getRaceDetails(raceId, competitionId);
+    setRaceDetails(details);
+  };
 
   const initialData = async () => {
-    const rd = await getRaceDetails(raceId, competitionId);
-    setRaceDetails(rd);
     const raceQuery = `
           WITH factors AS (SELECT 730 AS factor, 'SL' AS race
                            UNION ALL
@@ -60,7 +64,7 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               ct.team_name AS team,
+                               ct.team_name AS team_name,
                                f.factor AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id) AS mintime
@@ -72,7 +76,6 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                LEFT JOIN races r ON r.race_id = run1.race_id
                                LEFT JOIN factors f ON f.race = r.race_type
                                LEFT JOIN competition_team ct ON ct.team_id = cc.team
-
                         )
           SELECT
             *,
@@ -93,7 +96,8 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
       return {
         id: `${result.racer_id}/results`,
         racerId: result.racer_id,
-        raceId: result.raceId,
+        raceId: result.race_id,
+        run1TimeSecs: result.run_1_time,
         run1Time: convertRaceTime(result.run_1_time),
         run1Dns: result.run_1_dns,
         run1Dsq: result.run_1_dsq,
@@ -104,51 +108,48 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
-        team: result.team,
+        teamName: result.team_name,
         seedPoints: result.seed_points,
         bibNumber: result.bib_number,
         position: result.position,
       };
     });
-    const r1Dnf = mapped
-      .filter((e) => {
-        return e.run1Dnf;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
-    setRun1Dnf(r1Dnf);
-    const r1Dns = mapped
-      .filter((e) => {
-        return e.run1Dns;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
-    setRun1Dns(r1Dns);
-    const r1Dsq = mapped
-      .filter((e) => {
-        return e.run1Dsq;
-      })
-      .sort(function (a, b) {
-        return a.bibNumber - b.bibNumber;
-      });
-    setRun1Dsq(r1Dsq);
     const finished = mapped
       .filter((e) => {
         return e.completed;
-      })
-      .sort(function (a, b) {
-        return a.position - b.position;
       });
-    setData(finished);
+    const teamResults = [];
+    const dnfTeams = [];
+    const teamNames = mapped.map(r => r.teamName).filter((teamName, index, self) => {
+      return self.indexOf(teamName) === index && teamName !== null;
+    });
+    teamNames.forEach((teamName) => {
+      const sortedRacers = finished.filter((r) => r.teamName === teamName).sort((a, b) => a.points - b.points);
+      const topNRacers = sortedRacers.slice(0, 3);
+      if (sortedRacers.length < 3) {
+        dnfTeams.push({"teamName": teamName});
+        return
+      }
+      const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
+      const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.run1TimeSecs, 0);
+      const topNTimes = convertRaceTime(topNTimesSecs);
+      const results = {teamName: teamName, racers: topNRacers, points: topNPoints, time: topNTimes};
+      teamResults.push(results);
+    });
+    teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
+    setData(teamResults);
   };
 
   useEffect(() => {
     initialData();
-  });
+    initRaceDetails().catch(console.error);
+  }, [raceId, competitionId]);
+
   const generatePDF = () => {
-    resultsPdf(raceDetails, data, run1Dns, run1Dnf, run1Dsq);
+    resultsTeamPdf(
+      raceDetails,
+      data
+    );
   };
 
   return (
@@ -157,29 +158,37 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow key="header">
                 <TableCell align="center">Position</TableCell>
-                <TableCell align="center">Start Number</TableCell>
+                <TableCell align="center">Total Time</TableCell>
+                <TableCell align="center">Team</TableCell>
                 <TableCell align="center">Rank</TableCell>
                 <TableCell align="center">Name</TableCell>
-                <TableCell align="center">Team</TableCell>
-                <TableCell align="center">Time First Run</TableCell>
-                <TableCell align="center">Seed Points</TableCell>
+                <TableCell align="center">Individual Time</TableCell>
+                <TableCell align="center">Race Points</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell align="center">{row.position}</TableCell>
-                  <TableCell align="center">{row.bibNumber}</TableCell>
-                  <TableCell align="center">{row.title}</TableCell>
-                  <TableCell align="center">
-                    {row.lastName.toUpperCase()} {row.firstName}
-                  </TableCell>
-                  <TableCell align="center">{row.team}</TableCell>
-                  <TableCell align="center">{row.run1Time}</TableCell>
-                  <TableCell align="center">{row.seedPoints}</TableCell>
-                </TableRow>
+              {data.map((row, index) => (
+                <React.Fragment key={index}>
+                {row.racers.map((racer, idx) => (
+                  <TableRow key={racer.id}>
+                    {idx === 0 && (
+                      <>
+                      <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.position}</TableCell>
+                      <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.time}</TableCell>
+                      <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.teamName}</TableCell>
+                      </>
+                   )}
+                      <TableCell>{racer.title}</TableCell>
+                      <TableCell>{racer.lastName.toUpperCase()} {racer.firstName}</TableCell>
+                      <TableCell>{racer.run1Time}</TableCell>
+                    {idx === 0 && (
+                      <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.points}</TableCell>
+                    )}
+                  </TableRow>
+                  ))}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
@@ -190,30 +199,6 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
           No Competitors found, make sure you&apos;ve marked the previous run as
           finished.
         </div>
-      )}
-      {run1Dns.length > 0 && (
-        <>
-          <h1>DNS Run 1</h1>
-          <TableContainer component={Paper}>
-            <OtherResultTable data={run1Dns} />
-          </TableContainer>
-        </>
-      )}
-      {run1Dnf.length > 0 && (
-        <>
-          <h1>DNF Run 1</h1>
-          <TableContainer>
-            <OtherResultTable data={run1Dnf} />
-          </TableContainer>
-        </>
-      )}
-      {run1Dsq.length > 0 && (
-        <>
-          <h1>DSQ Run 1</h1>
-          <TableContainer>
-            <OtherResultTable data={run1Dsq} />
-          </TableContainer>
-        </>
       )}
       <Button variant="contained" onClick={generatePDF}>
         Download PDF

@@ -4,7 +4,7 @@ import { calculateCategory } from './CompetitorManagement';
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
-const startListPdf = (raceDetails, finished, dns1, dnf1, dsq1, dns2, dnf2, dsq2) => {
+const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
 
   const docDefinition = {
     content: [
@@ -41,7 +41,6 @@ const startListPdf = (raceDetails, finished, dns1, dnf1, dsq1, dns2, dnf2, dsq2)
               { text: 'Team', style: 'tableHeader' },
               { text: 'Class', style: 'tableHeader' },
               { text: 'Time 1st Run', style: 'tableHeader' },
-              { text: 'Time 2nd Run', style: 'tableHeader' },
               { text: 'Total Time', style: 'tableHeader' },
               { text: 'Race Points', style: 'tableHeader' },
             ],
@@ -132,77 +131,6 @@ const startListPdf = (raceDetails, finished, dns1, dnf1, dsq1, dns2, dnf2, dsq2)
           layout: 'lightHorizontalLines',
         },
       },
-      // DNS 2
-      { text: 'Did not start 2nd run', style: 'subheader' },
-      {
-        table: {
-          headerRows: 1,
-          widths: ['auto', 'auto', '*', '*', 'auto'],
-          body: [
-            [
-              { text: 'Start No', style: 'tableHeader' },
-              { text: 'Rank', style: 'tableHeader' },
-              { text: 'Name', style: 'tableHeader' },
-              { text: 'Team', style: 'tableHeader' },
-            ],
-            ...(dns2 || []).map((competitor) => [
-              competitor.bibNumber,
-              competitor.title,
-              `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
-              competitor.team,
-            ]),
-          ],
-          layout: 'lightHorizontalLines',
-        },
-      },
-      // DNF 2
-      { text: 'Did not finish 2nd run', style: 'subheader' },
-      {
-        table: {
-          headerRows: 1,
-          widths: ['auto', 'auto', '*', '*', 'auto'],
-          body: [
-            [
-              { text: 'Start No', style: 'tableHeader' },
-              { text: 'Rank', style: 'tableHeader' },
-              { text: 'Name', style: 'tableHeader' },
-              { text: 'Team', style: 'tableHeader' },
-            ],
-            ...(dnf2 || []).map((competitor) => [
-              competitor.bibNumber,
-              competitor.title,
-              `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
-              competitor.team,
-            ]),
-          ],
-          layout: 'lightHorizontalLines',
-        },
-      },
-      // DSQ 2
-      { text: 'Disqualified 2nd run', style: 'subheader' },
-      {
-        table: {
-          headerRows: 1,
-          widths: ['auto', 'auto', '*', '*', 'auto'],
-          body: [
-            [
-              { text: 'Start No', style: 'tableHeader' },
-              { text: 'Rank', style: 'tableHeader' },
-              { text: 'Name', style: 'tableHeader' },
-              { text: 'Team', style: 'tableHeader' },
-              { text: 'Gate No.', style: 'tableHeader' },
-            ],
-            ...(dsq1 || []).map((competitor) => [
-              competitor.bibNumber,
-              competitor.title,
-              `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
-              competitor.team,
-              competitor.run2DsqGate,
-            ]),
-          ],
-          layout: 'lightHorizontalLines',
-        },
-      },
     ],
     styles: {
       header: { fontSize: 18, bold: true, margin: [0, 0, 0, 5], alignment: 'center' },
@@ -235,4 +163,4 @@ const startListPdf = (raceDetails, finished, dns1, dnf1, dsq1, dns2, dnf2, dsq2)
   });
 };
 
-export { startListPdf };
+export { resultsPdf };

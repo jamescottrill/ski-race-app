@@ -77,7 +77,7 @@ export default function ViewCompetitorsPage() {
                 <TableCell>{competitor.dob}</TableCell>
                 <TableCell>{competitor.service_number}</TableCell>
                 <TableCell>{competitor.country}</TableCell>
-                <TableCell>{competitor.formData}</TableCell>
+                <TableCell>{competitor.team}</TableCell>
                 <TableCell>{calculateCategory(competitor)}</TableCell>
                 <TableCell>
                   <Button

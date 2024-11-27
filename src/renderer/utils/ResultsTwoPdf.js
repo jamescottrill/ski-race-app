@@ -19,31 +19,6 @@ const resultsTwoPdf = (
     { text: 'Official Results', style: 'subheader' },
   ];
 
-  // const runDetailsSection = [
-  //   { text: 'First Run', style: 'subheaderLeft' },
-  //   {
-  //     columns: [
-  //       { text: 'Course Setter: ', bold: true },
-  //       { text: raceDetails.firstRun.courseSetter },
-  //       { text: 'Number of Gates: ', bold: true },
-  //       { text: raceDetails.firstRun.numberOfGates },
-  //       { text: 'Start Time: ', bold: true },
-  //       { text: raceDetails.firstRun.startTime },
-  //     ],
-  //   },
-  //   { text: 'Second Run', style: 'subheaderLeft', margin: [0, 10, 0, 0] },
-  //   {
-  //     columns: [
-  //       { text: 'Course Setter: ', bold: true },
-  //       { text: raceDetails.secondRun.courseSetter },
-  //       { text: 'Number of Gates: ', bold: true },
-  //       { text: raceDetails.secondRun.numberOfGates },
-  //       { text: 'Start Time: ', bold: true },
-  //       { text: raceDetails.secondRun.startTime },
-  //     ],
-  //   },
-  // ];
-
   const content = [
     ...header,
     // ...runDetailsSection,

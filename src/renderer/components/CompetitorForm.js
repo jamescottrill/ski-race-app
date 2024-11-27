@@ -41,9 +41,9 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
   const [selectedTeamField, setSelectedTeamField] = useState(null);
 
   const fetchTeam = async () => {
-    const query = `SELECT team_id, team_name FROM competition_team`;
+    const query = `SELECT team_id, team_name FROM competition_team WHERE competition_id = ?`;
     try {
-      const result = await window.api.select(query);
+      const result = await window.api.select(query, [competitionId]);
       setTeams(result);
     } catch (error) {
       console.error('Failed to fetch teams:', error);
@@ -127,7 +127,7 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
           country: result[0].country || 'GBR',
           serviceNumber: result[0].service_number || '',
           gender: result[0].gender || 'M',
-          team: result[0].formData || '',
+          team: result[0].team || '',
           arrivalSeed: result[0].arrival_seed || '',
           isJunior: result[0].is_junior || false,
           isSenior: result[0].is_senior || false,
@@ -242,7 +242,6 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
       await window.api.insert(query1, params1);
       let query2;
       let params2;
-      if (existingCompetitor) {
         let isJunior = false;
         let isVeteran = false;
         let isSenior = true;
@@ -270,7 +269,6 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
           formData.isFemale,
           formData.title,
         ];
-      } else {
         query2 = `
           UPDATE competition_competitor
           SET team         = ?,
@@ -294,12 +292,11 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
           formData.isVeteran || false,
           formData.isReserve || false,
           formData.isFemale || false,
+          formData.title,
           competitionId,
           competitorId,
-          formData.title,
         ];
-      }
-      await window.api.insert(query2, params2);
+      const res = await window.api.insert(query2, params2);
       navigate(-1);
     } catch (error) {
       console.error('Failed to update competitor:', error);

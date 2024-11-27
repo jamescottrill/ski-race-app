@@ -29,7 +29,7 @@ export default function GenerateStartList() {
   const [raceDetails, setRaceDetails] = useState({
     is_women_separate: false,
     randomise_top: 15,
-    randomise_top_women: 15,
+    randomise_top_women: 5,
   });
 
   const handleBack = useBackButton();
@@ -54,7 +54,7 @@ export default function GenerateStartList() {
     SELECT
       p.id AS racer_id, p.first_name, p.last_name, rc.bib_number,
       cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, cc.team
+      cc.is_veteran, cc.is_female, cc.team, '' AS seed_points
       FROM race_competitor rc
     INNER JOIN people p ON rc.racer_id = p.id
     INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
@@ -63,7 +63,6 @@ export default function GenerateStartList() {
     const results = await window.api.select(query, [competitionId, raceId]);
     if (results) {
       setStartList(results);
-      console.log(results);
     }
   };
 
@@ -147,7 +146,6 @@ export default function GenerateStartList() {
         ...activeCompetitors.slice(raceDetails.randomise_top),
       ];
     }
-    console.log(menStartList);
     setStartList(menStartList);
     setWomenStartList(raceDetails.is_women_separate ? tmpWomenStartList : null);
   };
@@ -161,8 +159,8 @@ export default function GenerateStartList() {
 
   const saveStartList = async (list, gender) => {
     const query = `
-      INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number)
-      VALUES (?, ?, ?, ?);
+      INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
+      VALUES (?, ?, ?, ?, ?);
     `;
     const raceQuery = `
       INSERT INTO race_results (competition_id, race_id, racer_id, run_number)
@@ -177,6 +175,7 @@ export default function GenerateStartList() {
           raceId,
           list[i].racer_id,
           i + 1,
+          list[i].seed_points,
         ]);
         promises.push(res);
         res = window.api.insert(raceQuery, [

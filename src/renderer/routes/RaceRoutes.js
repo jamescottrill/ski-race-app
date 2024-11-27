@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import RaceLandingPage from '../pages/race/RaceLandingPage';
 import CreateRacePage from '../pages/race/CreateRacePage';
 import EditRacePage from '../pages/race/EditRacePage';
+import RecordRaceResultsPage from '../pages/race/RecordRaceResultsPage';
 import RaceResultsPage from '../pages/race/RaceResultsPage';
 import Layout from '../components/Layout';
 import RaceDetailsPage from '../pages/race/RaceDetailsPage';
@@ -37,7 +38,7 @@ function RaceRoutes() {
       />
       <Route
         path="competition/:competitionId/race/:raceId/results/edit"
-        element={<Layout><RaceResultsPage /></Layout>}
+        element={<Layout><RecordRaceResultsPage /></Layout>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/start-list"

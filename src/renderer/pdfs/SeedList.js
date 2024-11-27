@@ -1,11 +1,8 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+import * as pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from '../utils/CompetitorManagement';
 
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const generatePDF = (seedList, races) => {
-  console.log(seedList);
   let title = 'Initial Seed List';
   if (races.length > 0) {
     title = `Seed List after ${races.length} Race${races.length > 1 ? 's' : ''}`;

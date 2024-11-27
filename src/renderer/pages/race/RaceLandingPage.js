@@ -36,17 +36,17 @@ export default function RaceLandingPage() {
     }
   };
 
-  const handleEditRace = (raceId) => {
-    navigate(`/competition/${competitionId}/race/${raceId}/edit`);
-  };
+  // const handleEditRace = (raceId) => {
+  //   navigate(`/competition/${competitionId}/race/${raceId}/edit`);
+  // };
 
   const handleViewRace = (raceId) => {
     navigate(`/competition/${competitionId}/race/${raceId}`);
   };
-  //
-  // const handleViewResults = (raceId) => {
-  //   navigate(`/competition/${competitionId}/race/${raceId}/results`);
-  // };
+
+  const handleViewResults = (raceId) => {
+    navigate(`/competition/${competitionId}/race/${raceId}/results`);
+  };
 
   const handleNewRace = () => {
     navigate(`/competition/${competitionId}/race/new`);
@@ -108,10 +108,10 @@ export default function RaceLandingPage() {
                     <Button
                       variant="outlined"
                       color="secondary"
-                      onClick={() => handleEditRace(race.id)}
+                      onClick={() => handleViewResults(race.id)}
                       className="mr-2"
                     >
-                      Edit
+                      Results
                     </Button>
 
                   </TableCell>

@@ -15,7 +15,8 @@ const seedResults = `
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
                                dsq_gate,
-                               dsq_reason
+                               dsq_reason,
+                               competition_id
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 1
@@ -51,7 +52,7 @@ const seedResults = `
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               cc.team,
+                               ct.team_name,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS min1time,
@@ -62,6 +63,7 @@ const seedResults = `
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id
+                               LEFT JOIN competition_team ct ON ct.team_id = cc.team AND ct.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type
                         ),

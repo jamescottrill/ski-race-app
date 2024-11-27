@@ -94,7 +94,6 @@
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^5.16.7",
     "@mui/material": "^5.16.7",
-    "@types/pdfmake": "^0.2.9",
     "danfojs": "^1.1.2",
     "dataframe-js": "^1.4.4",
     "electron-debug": "^3.2.0",
@@ -104,7 +103,7 @@
     "json2csv": "^6.0.0-alpha.2",
     "os-browserify": "^0.3.0",
     "papaparse": "^5.4.1",
-    "pdfmake": "^0.2.14",
+    "pdfmake": "^0.2.15",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.16.0",
@@ -120,6 +119,7 @@
     "@testing-library/react": "^14.0.0",
     "@types/jest": "^29.5.5",
     "@types/node": "20.6.2",
+    "@types/pdfmake": "^0.2.9",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@types/react-test-renderer": "^18.0.1",
@@ -181,7 +181,7 @@
     "webpack-merge": "^5.10.0"
   },
   "build": {
-    "productName": "SkiRaceResults",
+    "productName": "Ski Race Results",
     "appId": "io.accessium.skiraceresults",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",

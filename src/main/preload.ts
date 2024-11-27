@@ -6,7 +6,8 @@ export type Channels = 'ipc-example';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   savePDF: async (buffer: any, defaultFileName: string) => {
-    return await ipcRenderer.invoke('save-pdf', buffer, defaultFileName);
+    const res = await ipcRenderer.invoke('save-pdf', buffer, defaultFileName);
+    return res;
   },
 });
 

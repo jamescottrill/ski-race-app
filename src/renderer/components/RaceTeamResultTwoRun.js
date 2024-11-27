@@ -11,11 +11,11 @@ import {
   Button,
 } from '@mui/material';
 import OtherResultTable from './DnsTable';
-import { resultsTwoPdf } from '../utils/ResultsTwoPdf';
+import { resultsTeamPdf } from '../utils/ResultsTeamPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 import { convertRaceTime } from '../utils/TimeUtils';
 
-export default function RaceResultTwoRun({ raceId, competitionId }) {
+export default function RaceTeamResultTwoRun({ raceId, competitionId }) {
   const [data, setData] = useState([]);
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
@@ -82,7 +82,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               ct.team_name AS team,
+                               cc.team,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS mintime
@@ -91,7 +91,6 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
-                               JOIN competition_team ct ON ct.team_id = cc.team AND ct.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type)
           SELECT
@@ -219,7 +218,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
-    resultsTwoPdf(
+    resultsTeamPdf(
       raceDetails,
       data,
       run1Dns,
