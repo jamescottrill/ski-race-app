@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Paper, Typography, Button, List, ListItem, ListItemText, Grid } from '@mui/material';
+import {
+  Container,
+  Paper,
+  Typography,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  Grid,
+} from '@mui/material';
 import { useBackButton } from '../../utils/navigation';
 
 export default function RaceDetailsPage() {
@@ -37,37 +46,58 @@ export default function RaceDetailsPage() {
       <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-xl">
         {raceDetails ? (
           <>
-            <Typography variant="h4" component="h1" className="mb-6 text-gray-800 font-bold text-center">
+            <Typography
+              variant="h4"
+              component="h1"
+              className="mb-6 text-gray-800 font-bold text-center"
+            >
               {raceDetails.race_name}
             </Typography>
             <List>
-            <Grid container spacing={2}>
-              <Grid item xs={4}>
-                <ListItem>
-                  <ListItemText primary="Discipline" secondary={raceDetails.race_type} />
-                </ListItem>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <ListItem>
+                    <ListItemText
+                      primary="Discipline"
+                      secondary={raceDetails.race_type}
+                    />
+                  </ListItem>
+                </Grid>
+                <Grid item xs={4}>
+                  <ListItem>
+                    <ListItemText
+                      primary="Date"
+                      secondary={new Date(
+                        raceDetails.race_date,
+                      ).toLocaleDateString('en-GB')}
+                    />
+                  </ListItem>
+                </Grid>
+                <Grid item xs={4}>
+                  <ListItem>
+                    <ListItemText
+                      primary="Venue"
+                      secondary={raceDetails.venue}
+                    />
+                  </ListItem>
+                </Grid>
+                <Grid item xs={4}>
+                  <ListItem>
+                    <ListItemText
+                      primary="Runs"
+                      secondary={raceDetails.number_runs}
+                    />
+                  </ListItem>
+                </Grid>
+                <Grid item xs={4}>
+                  <ListItem>
+                    <ListItemText
+                      primary="Team Race"
+                      secondary={raceDetails.is_team ? 'Yes' : 'No'}
+                    />
+                  </ListItem>
+                </Grid>
               </Grid>
-              <Grid item xs={4}>
-              <ListItem>
-                <ListItemText primary="Date" secondary={new Date(raceDetails.race_date).toLocaleDateString('en-GB')} />
-              </ListItem>
-              </Grid>
-              <Grid item xs={4}>
-              <ListItem>
-                <ListItemText primary="Venue" secondary={raceDetails.venue} />
-              </ListItem>
-              </Grid>
-              <Grid item xs={4}>
-              <ListItem>
-                <ListItemText primary="Runs" secondary={raceDetails.number_runs} />
-              </ListItem>
-              </Grid>
-              <Grid item xs={4}>
-              <ListItem>
-                <ListItemText primary="Team Race" secondary={raceDetails.is_team ? 'Yes' : 'No'} />
-              </ListItem>
-              </Grid>
-            </Grid>
             </List>
 
             <div className="action-buttons flex flex-col mt-6 space-y-4">
@@ -109,7 +139,11 @@ export default function RaceDetailsPage() {
             </div>
           </>
         ) : (
-          <Typography variant="h6" component="h2" className="text-gray-800 font-bold text-center">
+          <Typography
+            variant="h6"
+            component="h2"
+            className="text-gray-800 font-bold text-center"
+          >
             Loading race details...
           </Typography>
         )}
