@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import { Button, Typography, Container, Box, Paper, Grid } from '@mui/material';
 import { createCompetitor, competitorExists, updateCompetitor } from '../../utils/CompetitorManagement';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useBackButton } from '../../utils/navigation';
 
 
 function UploadCompetitorsPage() {
@@ -30,6 +31,7 @@ const navigate = useNavigate();
       });
     }
   };
+  const handleBack = useBackButton();
 
   const handleConfirmUpload = async () => {
     for (const i in competitors) {
@@ -54,6 +56,7 @@ const navigate = useNavigate();
         >
           Bulk Upload Competitors
         </Typography>
+        <Button onClick={handleBack}>Back</Button>
         <input type="file" accept=".csv" onChange={handleFileChange} />
         <Button
           variant="contained"

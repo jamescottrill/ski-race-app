@@ -32,13 +32,14 @@ export default function TeamListPage() {
         SELECT
           ct.team_id,
           ct.team_name,
-          COUNT(ctm.racer_id) AS num_members,
+          COUNT(cct.racer_id) AS num_members,
           ct.is_corps,
           ct.is_reserve,
           ct.is_female,
           ct.is_hc
         FROM competition_team ct
-        LEFT JOIN competition_team_members ctm ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+        LEFT JOIN main.competition_competitor cct ON ct.competition_id = cct.competition_id AND ct.team_id = cct.team
+--         LEFT JOIN competition_team_members ctm ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
         GROUP BY ct.team_id, ct.team_name
       `);
       setTeams(result);
@@ -98,6 +99,7 @@ export default function TeamListPage() {
 
   return (
     <Container className="team-list-page flex flex-col items-center justify-center min-h-screen  w-full max-w-full">
+      <Paper elevation={3} className="p-8 max-w-full">
       <Typography
         variant="h4"
         component="h1"
@@ -105,7 +107,6 @@ export default function TeamListPage() {
       >
         Teams
       </Typography>
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -165,7 +166,7 @@ export default function TeamListPage() {
           Create New Team
         </Button>
       </Box>
-
+      </Paper>
       {/* Create Team Modal */}
       <TeamModal
         open={isCreateModalOpen}
