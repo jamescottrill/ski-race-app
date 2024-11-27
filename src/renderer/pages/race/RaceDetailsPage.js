@@ -49,7 +49,7 @@ export default function RaceDetailsPage() {
               </Grid>
               <Grid item xs={4}>
               <ListItem>
-                <ListItemText primary="Date" secondary={new Date(raceDetails.race_date).toLocaleDateString()} />
+                <ListItemText primary="Date" secondary={new Date(raceDetails.race_date).toLocaleDateString('en-GB')} />
               </ListItem>
               </Grid>
               <Grid item xs={4}>
@@ -79,6 +79,15 @@ export default function RaceDetailsPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg"
               >
                 View Start List
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                component={Link}
+                to={`/competition/${competitionId}/race/${raceId}/edit`}
+                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg"
+              >
+                Edit Race
               </Button>
               <Button
                 variant="contained"
