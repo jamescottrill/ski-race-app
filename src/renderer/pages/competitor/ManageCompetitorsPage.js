@@ -29,7 +29,7 @@ function ManageCompetitorsPage() {
   const handleBack = useBackButton();
 
   return (
-    <Container className="competitor-management-page flex flex-col items-center justify-center min-h-screen  w-full max-w-full">
+    <Container className="competitor-management-page flex flex-col items-center justify-center min-h-screen w-full max-w-full">
       <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-lg">
         <Typography
           variant="h4"

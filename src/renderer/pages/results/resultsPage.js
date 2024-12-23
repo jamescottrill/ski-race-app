@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Typography, Container, Box, Paper } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useBackButton } from '../../utils/navigation';
 
-function CompetitionManagementPage() {
+function ResultsPage() {
   const { competitionId } = useParams();
   const [competitionName, setCompetitionName] = useState('');
   const navigate = useNavigate();
@@ -14,39 +15,20 @@ function CompetitionManagementPage() {
 
       try {
         const result = await window.api.select(query, params);
-        if (result && result[0]) {
-          setCompetitionName(result[0].competition_name);
-        } else {
-          console.error('Competition not found');
-          navigate('/');
-        }
-      } catch (error) {
+        setCompetitionName(result[0].competition_name);
+        } catch (error) {
         console.error('Failed to fetch competition details:', error);
-        navigate('/');
       }
     };
 
     fetchCompetitionDetails();
   }, [competitionId]);
 
-  const handleManageCompetitors = () => {
-    navigate(`/competition/${competitionId}/competitor/manage`);
+  const handleClick = (endpoint) => {
+    navigate(`/competition/${competitionId}/results/${endpoint}`);
   };
 
-  const handleManageRaces = () => {
-    navigate(`/competition/${competitionId}/race`);
-  };
-
-  const handleViewRaceResults = () => {
-    navigate(`/competition/${competitionId}/results`);
-  };
-
-  const handleGenerateSeedList = () => {
-    navigate(`/competition/${competitionId}/seed-list/generate`);
-  };
-  const handleChangeCompetition = () => {
-    navigate('/');
-  };
+  const handleBack = useBackButton();
 
   return (
     <Container className="competition-management-page flex flex-col items-center justify-center min-h-screen w-full max-w-full">
@@ -62,50 +44,41 @@ function CompetitionManagementPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleManageCompetitors}
+            onClick={handleClick('individual')}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            Competitors
+            Individual
           </Button>
 
           <Button
             variant="contained"
             color="primary"
-            onClick={handleManageRaces}
+            onClick={handleClick('team')}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
+          >
+            Team
+          </Button>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleClick('races')}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
             Races
           </Button>
-
           <Button
             variant="contained"
-            color="primary"
-            onClick={handleViewRaceResults}
+            color="secondary"
+            onClick={handleBack}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            Results
-          </Button>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleGenerateSeedList}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
-          >
-            Seed List
+            Back
           </Button>
         </div>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleChangeCompetition}
-          className="text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
-        >
-          Change Competition
-        </Button>
       </Paper>
     </Container>
   );
 }
 
-export default CompetitionManagementPage;
+export default ResultsPage;

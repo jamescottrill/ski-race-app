@@ -16,7 +16,12 @@ import { v4 as uuid4 } from 'uuid';
 import AddIcon from '@mui/icons-material/Add';
 import TeamModal from './TeamModal';
 
-function CompetitorForm({ editMode, competitorId, existingCompetitor, competitionId }) {
+function CompetitorForm({
+  editMode,
+  competitorId,
+  existingCompetitor,
+  competitionId,
+}) {
   const navigate = useNavigate();
   const initialData = {
     firstName: '',
@@ -27,7 +32,7 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
     serviceNumber: '',
     gender: 'M',
     team: '',
-    arrivalSeed: '',
+    arrivalSeed: 2000,
     isNovice: false,
     isJunior: false,
     isSenior: false,
@@ -83,13 +88,13 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
     if (existingCompetitor) {
       query = `
         SELECT p.*,
-               NULL AS team,
-               NULL AS arrival_seed,
-               NULL AS is_junior,
-               NULL AS is_senior,
-               NULL AS is_veteran,
-               NULL AS is_reserve,
-               NULL AS is_female
+               0 AS arrival_corps_seed,
+               FALSE AS is_junior,
+               FALSE AS is_senior,
+               FALSE AS is_veteran,
+               FALSE AS is_reserve,
+               FALSE AS is_female,
+               NULL  AS team
         FROM people p
         WHERE p.id = ?`;
       params = [competitorId];
@@ -102,21 +107,26 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
                p.country,
                p.service_number,
                p.gender,
-               COALESCE(cc.title, p.title) AS title,
-               cc.team,
-               cc.arrival_seed,
+               cc.title,
+               ct.team_id AS team,
                cc.is_junior,
                cc.is_senior,
                cc.is_veteran,
                cc.is_reserve,
-               cc.is_female
+               cc.is_female,
+               cc.arrival_corps_seed
         FROM people p
          LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
+         LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND  ctm.competition_id = cc.competition_id
+         LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id
         WHERE p.id = ? AND cc.competition_id = ?
+        AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
       `;
       params = [competitorId, competitionId];
     }
     try {
+      console.log(query);
+      console.log(params);
       const result = await window.api.select(query, params);
       if (result && result[0]) {
         setFormData({
@@ -128,7 +138,7 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
           serviceNumber: result[0].service_number || '',
           gender: result[0].gender || 'M',
           team: result[0].team || '',
-          arrivalSeed: result[0].arrival_seed || '',
+          arrivalSeed: result[0].arrival_corps_seed || 2000,
           isJunior: result[0].is_junior || false,
           isSenior: result[0].is_senior || false,
           isVeteran: result[0].is_veteran || false,
@@ -191,7 +201,7 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
 
       const query2 = `
         INSERT INTO competition_competitor
-        (competition_id, racer_id, team, arrival_seed, is_novice, is_junior,
+        (competition_id, racer_id, team, arrival_corps_seed, is_novice, is_junior,
          is_senior, is_veteran, is_reserve, is_female, title)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
@@ -206,10 +216,17 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
         isVeteran,
         formData.isReserve,
         formData.isFemale,
-        formData.title
+        formData.title,
       ];
 
       await window.api.insert(query2, params2);
+
+      const query3 = `
+      INSERT INTO competition_team_members (competition_id, team_id, racer_id) VALUES (?, ?, ?)
+      `;
+      const params3 = [competitionId, formData.team, id];
+      await window.api.insert(query3, params3);
+
       navigate(`/competition/${competitionId}/competitor/manage`);
     } catch (error) {
       console.error('Failed to create competitor:', error);
@@ -240,39 +257,17 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
 
     try {
       await window.api.insert(query1, params1);
-      let query2;
-      let params2;
-        let isJunior = false;
-        let isVeteran = false;
-        let isSenior = true;
-        if (formData.dob) {
-          ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(
-            formData.dob,
-          ));
-        }
-        query2 = `
-        INSERT INTO competition_competitor
-        (competition_id, racer_id, team, arrival_seed, is_novice, is_junior,
-          is_senior, is_veteran, is_reserve, is_female, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-        params2 = [
-          competitionId,
-          competitorId,
-          formData.team,
-          formData.arrivalSeed,
-          formData.isNovice,
-          isJunior,
-          isSenior,
-          isVeteran,
-          formData.isReserve,
-          formData.isFemale,
-          formData.title,
-        ];
-        query2 = `
+      let isJunior = false;
+      let isVeteran = false;
+      let isSenior = true;
+      if (formData.dob) {
+        ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(
+          formData.dob,
+        ));
+      }
+      const query2 = `
           UPDATE competition_competitor
-          SET team         = ?,
-              arrival_seed = ?,
+          SET arrival_corps_seed = ?,
               is_novice    = ?,
               is_junior    = ?,
               is_senior    = ?,
@@ -283,20 +278,45 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
           WHERE competition_id = ?
             AND racer_id = ?
         `;
-        params2 = [
-          formData.team,
-          formData.arrivalSeed,
-          formData.isNovice || false,
-          formData.isJunior || false,
-          formData.isSenior || false,
-          formData.isVeteran || false,
-          formData.isReserve || false,
-          formData.isFemale || false,
-          formData.title,
-          competitionId,
-          competitorId,
-        ];
-      const res = await window.api.insert(query2, params2);
+      const params2 = [
+        formData.arrivalSeed,
+        formData.isNovice || false,
+        isJunior || false,
+        isSenior || false,
+        isVeteran || false,
+        formData.isReserve || false,
+        formData.isFemale || false,
+        formData.title,
+        competitionId,
+        competitorId,
+      ];
+      await window.api.insert(query2, params2);
+      const primaryTeam = await window.api.select(
+        `
+      SELECT ctm.team_id
+      FROM competition_team_members ctm
+      LEFT JOIN competition_team ct USING(team_id, competition_id)
+      WHERE racer_id = ?
+        AND competition_id = ?
+        AND NOT COALESCE(ct.is_hc, FALSE)
+        AND NOT COALESCE(ct.is_corps, FALSE)
+        AND NOT COALESCE(ct.is_female, FALSE)
+      `,
+        [competitorId, competitionId],
+      );
+      let query3
+      if(primaryTeam && primaryTeam.length > 0) {
+        query3 = `
+        UPDATE competition_team_members
+        SET team_id = ?
+        WHERE competition_id = ?
+          AND racer_id = ?
+      `;
+      } else {
+        query3 = `INSERT INTO main.competition_team_members (team_id, competition_id, racer_id) VALUES (?,?,?)`;
+      }
+      const params3 = [formData.team, competitionId, competitorId];
+      await window.api.insert(query3, params3);
       navigate(-1);
     } catch (error) {
       console.error('Failed to update competitor:', error);
@@ -393,8 +413,8 @@ function CompetitorForm({ editMode, competitorId, existingCompetitor, competitio
               name="serviceNumber"
               value={formData.serviceNumber}
               onChange={handleChange}
-              required
-              disabled={existingCompetitor}
+              // required
+              // disabled={existingCompetitor}
             />
           </Grid>
           <Grid item xs={12}>

@@ -52,7 +52,7 @@ const seedResults = `
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               ct.team_name,
+                               ct.team_name AS team,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS min1time,
@@ -63,9 +63,11 @@ const seedResults = `
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id
-                               LEFT JOIN competition_team ct ON ct.team_id = cc.team AND ct.competition_id = run1.competition_id
+                               LEFT JOIN competition_team_members ctm ON ctm.racer_id = run1.racer_id AND ctm.competition_id = run1.competition_id
+                               LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type
+                               WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         ),
           seeds AS (SELECT *,
                              ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_1,
@@ -83,7 +85,7 @@ const seedResults = `
             *,
           RANK() OVER (ORDER BY COALESCE(overall_seed, 9999999)) AS position
           FROM final
-          ORDER BY overall_seed
+          ORDER BY total_time
         `;
 
 const seedingPoints = `
@@ -114,7 +116,7 @@ const seedingPoints = `
                                run1.race_id,
                                run1.race_time                                                            AS run_1_time,
                                run2.race_time                                                            AS run_2_time,
-                               ROUND(run1.race_time + run2.race_time, 2)                                 AS total_time,
+                               run1.race_time + run2.race_time                                           AS total_time,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS min1time,
@@ -132,13 +134,15 @@ const seedingPoints = `
             SELECT
               s.racer_id,
               race_id,
+              total_time,
               CASE
                 WHEN NOT seed_1 AND NOT seed_2 THEN NULL
-                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < cc.arrival_seed THEN seed_1
-                WHEN COALESCE(seed_2, 999999) < cc.arrival_seed THEN seed_2
-                ELSE arrival_seed END AS seed_point
+                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < cc.arrival_corps_seed THEN seed_1
+                WHEN COALESCE(seed_2, 999999) < cc.arrival_corps_seed THEN seed_2
+                ELSE arrival_corps_seed END AS seed_point
             FROM seeds s
             JOIN competition_competitor cc ON cc.racer_id = s.racer_id
+          ORDER BY total_time NULLS LAST
         `;
 
 export { seedResults, seedingPoints };

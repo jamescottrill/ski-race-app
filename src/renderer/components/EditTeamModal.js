@@ -29,10 +29,14 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
     try {
       const result = await window.api.select(
         `
-        SELECT p.id, p.first_name, p.last_name
+        SELECT
+          DISTINCT
+          p.id, p.first_name, p.last_name
         FROM people p
-        LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
-        WHERE cc.team != ? OR cc.team IS NULL
+        LEFT OUTER JOIN competition_team_members ctm ON p.id = ctm.racer_id
+        LEFT OUTER JOIN competition_team ct ON ctm.team_id = ct.team_id
+        WHERE ct.team_id != ? OR Ct.team_id IS NULL
+        ORDER BY first_name
       `,
         [teamId],
       );
@@ -78,7 +82,8 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
     team_name,
     is_corps,
     is_female,
-    is_hc
+    is_hc,
+    is_reserve
     FROM competition_team
     WHERE competition_id = ? AND team_id = ?
     `;
@@ -89,7 +94,8 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
       teamName: team.team_name || '',
       isCorpsTeam: team.is_corps || false,
       isFemaleTeam: team.is_female || false,
-      isHCTeam: team.is_jc || false,
+      isHCTeam: team.is_hc || false,
+      isReserveTeam: team.is_reserve || false,
       selectedCompetitors: [], // Fetch these later
     });
   };
@@ -136,7 +142,7 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
     // Save team changes
     const query = `
       UPDATE competition_team
-      SET team_name = ?, is_corps = ?, is_female = ?, is_hc = ?
+      SET team_name = ?, is_corps = ?, is_female = ?, is_hc = ?, is_reserve = ?
       WHERE competition_id = ? AND team_id = ?
     `;
     const params = [
@@ -144,6 +150,7 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
       formData.isCorpsTeam,
       formData.isFemaleTeam,
       formData.isHCTeam,
+      formData.isReserveTeam,
       competitionId,
       teamId,
     ];
@@ -237,6 +244,18 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
               label="HC Team?"
             />
           </Grid>
+          <Grid item xs={6}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="isReserveTeam"
+                  checked={formData.isReserveTeam}
+                  onChange={handleChange}
+                />
+              }
+              label="Reserve Team?"
+            />
+          </Grid>
           <Grid item xs={12}>
             <Autocomplete
               multiple
@@ -248,6 +267,7 @@ export default function EditTeamModal({ open, onClose, onError, teamId }) {
               value={formData.selectedCompetitors}
               onChange={handleCompetitorChange}
               disablePortal
+              isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => (
                 <TextField
                   {...params}

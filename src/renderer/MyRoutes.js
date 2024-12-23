@@ -3,6 +3,7 @@ import LandingPage from './pages/landingPage';
 import CreateCompetitionPage from './pages/createCompetition';
 import CompetitionManagementPage from './pages/competitonManagementPage';
 import CompetitorRoutes from './routes/CompetitorRoutes';
+import ResultsRoutes from './routes/ResultsRoutes';
 import RaceRoutes from './routes/RaceRoutes';
 import SeedListRoutes from './routes/SeedListRoutes';
 import Layout from './components/Layout';
@@ -23,6 +24,7 @@ export default function MyRoutes() {
       {CompetitorRoutes()}
       {RaceRoutes()}
       {SeedListRoutes()}
+      {ResultsRoutes()}
     </>
   );
 }

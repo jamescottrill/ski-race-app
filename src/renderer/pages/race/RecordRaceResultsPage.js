@@ -10,7 +10,7 @@ import RaceTeamResultTwoRun from '../../components/RaceTeamResultTwoRun';
 import RaceTeamResultOneRun from '../../components/RaceTeamResult';
 
 function RaceRunTabPanel(props) {
-  const { value, index, raceId, competitionId, edit, totalRuns, ...other } = props;
+  const { value, index, raceId, competitionId, edit, totalRuns, isSeedingRace, ...other } = props;
 
   return (
     <div
@@ -26,6 +26,7 @@ function RaceRunTabPanel(props) {
         competitionId={competitionId}
         edit={edit}
         totalRuns={totalRuns}
+        isSeedingRace={isSeedingRace}
       />
     </div>
   );
@@ -149,6 +150,7 @@ export default function RecordRaceResultsPage() {
             competitionId={run.competition_id}
             edit={!run.is_complete}
             totalRuns={raceRuns.length}
+            isSeedingRace={raceDetails.is_seeding}
           />
         ))}
         <RaceResultTabPanel

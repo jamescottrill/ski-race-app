@@ -14,9 +14,9 @@ import OtherResultTable from './DnsTable';
 import { resultsSeedPdf } from '../utils/ResultsSeedPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 import { convertRaceTime } from '../utils/TimeUtils';
-import { seedResults} from '../queries/SeedResults';
+import { seedResults } from '../queries/SeedResults';
 
-export default function RaceResultTwoRun({ raceId, competitionId }) {
+export default function RaceResultSeed({ raceId, competitionId }) {
   const [data, setData] = useState([]);
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
@@ -40,8 +40,24 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
         id: `${result.racer_id}/results`,
         racerId: result.racer_id,
         raceId: result.raceId,
-        run1Time: result.run_1_time ? convertRaceTime(result.run_1_time) : result.run_1_dns ? "DNS" : result.run_1_dnf ? "DNF" : result.run_1_dsq ? "DSQ" : "",
-        run2Time: result.run_2_time ? convertRaceTime(result.run_2_time) : result.run_2_dns ? "DNS" : result.run_2_dnf ? "DNF" : result.run_2_dsq ? "DSQ" : "",
+        run1Time: result.run_1_time
+          ? convertRaceTime(result.run_1_time)
+          : result.run_1_dns
+            ? 'DNS'
+            : result.run_1_dnf
+              ? 'DNF'
+              : result.run_1_dsq
+                ? 'DSQ'
+                : '',
+        run2Time: result.run_2_time
+          ? convertRaceTime(result.run_2_time)
+          : result.run_2_dns
+            ? 'DNS'
+            : result.run_2_dnf
+              ? 'DNF'
+              : result.run_2_dsq
+                ? 'DSQ'
+                : '',
         run1Dns: result.run_1_dns,
         run2Dns: result.run_2_dns,
         run1Dsq: result.run_1_dsq,
@@ -73,7 +89,9 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
         finalSeed: result.overall_seed,
       };
       obj.completed = obj.completed1 && obj.completed2;
-      obj.totalTime = obj.completed ? convertRaceTime(Math.round(result.run_1_time + result.run_2_time,2)) : '';
+      obj.totalTime = obj.completed
+        ? convertRaceTime((result.run_1_time + result.run_2_time).toFixed(2))
+        : '';
       return obj;
     });
 

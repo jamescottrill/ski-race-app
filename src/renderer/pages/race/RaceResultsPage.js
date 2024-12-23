@@ -111,7 +111,7 @@ export default function RaceResultsPage() {
           Results
         </Typography>
         <Tabs onChange={handleChange} value={value}>
-          <Tab label="Results" value="result" />
+ <Tab label="Results" value="result" />
           {raceDetails.is_team &&(
             <Tab label="Team Results" value="teamResult" />
           )}
@@ -124,7 +124,7 @@ export default function RaceResultsPage() {
           isSeed={raceDetails.is_seeding}
           runs={raceRuns.length}
         />
-        {raceDetails.is_team && (<TeamResultTabPanel
+        {raceDetails.is_team > 0 && (<TeamResultTabPanel
             value={value}
             index="teamResult"
             raceId={raceId}

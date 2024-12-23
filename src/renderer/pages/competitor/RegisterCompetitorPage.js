@@ -83,7 +83,7 @@ function RegisterCompetitorPage() {
           <CompetitorForm
             editMode
             competitorId={selectedCompetitorId}
-            existingCompetitor
+            existingCompetitor={true}
             competitionId
           />
         )) || <CompetitorForm editMode={false} competitionId={competitionId} />}

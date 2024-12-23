@@ -12,9 +12,9 @@ const calculateAgeCategory = (dob) => {
   };
 };
 
-const competitorExists = async (serviceNumber) => {
-  const query = `SELECT COUNT(*) AS count FROM people WHERE service_number = ?`
-  const params = [serviceNumber];
+const competitorExists = async (serviceNumber, firstName, LastName) => {
+  const query = `SELECT COUNT(*) AS count FROM people WHERE service_number = ? AND first_name = ? AND last_name = ? `;
+  const params = [serviceNumber, firstName, LastName];
   try {
     const result = await window.api.select(query, params);
     return result[0].count > 0;
@@ -35,11 +35,7 @@ const updateCompetitor = async (
       SET title = ?,  country = ?
       WHERE id = ?
     `;
-  const params1 = [
-    formData.title,
-    formData.country,
-    competitorId,
-  ];
+  const params1 = [formData.title, formData.country, competitorId];
 
   try {
     await window.api.insert(query1, params1);
@@ -56,15 +52,13 @@ const updateCompetitor = async (
       }
       query2 = `
         INSERT INTO competition_competitor
-        (competition_id, racer_id, team, arrival_seed, is_novice, is_junior,
-          is_senior, is_veteran, is_reserve, is_female, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (competition_id, racer_id, is_novice, is_junior,
+          is_senior, is_veteran, is_reserve, is_female, title, arrival_corps_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
       params2 = [
         competitionId,
         competitorId,
-        formData.formData,
-        formData.arrivalSeed,
         formData.isNovice,
         isJunior,
         isSenior,
@@ -72,12 +66,13 @@ const updateCompetitor = async (
         formData.isReserve,
         formData.isFemale,
         formData.title,
+        formData.arrivalSeed || 2000,
       ];
     } else {
       query2 = `
           UPDATE competition_competitor
-          SET team         = ?,
-              arrival_seed = ?,
+          SET
+              arrival_corps_seed = ?,
               is_novice    = ?,
               is_junior    = ?,
               is_senior    = ?,
@@ -89,8 +84,7 @@ const updateCompetitor = async (
             AND racer_id = ?
         `;
       params2 = [
-        formData.formData,
-        formData.arrivalSeed,
+        formData.arrivalSeed || 2000,
         formData.isNovice || false,
         formData.isJunior || false,
         formData.isSenior || false,
@@ -103,6 +97,12 @@ const updateCompetitor = async (
       ];
     }
     await window.api.insert(query2, params2);
+    if (formData.teamId) {
+      const params3 = [competitionId, formData.teamId, competitorId];
+      const query3 = `INSERT INTO main.competition_team_members (competition_id, team_id, racer_id)
+                      VALUES (?, ?, ?)`;
+      await window.api.insert(query3, params3);
+    }
     return true;
   } catch (error) {
     console.error('Failed to update competitor:', error);
@@ -136,15 +136,13 @@ const createCompetitor = async (formData, competitionId) => {
 
     const query2 = `
         INSERT INTO competition_competitor
-        (competition_id, racer_id, team, arrival_seed, is_novice, is_junior,
+        (competition_id, racer_id, is_novice, is_junior,
          is_senior, is_veteran, is_reserve, is_female, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
     const params2 = [
       competitionId,
       id,
-      formData.formData,
-      formData.arrivalSeed,
       formData.isNovice,
       isJunior,
       isSenior,
@@ -192,4 +190,10 @@ const calculateCategory = (competitor) => {
   return category;
 };
 
-export { updateCompetitor, calculateAgeCategory, createCompetitor, competitorExists, calculateCategory };
+export {
+  updateCompetitor,
+  calculateAgeCategory,
+  createCompetitor,
+  competitorExists,
+  calculateCategory,
+};

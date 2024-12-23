@@ -32,20 +32,25 @@ export default function TeamListPage() {
         SELECT
           ct.team_id,
           ct.team_name,
-          COUNT(cct.racer_id) AS num_members,
+          COUNT(ctm.racer_id) AS num_members,
           ct.is_corps,
           ct.is_reserve,
           ct.is_female,
           ct.is_hc
         FROM competition_team ct
-        LEFT JOIN main.competition_competitor cct ON ct.competition_id = cct.competition_id AND ct.team_id = cct.team
---         LEFT JOIN competition_team_members ctm ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+        LEFT JOIN competition_team_members ctm ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
         GROUP BY ct.team_id, ct.team_name
+        ORDER BY team_name
       `);
       setTeams(result);
     } catch (error) {
       console.error('Failed to fetch teams:', error);
     }
+  };
+
+  const handleSaveTeam = async () => {
+    await fetchTeams();
+    setIsCreateModalOpen(false); // Close the modal after saving
   };
 
   useEffect(() => {
@@ -170,6 +175,7 @@ export default function TeamListPage() {
       {/* Create Team Modal */}
       <TeamModal
         open={isCreateModalOpen}
+        onSave={handleSaveTeam}
         onClose={handleCloseCreateModal}
         onCreate={handleCreateTeam}
       />

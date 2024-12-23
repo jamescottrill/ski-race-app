@@ -1,21 +1,11 @@
-/* eslint global-require: off, no-console: off, promise/always-return: off */
-
-/**
- * This module executes inside of electron's main process. You can start
- * electron renderer process from here and communicate with the other processes
- * through IPC.
- *
- * When running `npm run build` or `npm run build:main`, this file is compiled to
- * `./src/main.js` using webpack. This gives us some performance wins.
- */
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { Database, AppPreferences } from './utils/db';
 
-const db = require('./utils/db');
 const fs = require('fs');
 
 class AppUpdater {
@@ -28,62 +18,76 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
+function ensureDatabasePath(): string | undefined {
+  const preferences = AppPreferences.loadPreferences();
 
-// Handle SELECT queries
-ipcMain.handle('db-select', (event, query, params) => {
-  return db.all(query, params);
-});
+  let dbPath = preferences.databasePath;
+  if (!dbPath || !fs.existsSync(dbPath)) {
+    // Prompt user to select a database file or location
+    const result = dialog.showSaveDialogSync({
+      title: 'Select or Create Database File',
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+    });
 
-// Handle INSERT queries
-ipcMain.handle('db-insert', async (event, query, params) => {
-  try {
-    const result = await db.run(query, params);
-    return { success: true, id: result.id };
-  } catch (error: any) {
-    console.error('Error inserting data:', error);
-    return { success: false, error: error.message };
+    if (result) {
+      dbPath = result;
+      preferences.databasePath = dbPath;
+      AppPreferences.savePreferences(preferences);
+    } else {
+      // User cancelled - handle how you want. You could quit:
+      app.quit();
+      return;
+    }
   }
-});
 
-// Handle DELETE queries
-ipcMain.handle('db-delete', (event, query, params) => {
-  return db.delete(query, params);
-});
-
-if (process.env.NODE_ENV === 'production') {
-  const sourceMapSupport = require('source-map-support');
-  sourceMapSupport.install();
+  return dbPath;
 }
 
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
-if (isDebug) {
-  require('electron-debug')();
-}
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload,
-    )
-    .catch(console.log);
-};
-
-const createWindow = async () => {
+async function createWindow() {
   if (isDebug) {
+    const installExtensions = async () => {
+      const installer = require('electron-devtools-installer');
+      const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
+      const extensions = ['REACT_DEVELOPER_TOOLS'];
+      return installer
+        .default(
+          extensions.map((name) => installer[name]),
+          forceDownload,
+        )
+        .catch(console.log);
+    };
     await installExtensions();
   }
+
+  const dbPath = ensureDatabasePath();
+  if (!dbPath) {
+    // If no dbPath, we've quit or handled the scenario
+    return;
+  }
+
+  // Now that we have a valid DB path, create the database
+  const db = new Database(dbPath);
+
+  ipcMain.handle('db-select', (event, query, params) => {
+    return db.all(query, params);
+  });
+
+  ipcMain.handle('db-insert', async (event, query, params) => {
+    try {
+      const result = await db.run(query, params);
+      return { success: true, id: result.id };
+    } catch (error: any) {
+      console.error('Error inserting data:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('db-delete', (event, query, params) => {
+    return db.delete(query, params);
+  });
 
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
@@ -125,25 +129,15 @@ const createWindow = async () => {
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
-
-  // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {
     shell.openExternal(edata.url);
     return { action: 'deny' };
   });
 
-  // Remove this if your app does not use auto updates
-  // eslint-disable-next-line
   new AppUpdater();
-};
-
-/**
- * Add event listeners...
- */
+}
 
 app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -154,9 +148,7 @@ app
   .then(() => {
     createWindow();
     app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   })
   .catch(console.log);
@@ -171,11 +163,11 @@ ipcMain.handle('save-pdf', async (event, buffer, defaultFileName) => {
   if (filePath) {
     try {
       fs.writeFileSync(filePath, Buffer.from(buffer));
-      return filePath; // Return file path if saved successfully
+      return filePath;
     } catch (err) {
       console.error('Failed to save PDF:', err);
-      throw err; // Throw error to be caught in renderer
+      throw err;
     }
   }
-  return null; // Return null if the user cancels the dialog
+  return null;
 });

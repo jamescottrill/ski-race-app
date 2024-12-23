@@ -36,11 +36,20 @@ export default function GenerateStartList() {
 
   const getFetchSeedList = async () => {
     let completedRaces;
-    completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training ORDER BY r.race_date ASC`, [competitionId]);
+    completedRaces = await window.api.select(
+      `SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training ORDER BY r.race_date ASC`,
+      [competitionId],
+    );
     if (completedRaces.length > 3) {
-      completedRaces = await window.api.select(`SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding ORDER BY r.race_date ASC`, [competitionId]);
+      completedRaces = await window.api.select(
+        `SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding ORDER BY r.race_date ASC`,
+        [competitionId],
+      );
     }
-    const seedlist = await fetchSeedList(competitionId, completedRaces.map((e)=>e.raceId));
+    const seedlist = await fetchSeedList(
+      competitionId,
+      completedRaces.map((e) => e.raceId),
+    );
     setSeedList(seedlist);
   };
 
@@ -54,11 +63,16 @@ export default function GenerateStartList() {
     SELECT
       p.id AS racer_id, p.first_name, p.last_name, rc.bib_number,
       cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, cc.team, '' AS seed_points
+      cc.is_veteran, cc.is_female, seed_points
       FROM race_competitor rc
     INNER JOIN people p ON rc.racer_id = p.id
     INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
+    LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
+    LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
     WHERE rc.competition_id = ? AND rc.race_id = ?
+    AND NOT COALESCE(ct.is_female, FALSE)
+    AND NOT COALESCE(ct.is_hc, FALSE)
+    ORDER BY bib_number
     `;
     const results = await window.api.select(query, [competitionId, raceId]);
     if (results) {
@@ -192,6 +206,29 @@ export default function GenerateStartList() {
     }
   };
 
+  const deleteStartList = async () => {
+    const query = `
+      DELETE FROM race_competitor
+      WHERE competition_id = ? AND race_id = ?;
+    `;
+    const raceQuery = `
+      DELETE FROM race_results
+      WHERE competition_id = ? AND race_id = ?;
+    `;
+    try {
+      const promises = [];
+      const res1 = window.api.delete(query, [competitionId, raceId]);
+      const res2 = window.api.delete(raceQuery, [competitionId, raceId]);
+      promises.push(res1);
+      promises.push(res2);
+      await Promise.all(promises);
+      alert(`Start list deleted successfully.`);
+    } catch (error) {
+      alert(`Failed to delete start list. ${error}`);
+      console.error(`Failed to delete start list:`, error);
+    }
+  };
+
   const handleSaveStartList = () => {
     if (womenStartList) {
       saveStartList(startList, "Men's");
@@ -215,7 +252,6 @@ export default function GenerateStartList() {
           variant="contained"
           color="primary"
           onClick={handleBack}
-          // className="over:bg-green-700 text-white py-2 px-4 rounded shadow-lg w-full mt-4"
         >
           Back
         </Button>
@@ -256,7 +292,9 @@ export default function GenerateStartList() {
                 textDecoration: struckOutCompetitors[competitor.racer_id]
                   ? 'line-through'
                   : 'none',
-                color: struckOutCompetitors[competitor.racer_id] ? 'gray' : 'black',
+                color: struckOutCompetitors[competitor.racer_id]
+                  ? 'gray'
+                  : 'black',
               }}
             >
               <FormControlLabel
@@ -361,7 +399,7 @@ export default function GenerateStartList() {
           Back
         </Button>
         {startList && (
-          <Paper elevation={1} className="p-4 mt-4">
+          <Paper>
             {!!raceDetails.is_women_separate && (
               <Typography
                 variant="h6"
@@ -376,6 +414,7 @@ export default function GenerateStartList() {
                 <ListItem key={competitor.racer_id}>
                   <ListItemText
                     primary={`${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
+                    secondary={`Seed: ${competitor.seed_points.toFixed(2)}`}
                   />
                 </ListItem>
               ))}
@@ -396,7 +435,8 @@ export default function GenerateStartList() {
               {womenStartList.map((competitor, index) => (
                 <ListItem key={competitor.racer_id}>
                   <ListItemText
-                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points.toFixed(2)})`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name}`}
+                    secondary={`Seed: ${competitor.seed_points.toFixed(2)}`}
                   />
                 </ListItem>
               ))}
@@ -405,6 +445,9 @@ export default function GenerateStartList() {
         )}
         <Button variant="contained" onClick={generatePDF}>
           Download PDF
+        </Button>
+        <Button variant="contained" onClick={deleteStartList}>
+          Delete Start List
         </Button>
       </Paper>
     </Container>

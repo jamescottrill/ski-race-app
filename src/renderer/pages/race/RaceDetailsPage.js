@@ -10,16 +10,11 @@ import {
   ListItemText,
   Grid,
 } from '@mui/material';
-import { useBackButton } from '../../utils/navigation';
-
+// import { useBackButton } from '../../utils/navigation';
 export default function RaceDetailsPage() {
   const { competitionId, raceId } = useParams();
   const [raceDetails, setRaceDetails] = useState(null);
-  const handleBack = useBackButton();
-
-  useEffect(() => {
-    fetchRaceDetails();
-  }, []);
+  // const handleBack = useBackButton();
 
   const fetchRaceDetails = async () => {
     try {
@@ -40,6 +35,10 @@ export default function RaceDetailsPage() {
       console.error('Failed to fetch race details:', error);
     }
   };
+
+  useEffect(() => {
+    fetchRaceDetails();
+  }, []);
 
   return (
     <Container className="race-details-page flex flex-col items-center justify-center min-h-screen">

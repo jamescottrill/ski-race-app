@@ -1,19 +1,74 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { app, dialog } = require('electron');
+const fs = require('fs');
+
+class AppPreferences {
+  static preferencesPath = path.join(app.getPath('userData'), 'config.json');
+
+  static loadPreferences() {
+    if (fs.existsSync(this.preferencesPath)) {
+      return JSON.parse(fs.readFileSync(this.preferencesPath, 'utf-8'));
+    }
+    this.savePreferences({});
+    return {};
+  }
+
+  static savePreferences(preferences) {
+    fs.writeFileSync(
+      this.preferencesPath,
+      JSON.stringify(preferences, null, 2),
+    );
+  }
+}
+
+const preferences = AppPreferences.loadPreferences();
+
+function selectDatabaseFile() {
+  const result = dialog.showOpenDialogSync({
+    title: 'Select Database File',
+    properties: ['openFile', 'openDirectory', 'createDirectory'], // flexibly allow directory or file
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }], // filter files
+  });
+
+  if (result && result.length > 0) {
+    preferences.databasePath = result[0];
+    AppPreferences.savePreferences(preferences);
+    return result[0];
+  }
+  return undefined;
+}
 
 class Database {
+  // constructor() {
+  //   this.db = new sqlite3.Database(
+  //     path.join(__dirname, '../../races.db'),
+  //     (err) => {
+  //       if (!err) {
+  //         console.log('Connected to the SQLite database.');
+  //         this.initializeDatabase(); // Initialize the database when the connection is established
+  //       } else {
+  //         console.error('Could not connect to database:', err.message);
+  //         alert(err.message);
+  //       }
+  //     });
+  // }
+
   constructor() {
-    this.db = new sqlite3.Database(
-      path.join(__dirname, '../../races.db'),
-      (err) => {
-        if (!err) {
-          console.log('Connected to the SQLite database.');
-          this.initializeDatabase(); // Initialize the database when the connection is established
-        } else {
-          console.error('Could not connect to database:', err.message);
-          alert(err.message);
-        }
-      });
+    const dbPath = preferences.databasePath || selectDatabaseFile();
+
+    if (!dbPath) {
+      throw new Error('Database file must be selected to proceed.');
+    }
+
+    this.db = new sqlite3.Database(dbPath, (err) => {
+      if (!err) {
+        console.log('Connected to the SQLite database at:', dbPath);
+        this.initializeDatabase(); // Initialize tables
+      } else {
+        console.error('Failed to connect to database:', err.message);
+      }
+    });
   }
 
   initializeDatabase() {
@@ -90,7 +145,11 @@ class Database {
         race_name TEXT,
         race_date DATE,
         race_type TEXT,
+        is_individual BOOLEAN,
         is_team BOOLEAN,
+        is_training BOOLEAN,
+        is_seeding BOOLEAN,
+        women_separate BOOLEAN,
         number_runs INTEGER,
         venue TEXT,
         course_name TEXT,
@@ -193,7 +252,7 @@ class Database {
 
   run(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.run(query, params, function(err) {
+      this.db.run(query, params, function (err) {
         if (err) {
           console.error('Error running query:', err.message);
           reject(err);
@@ -232,7 +291,7 @@ class Database {
 
   delete(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.run(query, params, function(err) {
+      this.db.run(query, params, function (err) {
         if (err) {
           console.error('Error deleting data:', err.message);
           reject(err);
@@ -244,4 +303,4 @@ class Database {
   }
 }
 
-module.exports = new Database();
+module.exports = { Database, AppPreferences };

@@ -12,12 +12,18 @@ import {
   Select,
   MenuItem,
   Button,
+  Autocomplete,
+  Grid,
+  IconButton,
 } from '@mui/material';
+import { race } from 'eslint-plugin-promise/rules/lib/promise-statics';
+import AddIcon from '@mui/icons-material/Add';
 import {
   convertRaceTime,
   convertHumanTime,
   formatTime,
 } from '../utils/TimeUtils';
+import PersonModal from './PersonModal';
 
 export default function RaceRun({
   raceId,
@@ -25,28 +31,120 @@ export default function RaceRun({
   runId,
   totalRuns,
   edit = false,
+  isSeedingRace = false,
 }) {
   const [data, setData] = useState([]);
+  const [people, setPeople] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPersonField, setSelectedPersonField] = useState(null);
+  const [runDetails, setRunDetails] = useState({
+    courseSetter: '',
+    numberGates: '',
+    turningGates: '',
+    startTime: '',
+    forerunner1: '',
+    forerunner2: '',
+    forerunner3: '',
+    forerunner4: '',
+  });
 
+  const handleOpenModal = (field) => {
+    setSelectedPersonField(field);
+    setModalOpen(true);
+  };
+
+  const fetchPeople = async () => {
+    const query = `SELECT id, first_name, last_name FROM people`;
+    try {
+      const result = await window.api.select(query);
+      setPeople(result);
+    } catch (error) {
+      console.error('Failed to fetch people:', error);
+    }
+  };
+
+  const initRunDetails = async () => {
+    const query = `SELECT
+    course_setter AS courseSetter,
+    number_gates AS numberGates,
+    turning_gates AS turningGates,
+    start_time AS startTime,
+    forerunner_a AS forerunnerA,
+    forerunner_b AS forerunnerB,
+    forerunner_c AS forerunnerC,
+    forerunner_d AS forerunnerD
+    FROM race_run
+    WHERE race_id = ? AND run_number = ?
+     `;
+    const params = [raceId, runId];
+    const results = await window.api.select(query, params);
+    if (results && results.length > 0) {
+      setRunDetails(results[0]);
+    }
+  };
   const initialData = async () => {
-    const initQuery = `
-    SELECT
-      rr.racer_id, rc.bib_number, rr.racer_id
-      , p.first_name, p.last_name
-      , rr.race_time, rr.dsq_gate, rr.dsq_reason, rr.is_dnf, rr.is_dns, rr.is_dsq
-    FROM
-      race_results rr
+    let initQuery;
+    if (runId === 1) {
+      initQuery = `
+        SELECT rr.racer_id
+             , rc.bib_number
+             , rr.racer_id
+             , p.first_name
+             , p.last_name
+             , rr.race_time
+             , rr.dsq_gate
+             , rr.dsq_reason
+             , rr.is_dnf
+             , rr.is_dns
+             , rr.is_dsq
+             , NULL as prev_race_time
+        FROM race_results rr
+               INNER JOIN people p ON p.id = rr.racer_id
+               INNER JOIN race_competitor rc ON
+          rc.race_id = rr.race_id
+            AND rc.competition_id = rr.competition_id
+            AND rc.racer_id = rr.racer_id
+        WHERE rr.run_number = ?
+          AND rr.race_id = ?
+          AND rr.competition_id = ?
+        ORDER BY bib_number
+      `;
+    } else {
+      initQuery = `
+      SELECT rr.racer_id
+        , rc.bib_number
+        , rr.racer_id
+        , p.first_name
+        , p.last_name
+        , rr.race_time
+        , rr.dsq_gate
+        , rr.dsq_reason
+        , rr.is_dnf
+        , rr.is_dns
+        , rr.is_dsq
+        , rr1.race_time AS prev_race_time
+      FROM race_results rr
       INNER JOIN people p ON p.id = rr.racer_id
       INNER JOIN race_competitor rc ON
-        rc.race_id = rr.race_id
-          AND rc.competition_id = rr.competition_id
-          AND rc.racer_id = rr.racer_id
-    WHERE rr.run_number = ? AND rr.race_id = ? AND rr.competition_id = ?
-    ORDER BY bib_number
-    `;
+      rc.race_id = rr.race_id
+      AND rc.competition_id = rr.competition_id
+      AND rc.racer_id = rr.racer_id
+      LEFT JOIN race_results rr1 ON rr1.racer_id = rr.racer_id AND rr1.run_number = rr.run_number - 1 AND rr1.race_id = rr.race_id
+      WHERE rr.run_number = ?
+        AND rr.race_id = ?
+        AND rr.competition_id = ?
+      ORDER BY prev_race_time ASC NULLS LAST , bib_number ASC
+              `;
+    }
     const initParams = [runId, raceId, competitionId];
     try {
-      const results = await window.api.select(initQuery, initParams);
+      let results;
+      results = await window.api.select(initQuery, initParams);
+      if (runId > 1) {
+        const top = results.slice(0, 15).reverse();
+        const rest = results.slice(15);
+        results = [...top, ...rest];
+      }
       const mapped = results.map((result) => {
         return {
           id: `${result.racer_id}/${runId}`,
@@ -71,6 +169,27 @@ export default function RaceRun({
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    // Update formData based on user input
+    const updatedFormData = {
+      ...runDetails,
+      [name]: type === 'checkbox' ? checked : value,
+    };
+    setRunDetails(updatedFormData);
+  };
+
+  const handleSavePerson = async (personId) => {
+    await fetchPeople(); // Refresh the list of people after adding a new one
+    setRunDetails({
+      ...runDetails,
+      [selectedPersonField]: personId, // Automatically select the new person
+    });
+    setModalOpen(false); // Close the modal after saving
+    setSelectedPersonField(null);
   };
 
   const handleTimeChange = (id, value) => {
@@ -167,7 +286,11 @@ export default function RaceRun({
       alert('No completed racers found.');
       return;
     }
-    saveResults(completedRacers);
+    if (isSeedingRace) {
+      saveResults(data);
+    } else {
+      saveResults(completedRacers);
+    }
   };
 
   const saveResults = async (results) => {
@@ -207,112 +330,283 @@ export default function RaceRun({
     }
   };
 
+  const handleAutocompleteChange = (event, newValue) => {
+    setRunDetails({
+      ...runDetails,
+      [event.target.parentElement.id.split('-')[0]]: newValue
+        ? newValue.id
+        : '',
+    });
+  };
+
+  const handleSaveCourseDetails = async () => {
+    const query1 = `
+      UPDATE race_run
+      SET course_setter  = ?,
+          number_gates   = ?,
+          turning_gates  = ?,
+          start_time     = ?,
+          forerunner_a   = ?,
+          forerunner_b   = ?,
+          forerunner_c   = ?,
+          forerunner_d   = ?
+      WHERE race_id = ? AND run_number = ?;
+    `;
+    const params1 = [
+      runDetails.courseSetter,
+      runDetails.numberGates,
+      runDetails.turningGates,
+      runDetails.startTime,
+      runDetails.forerunner1,
+      runDetails.forerunner2,
+      runDetails.forerunner3,
+      runDetails.forerunner4,
+      raceId,
+      runId,
+    ];
+    try {
+      await window.api.insert(query1, params1);
+    } catch (e) {
+      window.alert(e);
+    }
+  };
+
   useEffect(() => {
+    fetchPeople();
     initialData();
+    initRunDetails();
   }, []);
 
   return (
-    <TableContainer component={Paper}>
-      {data.length > 0 && (
-        <>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell align="center">Bib Number</TableCell>
-                <TableCell align="center">Competitor</TableCell>
-                <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
-                <TableCell align="center">Status</TableCell>
-                <TableCell align="center">Gate Disqualified</TableCell>
-                <TableCell align="center">Reason Disqualified</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell align="center">{row.bibNumber}</TableCell>
-                  <TableCell align="center">
-                    {row.lastName.toUpperCase()} {row.firstName}
-                  </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      value={row.raceTime}
-                      onChange={(e) => handleTimeChange(row.id, e.target.value)}
-                      onBlur={(e) => handleTimeBlur(row.id, e.target.value)}
-                      placeholder="MM:SS.SS"
-                      inputProps={{ className: 'race-time-input' }}
-                      type="text"
-                      disabled={!edit}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Select
-                      value={row.status}
-                      onChange={(e) =>
-                        handleStatusChange(row.id, e.target.value)
-                      }
-                      displayEmpty
-                      disabled={!edit}
-                    >
-                      <MenuItem value="Finished">
-                        <em>Finished</em>
-                      </MenuItem>
-                      <MenuItem value="DNS">DNS</MenuItem>
-                      <MenuItem value="DNF">DNF</MenuItem>
-                      <MenuItem value="DSQ">DSQ</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell align="center">
-                    {row.status === 'DSQ' ? (
-                      <TextField
-                        type="number"
-                        value={row.gateDisqualified}
-                        onChange={(e) =>
-                          handleGateChange(row.id, e.target.value)
-                        }
-                        placeholder="Gate #"
-                        inputProps={{ min: 1 }}
-                        disabled={!edit}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {row.status === 'DSQ' ? (
-                      <TextField
-                        value={row.dsqReason}
-                        onChange={(e) =>
-                          handleDsqReason(row.id, e.target.value)
-                        }
-                        placeholder="Missed Gate"
-                        inputProps={{ min: 1 }}
-                        disabled={!edit}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
+    <>
+      <div className="block justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">Course Details</h3>
+        <Grid container spacing={2}>
+          <Grid item xs={11}>
+            <Autocomplete
+              id="courseSetter"
+              name="courseSetter"
+              label="Course Setter"
+              options={people}
+              getOptionLabel={(option) =>
+                `${option.first_name} ${option.last_name}`
+              }
+              onChange={handleAutocompleteChange}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="courseSetter"
+                  inputProps={{
+                    ...params.inputProps,
+                  }}
+                />
+              )}
+              value={
+                runDetails.courseSetter
+                  ? people.find((e) => e.id === runDetails.courseSetter)
+                  : null
+              }
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
+          </Grid>
+          <Grid item xs={1}>
+            <IconButton onClick={() => handleOpenModal('courseSetter')}>
+              <AddIcon />
+            </IconButton>
+          </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label="Number of Gates"
+              name="numberGates"
+              id="numberGates"
+              type="number"
+              variant="outlined"
+              onChange={handleChange}
+              placeholder="Enter total number of gates"
+              value={runDetails.numberGates}
+            />
+          </Grid>
+          <Grid item xs={4}>
+          <TextField
+            label="Number of Turning Gates"
+            name="turningGates"
+            id="turningGates"
+            type="number"
+            variant="outlined"
+            onChange={handleChange}
+            placeholder="Enter number of turning gates"
+            value={runDetails.turningGates}
+          />
+          </Grid>
+          <Grid item xs={4}>
+          <TextField
+            label="Start Time"
+            variant="outlined"
+            type="text"
+            name="startTime"
+            id="startTime"
+            onChange={handleChange}
+            placeholder="HH:MM"
+            value={runDetails.startTime}
+            helperText="Use HH:MM format"
+          />
+          </Grid>
+          {[...Array(4)].map((_, index) => (
+            <>
+            <Grid item xs={8}>
+            <Autocomplete
+              id={`forerunner${index + 1}`}
+              name={`forerunner${index + 1}`}
+              options={people}
+              getOptionLabel={(option) =>
+                `${option.first_name} ${option.last_name}`
+              }
+              onChange={handleAutocompleteChange}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={`Forerunner ${index + 1}`}
+                  inputProps={{
+                    ...params.inputProps,
+                  }}
+                />
+              )}
+              value={
+                runDetails[`forerunner${index + 1}`]
+                  ? people.find(
+                      (e) => e.id === runDetails[`forerunner${index + 1}`],
+                    )
+                  : null
+              }
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
+            </Grid>
+            <Grid item xs={1}>
+              <IconButton onClick={() => handleOpenModal(`forerunner${index + 1}`)}>
+                <AddIcon />
+              </IconButton>
+            </Grid>
+            </>
+          ))}
+        </Grid>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSaveCourseDetails}
+          className="text-white py-2 px-4 rounded shadow-lg w-full mt-4"
+        >
+          Save Course Details
+        </Button>
+      </div>
+      <TableContainer component={Paper}>
+        {data.length > 0 && (
+          <>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">Bib Number</TableCell>
+                  <TableCell align="center">Competitor</TableCell>
+                  <TableCell align="center">Race Time (MM:SS.SS)</TableCell>
+                  <TableCell align="center">Status</TableCell>
+                  <TableCell align="center">Gate Disqualified</TableCell>
+                  <TableCell align="center">Reason Disqualified</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSaveResults}
-            className="text-white py-2 px-4 rounded shadow-lg w-full"
-            disabled={!edit}
-          >
-            Save Results
-          </Button>
-        </>
-      )}
-      {data.length === 0 && (
-        <div>
-          No Competitors found, make sure you've marked the previous run as
-          finished.
-        </div>
-      )}
-    </TableContainer>
+              </TableHead>
+              <TableBody>
+                {data.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell align="center">{row.bibNumber}</TableCell>
+                    <TableCell align="center">
+                      {row.lastName.toUpperCase()} {row.firstName}
+                    </TableCell>
+                    <TableCell align="center">
+                      <TextField
+                        value={row.raceTime}
+                        onChange={(e) =>
+                          handleTimeChange(row.id, e.target.value)
+                        }
+                        onBlur={(e) => handleTimeBlur(row.id, e.target.value)}
+                        placeholder="MM:SS.SS"
+                        inputProps={{ className: 'race-time-input' }}
+                        type="text"
+                        disabled={!edit}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Select
+                        value={row.status}
+                        onChange={(e) =>
+                          handleStatusChange(row.id, e.target.value)
+                        }
+                        displayEmpty
+                        disabled={!edit}
+                      >
+                        <MenuItem value="Finished">
+                          <em>Finished</em>
+                        </MenuItem>
+                        <MenuItem value="DNS">DNS</MenuItem>
+                        <MenuItem value="DNF">DNF</MenuItem>
+                        <MenuItem value="DSQ">DSQ</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell align="center">
+                      {row.status === 'DSQ' ? (
+                        <TextField
+                          type="number"
+                          value={row.gateDisqualified}
+                          onChange={(e) =>
+                            handleGateChange(row.id, e.target.value)
+                          }
+                          placeholder="Gate #"
+                          inputProps={{ min: 1 }}
+                          disabled={!edit}
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      {row.status === 'DSQ' ? (
+                        <TextField
+                          value={row.dsqReason}
+                          onChange={(e) =>
+                            handleDsqReason(row.id, e.target.value)
+                          }
+                          placeholder="Missed Gate"
+                          inputProps={{ min: 1 }}
+                          disabled={!edit}
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSaveResults}
+              className="text-white py-2 px-4 rounded shadow-lg w-full"
+              disabled={!edit}
+            >
+              Save Results
+            </Button>
+          </>
+        )}
+        {data.length === 0 && (
+          <div>
+            No Competitors found, make sure you've marked the previous run as
+            finished.
+          </div>
+        )}
+      </TableContainer>
+      <PersonModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSavePerson}
+      />
+    </>
   );
 }
