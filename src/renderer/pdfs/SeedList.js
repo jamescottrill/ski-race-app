@@ -39,7 +39,7 @@ const generatePDF = (seedList, races) => {
         competitor.position,
         competitor.title,
         `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
-        competitor.team,
+        competitor.team_name,
         calculateCategory(competitor),
       ];
       r.forEach((race) => {

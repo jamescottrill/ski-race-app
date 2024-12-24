@@ -262,7 +262,20 @@ const calculateRacerSeedPoints = async (
 
 const getPeople = async (competitionId) => {
   const people = await window.api.select(
-    'SELECT cc.*, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON cc.racer_id = p.id WHERE competition_id = ?',
+    `SELECT cc.*
+     , p.first_name
+     , p.last_name
+     , p.dob
+     , p.gender
+     , ct.team_name
+    FROM competition_competitor cc
+      LEFT JOIN people p ON cc.racer_id = p.id
+    LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
+    LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
+    WHERE cc.competition_id = ?
+    AND NOT COALESCE(ct.is_hc, FALSE)
+    AND NOT COALESCE(ct.is_female, FALSE)`
+    ,
     [competitionId],
   );
   return new dfd.DataFrame(people);
