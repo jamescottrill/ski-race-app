@@ -23,46 +23,144 @@ const resultsSeedPdf = (
     ...header,
     {
       columns: [
-        { width: 'auto', text: 'Venue: ' },
-        { width: 'auto', text: raceDetails.venue },
-        { width: 'auto', text: 'Date: ' },
-        { width: 'auto', text: raceDetails.race_date },
+        { width: 100, text: 'Venue: ' },
+        { width: '*', text: raceDetails.venue },
+        { width: 100, text: 'Date: ' },
+        { width: '*', text: raceDetails.race_date },
       ],
       columnGap: 10,
     },
     {
       columns: [
-        { width: 'auto', text: 'Course Name: ' },
+        { width: 100, text: 'Course Name: ' },
         { width: 'auto', text: raceDetails.course_name },
       ],
-      columnGap: 10,
     },
     {
       columns: [
-        { width: 'auto', text: 'Weather: ' },
-        { width: 'auto', text: raceDetails.weather },
-        { width: 'auto', text: 'Snow: ' },
-        { width: 'auto', text: raceDetails.snow },
-        { width: 'auto', text: 'Temperature: ' },
-        { width: 'auto', text: 'Start: ' },
-        { width: 'auto', text: raceDetails.temp_start },
-        { width: 'auto', text: 'Finish: ' },
-        { width: 'auto', text: raceDetails.temp_finish },
+        { width: '*', text: 'Jury', style: 'subheader' },
+        { width: '*', text: 'Technical Data', style: 'subheader' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100,  text: 'TD: ', style: 'key' },
+        { width: '*', text: raceDetails.tech_delegate.trim() || 'N/A', style: 'text' },
+        { width: 120, text: 'Start Height (m) ', style: 'key' },
+        { width: '*', text: raceDetails.start_altitude, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Referee: ', style: 'key' },
+        { width: '*', text: raceDetails.referee.trim() || 'N/A', style: 'text' },
+        { width: 120, text: 'Finish Height (m) ', style: 'key' },
+        { width: '*', text: raceDetails.finish_altitude, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Assistant Referee: ', style: 'key' },
+        { width: '*', text: raceDetails.asst_referee.trim() || 'N/A', style: 'text' },
+        { width: 120, text: 'Vertical Difference (m) ', style: 'key' },
+        { width: '*', text: raceDetails.altitude_difference, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Chief of Race: ', style: 'key' },
+        { width: '*', text: raceDetails.chief_of_race.trim()  || 'N/A', style: 'text' },
+        { width: 120, text: 'Homologation: ', style: 'key' },
+        { width: '*', text: raceDetails.homologation, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: '*', text: 'First Run', style: 'subheader' },
+        { width: '*', text: 'Second run', style: 'subheader' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Course Setter: ', style: 'key' },
+        { width: '*', text: raceDetails.course_setter_1.trim()  || 'N/A', style: 'text' },
+        { width: '*', text: raceDetails.course_setter_2, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Forerunners: ', style: 'key' },
+        { width: 10, text: 'A: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_1_a.trim() , style: 'text' },
+        { width: 10, text: 'A: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_2_a.trim(), style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: '', style: 'key' },
+        { width: 10, text: 'B: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_1_b.trim() , style: 'text' },
+        { width: 10, text: 'B: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_2_b.trim(), style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: '', style: 'key' },
+        { width: 10, text: 'C: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_1_c.trim() , style: 'text' },
+        { width: 10, text: 'C: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_2_c.trim(), style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: '', style: 'key' },
+        { width: 10, text: 'D: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_1_d.trim() , style: 'text' },
+        { width: 10, text: 'D: ', style: 'key' },
+        { width: '*', text: raceDetails.forerunner_2_d.trim(), style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 'auto', text: 'Weather: ', style: 'key' },
+        { width: 'auto', text: raceDetails.weather, style: 'text' },
+        { width: 'auto', text: 'Snow: ', style: 'key' },
+        { width: 'auto', text: raceDetails.snow, style: 'text' },
+        { width: 'auto', text: 'Temperature: ', style: 'key' },
+        { width: 'auto', text: 'Start: ', style: 'key' },
+        { width: 'auto', text: raceDetails.temp_start, style: 'text' },
+        { width: 'auto', text: 'Finish: ', style: 'key' },
+        { width: 'auto', text: raceDetails.temp_finish, style: 'text' },
       ],
       columnGap: 10,
     },
     // Results
     {
-      layout: 'lightHorizontalLines',
+      layout: 'headerLineOnly',
       style: 'table',
       table: {
         headerRows: 1,
+        columnGap: 0,
         widths: [
-          'auto',
-          'auto',
-          'auto',
-          'auto',
-          'auto',
+          20,
+          20,
+          30,
+          '*',
+          55,
           // 'auto',
           'auto',
           'auto',

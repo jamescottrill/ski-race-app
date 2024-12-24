@@ -2,8 +2,8 @@ const getRaceDetails = async (raceId, competitionId) => {
   const query = `
       SELECT
         women_separate AS is_women_separate
-        , is_seeding
-        , is_team
+        , r.is_seeding
+        , r.is_team
         , 15 AS randomise_top
         , 5 AS randomise_top_women
         , venue
@@ -20,13 +20,39 @@ const getRaceDetails = async (raceId, competitionId) => {
         , race_name
         , c.competition_name
         , c.competition_description
+        , CONCAT(td.title, ' ', UPPER(td.last_name), ' ', td.first_name, ' ', UPPER(td.country)) AS tech_delegate
+        , CONCAT(cor.title, ' ', UPPER(cor.last_name), ' ', cor.first_name, ' ', UPPER(cor.country)) AS chief_of_race
+        , CONCAT(rf.title, ' ', UPPER(rf.last_name), ' ', rf.first_name, ' ', UPPER(rf.country)) AS referee
+        , CONCAT(ar.title, ' ', UPPER(ar.last_name), ' ', ar.first_name, ' ', UPPER(ar.country)) AS asst_referee
+        , CONCAT(cs1.title, ' ', UPPER(cs1.last_name), ' ', cs1.first_name, ' ', UPPER(cs1.country)) AS course_setter_1
+        , CONCAT(cs2.title, ' ', UPPER(cs2.last_name), ' ', cs2.first_name, ' ', UPPER(cs2.country)) AS course_setter_2
+        , CONCAT(UPPER(fr1a.last_name), ' ', UPPER(fr1a.country)) AS forerunner_1_a
+        , CONCAT(UPPER(fr1b.last_name), ' ', UPPER(fr1b.country)) AS forerunner_1_b
+        , CONCAT(UPPER(fr1c.last_name), ' ', UPPER(fr1c.country)) AS forerunner_1_c
+        , CONCAT(UPPER(fr1d.last_name), ' ', UPPER(fr1d.country)) AS forerunner_1_d
+        , CONCAT(UPPER(fr2a.last_name), ' ', UPPER(fr2a.country)) AS forerunner_2_a
+        , CONCAT(UPPER(fr2b.last_name), ' ', UPPER(fr2b.country)) AS forerunner_2_b
+        , CONCAT(UPPER(fr2c.last_name), ' ', UPPER(fr2c.country)) AS forerunner_2_c
+        , CONCAT(UPPER(fr2d.last_name), ' ', UPPER(fr2d.country)) AS forerunner_2_d
       FROM races r
-        LEFT JOIN people td ON r.tech_delegate = td.id
-        LEFT JOIN people cor ON r.chief_of_race = td.id
-        LEFT JOIN people rf ON r.referee = td.id
-        LEFT JOIN people ar ON r.asst_referee = td.id
         LEFT JOIN competitions c ON r.competition_id = c.id
-      WHERE race_id = ? AND competition_id = ?
+        LEFT JOIN people td ON r.tech_delegate = td.id
+        LEFT JOIN people cor ON r.chief_of_race = cor.id
+        LEFT JOIN people rf ON r.referee = rf.id
+        LEFT JOIN people ar ON r.asst_referee = ar.id
+        LEFT JOIN race_run rr1 ON r.race_id = rr1.race_id AND rr1.run_number = 1
+        LEFT JOIN people cs1 ON rr1.course_setter = cs1.id
+        LEFT JOIN race_run rr2 ON r.race_id = rr2.race_id AND rr2.run_number = 2
+        LEFT JOIN people cs2 ON rr2.course_setter = cs2.id
+        LEFT JOIN people fr1a ON rr1.forerunner_a = fr1a.id
+        LEFT JOIN people fr1b ON rr1.forerunner_b = fr1b.id
+        LEFT JOIN people fr1c ON rr1.forerunner_c = fr1c.id
+        LEFT JOIN people fr1d ON rr1.forerunner_d = fr1d.id
+        LEFT JOIN people fr2a ON rr2.forerunner_a = fr2a.id
+        LEFT JOIN people fr2b ON rr2.forerunner_b = fr2b.id
+        LEFT JOIN people fr2c ON rr2.forerunner_c = fr2c.id
+        LEFT JOIN people fr2d ON rr2.forerunner_d = fr2d.id
+      WHERE r.race_id = ? AND r.competition_id = ?
     `;
   try {
     const result = await window.api.select(query, [raceId, competitionId]);

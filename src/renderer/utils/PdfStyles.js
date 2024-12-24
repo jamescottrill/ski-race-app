@@ -20,6 +20,16 @@ const tableStyles = {
   tableHeader: {
     bold: true,
   },
+  key: {
+    fontSize: 10,
+    bold: true,
+    alignment: 'left',
+  },
+  text: {
+    fontSize: 9,
+    bold: false,
+    alignment: 'left',
+  },
   table: {
     padding: [0, 5, 0, 15],
     fontSize: 9,
