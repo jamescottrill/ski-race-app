@@ -22,7 +22,7 @@ import { fetchSeedList } from '../../utils/FetchSeedList';
 import { useBackButton } from '../../utils/navigation';
 import { generatePDF } from '../../pdfs/SeedList';
 
-export default function IndividualResults() {
+export default function TeamResults() {
   const [results, setResults] = useState([]);
   const [races, setRaces] = useState([]);
   const [selectedRaces, setSelectedRaces] = useState([]);
@@ -49,7 +49,7 @@ export default function IndividualResults() {
         ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
     setRaces(res);
-    setSelectedRaces(res.map((e) => e.id));
+    console.log(res);
     return res;
   };
 
@@ -68,12 +68,29 @@ export default function IndividualResults() {
           initialRaces.map((e) => e.id),
         );
       }
-      // setResults(data);
-      setSeedList(data);
+      setResults(data);
     };
     fetchList();
   }, [competitionId]);
 
+  const handleChange = (event) => {
+    const { value } = event.target;
+    setSelectedRaces(value);
+    const refreshData = async (sRaces) => {
+      const fRaces = races.filter((e) => sRaces.includes(e.id));
+      let data;
+      try {
+        data = await fetchSeedList(
+          competitionId,
+          fRaces.map((e) => e.id),
+        );
+      } catch (e) {
+        console.error(e);
+      }
+      setSeedList(data);
+    };
+    refreshData(value);
+  };
 
   return (
     <Container className="seed-list-page flex flex-col items-center justify-top mt-4 min-h-screen">
@@ -88,9 +105,33 @@ export default function IndividualResults() {
         >
           {/* eslint-disable-next-line no-nested-ternary */}
           {selectedRaces.length === 0
-            ? `You need at least one individual race completed to see the results.`
-            : `Individual Results`}
+            ? `Select a race to continue`
+            : selectedRaces.length === 1
+              ? `Seed List after ${selectedRaces.length} Race`
+              : `Seed List after ${selectedRaces.length} Races`}
         </Typography>
+        <FormControl fullWidth>
+          <InputLabel id="multi-select-label">Completed Races</InputLabel>
+          <Select
+            labelId="multi-select-label"
+            multiple
+            value={selectedRaces}
+            onChange={handleChange}
+            renderValue={(selected) =>
+              selected
+                .map((id) => races.find((option) => option.id === id)?.text)
+                .join(', ')
+            }
+            className="mb-2"
+          >
+            {races.map((option) => (
+              <MenuItem key={option.text} value={option.id}>
+                <Checkbox checked={selectedRaces.includes(option.id)} />
+                <ListItemText primary={option.text} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         {selectedRaces.length > 0 && seedList && (
           <>
             <TableContainer>

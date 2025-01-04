@@ -1,7 +1,8 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import ResultsPage from '../pages/results/resultsPage';
-import IndividualResults from '../pages/results/individual'
+import IndividualResults from '../pages/results/individual';
+import TeamResults from '../pages/results/team';
 import Layout from '../components/Layout';
 
 function RaceRoutes() {
@@ -35,7 +36,7 @@ function RaceRoutes() {
         path="/competition/:competitionId/results/races"
         element={
           <Layout>
-            <ResultsPage />
+            <TeamResults />
           </Layout>
         }
       />
