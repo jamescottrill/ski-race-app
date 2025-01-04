@@ -76,17 +76,17 @@ function RegisterCompetitorPage() {
                 }}
               />
             )}
-            isOptionEqualToValue={(option, value) => option.id === value}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
           />
         </FormControl>
-        {(selectedCompetitorId && (
+        {selectedCompetitorId && (
           <CompetitorForm
-            editMode
             competitorId={selectedCompetitorId}
+            competitionId={competitionId}
             existingCompetitor={true}
-            competitionId
           />
-        )) || <CompetitorForm editMode={false} competitionId={competitionId} />}
+        )}
+        {!selectedCompetitorId && ( <CompetitorForm editMode={true} competitionId={competitionId} />)}
         <Button
           variant="contained"
           color="secondary"

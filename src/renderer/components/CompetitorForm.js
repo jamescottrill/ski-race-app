@@ -17,7 +17,7 @@ import AddIcon from '@mui/icons-material/Add';
 import TeamModal from './TeamModal';
 
 function CompetitorForm({
-  editMode,
+  editMode= true,
   competitorId,
   existingCompetitor,
   competitionId,
@@ -56,6 +56,25 @@ function CompetitorForm({
     }
   };
 
+  const handleDeleteCompetitor = async () => {
+    const query = `DELETE FROM competition_competitor WHERE racer_id = ? AND competition_id = ?`;
+    const params = [competitorId, competitionId];
+    try {
+      await window.api.delete(query, params);
+    } catch (error) {
+      console.error('Failed to delete competitor:', error);
+    }
+    const query2 = `DELETE FROM competition_team_members WHERE racer_id = ? AND competition_id = ?`;
+    const params2 = [competitorId, competitionId];
+    try {
+      await window.api.delete(query2, params2);
+      navigate(-1);
+    } catch (error) {
+      console.error('Failed to remove competitor from team.', error);
+    }
+
+  };
+
   const handleSaveTeam = async (teamId) => {
     await fetchTeam(); // Refresh the list of people after adding a new one
     setFormData({
@@ -82,11 +101,11 @@ function CompetitorForm({
       console.error('No competitor ID provided');
       return;
     }
-
     // Fetch competitor details using the competitorId
     let query;
     let params;
     if (existingCompetitor) {
+      // If this is an existing person
       query = `
         SELECT p.*,
                0 AS arrival_corps_seed,
@@ -124,6 +143,9 @@ function CompetitorForm({
         WHERE p.id = ? AND cc.competition_id = ?
         AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
       `;
+      console.log(query);
+      console.log(competitorId);
+      console.log(competitionId);
       params = [competitorId, competitionId];
     }
     try {
@@ -146,6 +168,7 @@ function CompetitorForm({
           isFemale: result[0].gender === 'F',
           regiment: result[0].regiment || '',
         });
+        console.log(result[0]);
       } else {
         console.error('Competitor not found');
       }
@@ -202,14 +225,13 @@ function CompetitorForm({
 
       const query2 = `
         INSERT INTO competition_competitor
-        (competition_id, racer_id, team, arrival_corps_seed, is_novice, is_junior,
+        (competition_id, racer_id, arrival_corps_seed, is_novice, is_junior,
          is_senior, is_veteran, is_reserve, is_female, title, regiment)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const params2 = [
         competitionId,
         id,
-        formData.team,
         formData.arrivalSeed,
         formData.isNovice,
         isJunior,
@@ -227,6 +249,47 @@ function CompetitorForm({
       INSERT INTO competition_team_members (competition_id, team_id, racer_id) VALUES (?, ?, ?)
       `;
       const params3 = [competitionId, formData.team, id];
+      await window.api.insert(query3, params3);
+
+      navigate(`/competition/${competitionId}/competitor/manage`);
+    } catch (error) {
+      console.error('Failed to create competitor:', error);
+    }
+  };
+
+  const registerNewCompetitor = async () => {
+    let { isJunior, isVeteran } = false;
+    let isSenior = true;
+    if (formData.dob) {
+      ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.dob));
+    }
+    try {
+      const query2 = `
+        INSERT INTO competition_competitor
+        (competition_id, racer_id, arrival_corps_seed, is_novice, is_junior,
+         is_senior, is_veteran, is_reserve, is_female, title, regiment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      const params2 = [
+        competitionId,
+        competitorId,
+        formData.arrivalSeed,
+        formData.isNovice,
+        isJunior,
+        isSenior,
+        isVeteran,
+        formData.isReserve,
+        formData.isFemale,
+        formData.title,
+        formData.regiment,
+      ];
+
+      await window.api.insert(query2, params2);
+
+      const query3 = `
+      INSERT INTO competition_team_members (competition_id, team_id, racer_id) VALUES (?, ?, ?)
+      `;
+      const params3 = [competitionId, formData.team, competitorId];
       await window.api.insert(query3, params3);
 
       navigate(`/competition/${competitionId}/competitor/manage`);
@@ -308,8 +371,8 @@ function CompetitorForm({
       `,
         [competitorId, competitionId],
       );
-      let query3
-      if(primaryTeam && primaryTeam.length > 0) {
+      let query3;
+      if (primaryTeam && primaryTeam.length > 0) {
         query3 = `
         UPDATE competition_team_members
         SET team_id = ?
@@ -328,6 +391,8 @@ function CompetitorForm({
   };
 
   useEffect(() => {
+    console.log(editMode);
+    console.log(competitorId);
     fetchTeam();
     if (editMode && competitorId) {
       fetchCompetitorDetails();
@@ -339,7 +404,11 @@ function CompetitorForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editMode) {
+      if (competitorId) {
+        await registerNewCompetitor();
+      } else {
       await updateCompetitor();
+      }
     } else {
       await createCompetitor();
     }
@@ -521,6 +590,16 @@ function CompetitorForm({
                   : 'Update Competitor'
                 : 'Register Competitor'}
             </Button>
+            {editMode && (
+            <Button
+            variant="contained"
+            color="secondary"
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full my-2"
+            onClick={handleDeleteCompetitor}
+          >
+            Delete Competitor
+          </Button>
+            )}
           </Grid>
         </Grid>
       </form>
