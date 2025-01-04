@@ -9,20 +9,21 @@ const seedResults = `
                            UNION ALL
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
-                               racer_id,
+                               rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
                                dsq_gate,
                                dsq_reason,
-                               competition_id
+                               rr.competition_id
                         FROM race_results rr
+                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
                run2 AS (SELECT race_id,
-                               racer_id,
+                               rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
@@ -30,6 +31,7 @@ const seedResults = `
                                dsq_gate,
                                dsq_reason
                         FROM race_results rr
+                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id
                         WHERE TRUE
                           AND run_number = 2
                           AND race_id = ?),
