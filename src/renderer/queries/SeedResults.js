@@ -130,8 +130,8 @@ const seedingPoints = `
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
-                             ROUND((run_1_time - min1time) / run_1_time * factor, 2) AS seed_1,
-                             ROUND((run_2_time - min2time) / run_2_time * factor, 2) AS seed_2
+                             ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_1,
+                             ROUND((run_2_time - min2time) / min2time * factor, 2) AS seed_2
                       FROM data)
             SELECT
               s.racer_id,
