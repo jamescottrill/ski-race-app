@@ -26,6 +26,7 @@ export default function IndividualResults() {
   const [results, setResults] = useState([]);
   const [races, setRaces] = useState([]);
   const [selectedRaces, setSelectedRaces] = useState([]);
+  const [seedList, setSeedList] = useState([]);
   const { competitionId } = useParams();
   const handleBack = useBackButton();
 
@@ -44,8 +45,8 @@ export default function IndividualResults() {
         WHERE rr.competition_id = ? AND NOT r.is_training AND rr.is_complete AND r.is_individual
         ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
-    setRaces(results);
-    return results;
+    // setRaces(res);
+    return res;
   };
 
   useEffect(() => {
@@ -146,7 +147,7 @@ export default function IndividualResults() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {seedList.map((competitor, index) => (
+                  {seedList.map((competitor) => (
                     <TableRow key={competitor.id}>
                       <TableCell align="center">
                         {competitor.position}

@@ -21,18 +21,18 @@ const tableStyles = {
     bold: true,
   },
   key: {
-    fontSize: 10,
+    fontSize: 9,
     bold: true,
     alignment: 'left',
   },
   text: {
-    fontSize: 9,
+    fontSize: 8,
     bold: false,
     alignment: 'left',
   },
   table: {
     padding: [0, 5, 0, 15],
-    fontSize: 9,
+    fontSize: 8,
   },
 };
 

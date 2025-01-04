@@ -109,6 +109,7 @@ class Database {
         is_reserve BOOLEAN,
         is_female BOOLEAN,
         is_hc BOOLEAN,
+        regiment TEXT,
         PRIMARY KEY (competition_id, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
         FOREIGN KEY (racer_id) REFERENCES people(id)

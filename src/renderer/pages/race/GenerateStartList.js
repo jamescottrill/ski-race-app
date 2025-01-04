@@ -63,15 +63,15 @@ export default function GenerateStartList() {
     SELECT
       p.id AS racer_id, p.first_name, p.last_name, rc.bib_number,
       cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, seed_points
+      cc.is_veteran, cc.is_female, seed_points, cc.regiment AS team
       FROM race_competitor rc
     INNER JOIN people p ON rc.racer_id = p.id
     INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
-    LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
-    LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+--     LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
+--     LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
     WHERE rc.competition_id = ? AND rc.race_id = ?
-    AND NOT COALESCE(ct.is_female, FALSE)
-    AND NOT COALESCE(ct.is_hc, FALSE)
+--     AND NOT COALESCE(ct.is_female, FALSE)
+--     AND NOT COALESCE(ct.is_hc, FALSE)
     ORDER BY bib_number
     `;
     const results = await window.api.select(query, [competitionId, raceId]);

@@ -20,7 +20,7 @@ export default function ViewCompetitorsPage() {
   const [competitors, setCompetitors] = useState([]);
   const { competitionId } = useParams();
   const [pg, setpg] = React.useState(0);
-  const [rpg, setrpg] = React.useState(100);
+  const [rpg, setrpg] = React.useState(25);
 
   function handleChangePage(event, newpage) {
     setpg(newpage);
@@ -44,13 +44,13 @@ export default function ViewCompetitorsPage() {
   const fetchCompetitors = async () => {
     const query = `
       SELECT p.id, p.first_name, p.last_name, p.gender, p.dob, p.service_number, p.country,
-             ct.team_name AS team, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title
+             cc.regiment, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id
-      LEFT JOIN main.competition_team_members ctm ON cc.competition_id = ctm.competition_id AND ctm.racer_id = p.id
-      LEFT JOIN competition_team ct ON cc.competition_id = ct.competition_id AND ct.team_id = ctm.team_id
+--       LEFT JOIN competition_team_members ctm ON cc.competition_id = ctm.competition_id AND ctm.racer_id = p.id
+--       LEFT JOIN competition_team ct ON cc.competition_id = ct.competition_id AND ct.team_id = ctm.team_id
       WHERE cc.competition_id = ?
-      AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
+--       AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
       ORDER BY first_name
     `;
 
@@ -73,7 +73,7 @@ export default function ViewCompetitorsPage() {
           Competitors
         </Typography>
         <TableContainer>
-          <Table>
+          <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>First Name</TableCell>
@@ -94,9 +94,7 @@ export default function ViewCompetitorsPage() {
                   <TableCell>{competitor.last_name}</TableCell>
                   <TableCell>{competitor.gender}</TableCell>
                   <TableCell>{competitor.title}</TableCell>
-                  {/*<TableCell>{competitor.dob}</TableCell>*/}
-                  {/*<TableCell>{competitor.service_number}</TableCell>*/}
-                  <TableCell>{competitor.team}</TableCell>
+                  <TableCell>{competitor.regiment}</TableCell>
                   <TableCell>{calculateCategory(competitor)}</TableCell>
                   <TableCell>
                     <Button

@@ -2,7 +2,8 @@ import flowbite from 'flowbite/plugin';
 
 module.exports = {
   content: [
-    './src/**/*.{js,jsx,ts,tsx}',
+    './src/main/**/*.{js,jsx,ts,tsx}',
+    './src/renderer/**/*.{js,jsx,ts,tsx}',
     './public/index.html',
     '"./node_modules/flowbite/**/*.js"',
   ],

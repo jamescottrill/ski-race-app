@@ -82,7 +82,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               ct.team_name AS team,
+                               cc.regiment AS team,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS mintime
@@ -91,9 +91,12 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
-                               JOIN competition_team ct ON ct.team_id = cc.team AND ct.competition_id = run1.competition_id
+--                                LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id
+--                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
                                JOIN races r ON r.race_id = run1.race_id
-                               JOIN factors f ON f.race = r.race_type)
+                               JOIN factors f ON f.race = r.race_type
+--                         WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
+               )
           SELECT
             *,
             ROUND((total_time - mintime) / mintime * factor, 2) AS seed_points,

@@ -170,6 +170,7 @@ const calculateRacerSeedPoints = async (
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
       break;
     case 5:
+      // Seeding after the 5th Championship race. Sum of the best three divided by 3
       if (nonNullRaces.length < 3) {
         const previousRaces = raceIds.slice(0, 3);
         const previousSeedList = await fetchSeedList(competitionId, previousRaces);
@@ -267,14 +268,15 @@ const getPeople = async (competitionId) => {
      , p.last_name
      , p.dob
      , p.gender
-     , ct.team_name
+     , cc.regiment AS team_name
     FROM competition_competitor cc
       LEFT JOIN people p ON cc.racer_id = p.id
-    LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
-    LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
+--     LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
+--     LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
     WHERE cc.competition_id = ?
-    AND NOT COALESCE(ct.is_hc, FALSE)
-    AND NOT COALESCE(ct.is_female, FALSE)`
+--     AND NOT COALESCE(ct.is_hc, FALSE)
+--     AND NOT COALESCE(ct.is_female, FALSE)
+    `
     ,
     [competitionId],
   );

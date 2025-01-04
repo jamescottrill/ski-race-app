@@ -39,6 +39,7 @@ function CompetitorForm({
     isVeteran: false,
     isReserve: false,
     isFemale: false,
+    regiment: '',
   };
   const [formData, setFormData] = useState(initialData);
   const [modalOpen, setModalOpen] = useState(false);
@@ -114,7 +115,8 @@ function CompetitorForm({
                cc.is_veteran,
                cc.is_reserve,
                cc.is_female,
-               cc.arrival_corps_seed
+               cc.arrival_corps_seed,
+               cc.regiment
         FROM people p
          LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
          LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND  ctm.competition_id = cc.competition_id
@@ -125,8 +127,6 @@ function CompetitorForm({
       params = [competitorId, competitionId];
     }
     try {
-      console.log(query);
-      console.log(params);
       const result = await window.api.select(query, params);
       if (result && result[0]) {
         setFormData({
@@ -144,6 +144,7 @@ function CompetitorForm({
           isVeteran: result[0].is_veteran || false,
           isReserve: result[0].is_reserve || false,
           isFemale: result[0].gender === 'F',
+          regiment: result[0].regiment || '',
         });
       } else {
         console.error('Competitor not found');
@@ -202,8 +203,8 @@ function CompetitorForm({
       const query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, team, arrival_corps_seed, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const params2 = [
         competitionId,
@@ -217,6 +218,7 @@ function CompetitorForm({
         formData.isReserve,
         formData.isFemale,
         formData.title,
+        formData.regiment,
       ];
 
       await window.api.insert(query2, params2);
@@ -274,7 +276,8 @@ function CompetitorForm({
               is_veteran   = ?,
               is_reserve   = ?,
               is_female    = ?,
-              title        = ?
+              title        = ?,
+              regiment     = ?
           WHERE competition_id = ?
             AND racer_id = ?
         `;
@@ -287,6 +290,7 @@ function CompetitorForm({
         formData.isReserve || false,
         formData.isFemale || false,
         formData.title,
+        formData.regiment || '',
         competitionId,
         competitorId,
       ];
@@ -460,6 +464,16 @@ function CompetitorForm({
             <IconButton onClick={() => handleOpenModal('team')}>
               <AddIcon />
             </IconButton>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="Regiment"
+              variant="outlined"
+              fullWidth
+              name="regiment"
+              value={formData.regiment}
+              onChange={handleChange}
+            />
           </Grid>
           <Grid item xs={12}>
             <TextField

@@ -72,7 +72,7 @@ export default function Sidebar() {
               component={Link}
               to={`/competition/${competitionId}/race`}
             >
-              <ListItemText primary="Manage Races" />
+              <ListItemText primary="View Races" />
             </ListItem>
           </List>
         </Collapse>

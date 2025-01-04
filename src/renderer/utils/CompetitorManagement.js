@@ -162,7 +162,6 @@ const createCompetitor = async (formData, competitionId) => {
 
 const calculateCategory = (competitor) => {
   let category = '';
-
   // Gender prefix
   if (competitor.gender === 'F') {
     category += 'F';
@@ -186,7 +185,6 @@ const calculateCategory = (competitor) => {
   if (competitor.is_reserve) {
     category += 'R';
   }
-
   return category;
 };
 

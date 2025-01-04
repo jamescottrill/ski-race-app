@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, Container, Box, Paper } from '@mui/material';
+import { Button, Typography, Container, Paper } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBackButton } from '../../utils/navigation';
 
@@ -7,6 +7,20 @@ function ResultsPage() {
   const { competitionId } = useParams();
   const [competitionName, setCompetitionName] = useState('');
   const navigate = useNavigate();
+
+  const individualNav = () => {
+    navigate(`/competition/${competitionId}/results/individual`);
+  };
+
+  const teamNav = () => {
+    navigate(`/competition/${competitionId}/results/team`);
+  };
+
+  const racesNav = () => {
+    navigate(`/competition/${competitionId}/results/races`);
+  };
+
+  const handleBack = useBackButton();
 
   useEffect(() => {
     const fetchCompetitionDetails = async () => {
@@ -22,13 +36,10 @@ function ResultsPage() {
     };
 
     fetchCompetitionDetails();
+
   }, [competitionId]);
 
-  const handleClick = (endpoint) => {
-    navigate(`/competition/${competitionId}/results/${endpoint}`);
-  };
 
-  const handleBack = useBackButton();
 
   return (
     <Container className="competition-management-page flex flex-col items-center justify-center min-h-screen w-full max-w-full">
@@ -44,7 +55,7 @@ function ResultsPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleClick('individual')}
+            onClick={individualNav}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
             Individual
@@ -53,7 +64,7 @@ function ResultsPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleClick('team')}
+            onClick={teamNav}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
             Team
@@ -62,7 +73,7 @@ function ResultsPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleClick('races')}
+            onClick={racesNav}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
             Races

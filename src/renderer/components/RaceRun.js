@@ -24,6 +24,7 @@ import {
   formatTime,
 } from '../utils/TimeUtils';
 import PersonModal from './PersonModal';
+import { secondRunStartListPdf } from '../utils/SecondRunStartListPdf'
 
 export default function RaceRun({
   raceId,
@@ -36,6 +37,7 @@ export default function RaceRun({
   const [data, setData] = useState([]);
   const [people, setPeople] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [selectedPersonField, setSelectedPersonField] = useState(null);
   const [runDetails, setRunDetails] = useState({
     courseSetter: '',
@@ -72,9 +74,17 @@ export default function RaceRun({
     forerunner_a AS forerunnerA,
     forerunner_b AS forerunnerB,
     forerunner_c AS forerunnerC,
-    forerunner_d AS forerunnerD
-    FROM race_run
-    WHERE race_id = ? AND run_number = ?
+    forerunner_d AS forerunnerD,
+    c.competition_name,
+    c.competition_description,
+    r.race_name,
+    r.venue,
+    r.race_date,
+    r.course_name
+    FROM race_run rr
+    LEFT JOIN races r ON r.race_id = rr.race_id
+    LEFT JOIN competitions c ON c.id = rr.competition_id
+    WHERE rr.race_id = ? AND run_number = ?
      `;
     const params = [raceId, runId];
     const results = await window.api.select(query, params);
@@ -116,6 +126,14 @@ export default function RaceRun({
         , rr.racer_id
         , p.first_name
         , p.last_name
+        , cc.title
+        , p.dob
+        , p.gender
+        , cc.is_junior
+        , cc.is_novice
+        , cc.is_veteran
+        , cc.is_reserve
+        , cc.regiment
         , rr.race_time
         , rr.dsq_gate
         , rr.dsq_reason
@@ -125,6 +143,9 @@ export default function RaceRun({
         , rr1.race_time AS prev_race_time
       FROM race_results rr
       INNER JOIN people p ON p.id = rr.racer_id
+      LEFT JOIN competition_competitor cc ON cc.racer_id = p.id
+--       LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id
+--       LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id
       INNER JOIN race_competitor rc ON
       rc.race_id = rr.race_id
       AND rc.competition_id = rr.competition_id
@@ -133,6 +154,8 @@ export default function RaceRun({
       WHERE rr.run_number = ?
         AND rr.race_id = ?
         AND rr.competition_id = ?
+--         AND NOT COALESCE(ct.is_female, FALSE)
+--         AND NOT COALESCE(ct.is_corps, FALSE)
       ORDER BY prev_race_time ASC NULLS LAST , bib_number ASC
               `;
     }
@@ -150,7 +173,11 @@ export default function RaceRun({
           id: `${result.racer_id}/${runId}`,
           bibNumber: result.bib_number,
           firstName: result.first_name,
+          first_name: result.first_name,
           lastName: result.last_name,
+          last_name: result.last_name,
+          team: result.team_name,
+          title: result.title,
           raceTime: convertRaceTime(result.race_time),
           status: result.is_dns
             ? 'DNS'
@@ -163,11 +190,19 @@ export default function RaceRun({
                   : '',
           gateDisqualified: result.dsq_gate,
           dsqReason: result.dsq_reason,
+          gender: result.gender || null,
+          is_junior: result.is_junior || null,
+          is_senior: result.is_senior || null,
+          is_veteran: result.is_veteran || null,
+          is_novice: result.is_novice || null,
+          is_reserve: result.is_reserve || null,
         };
       });
       setData(mapped);
+      setLoaded(true);
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
+      setLoaded(true);
     }
   };
 
@@ -190,6 +225,10 @@ export default function RaceRun({
     });
     setModalOpen(false); // Close the modal after saving
     setSelectedPersonField(null);
+  };
+
+  const handlePrintStartlist = async () => {
+    secondRunStartListPdf(runDetails, data);
   };
 
   const handleTimeChange = (id, value) => {
@@ -493,10 +532,19 @@ export default function RaceRun({
           variant="contained"
           color="primary"
           onClick={handleSaveCourseDetails}
-          className="text-white py-2 px-4 rounded shadow-lg w-full mt-4"
+          className=" block text-white py-2 px-4 rounded shadow-lg mt-4"
         >
           Save Course Details
         </Button>
+        {runId == 2 && (
+        <Button
+        variant="contained"
+        color="primary"
+        onClick={handlePrintStartlist}
+        className="block text-white py-2 px-4 rounded shadow-lg mt-4"
+      >Export Start List</Button>
+      )
+      }
       </div>
       <TableContainer component={Paper}>
         {data.length > 0 && (
@@ -595,10 +643,15 @@ export default function RaceRun({
             </Button>
           </>
         )}
-        {data.length === 0 && (
+        {data.length === 0 && loaded && (
           <div>
             No Competitors found, make sure you've marked the previous run as
             finished.
+          </div>
+        )}
+        {data.length === 0 && !loaded && (
+          <div>
+            Loading, please wait...
           </div>
         )}
       </TableContainer>

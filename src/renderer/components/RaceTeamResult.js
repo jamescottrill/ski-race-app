@@ -64,7 +64,7 @@ export default function RaceTeamResultOneRun({
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               ct.team_name AS team_name,
+                               cc.regiment AS team_name,
                                f.factor AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id) AS mintime
@@ -75,7 +75,9 @@ export default function RaceTeamResultOneRun({
                                LEFT JOIN competition_competitor cc ON cc.racer_id = run1.racer_id AND cc.competition_id = run1.competition_id
                                LEFT JOIN races r ON r.race_id = run1.race_id
                                LEFT JOIN factors f ON f.race = r.race_type
-                               LEFT JOIN competition_team ct ON ct.team_id = cc.team
+--                                LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id
+--                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+--                         WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         )
           SELECT
             *,
