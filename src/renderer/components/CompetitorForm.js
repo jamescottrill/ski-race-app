@@ -72,7 +72,6 @@ function CompetitorForm({
     } catch (error) {
       console.error('Failed to remove competitor from team.', error);
     }
-
   };
 
   const handleSaveTeam = async (teamId) => {
@@ -104,7 +103,7 @@ function CompetitorForm({
     // Fetch competitor details using the competitorId
     let query;
     let params;
-    if (existingCompetitor) {
+    if (!existingCompetitor) {
       // If this is an existing person
       query = `
         SELECT p.*,
@@ -250,11 +249,44 @@ function CompetitorForm({
       `;
       const params3 = [competitionId, formData.team, id];
       await window.api.insert(query3, params3);
-
+      await insertNewCompetitorExistingRaces(competitorId);
       navigate(`/competition/${competitionId}/competitor/manage`);
     } catch (error) {
       console.error('Failed to create competitor:', error);
     }
+  };
+
+  const insertNewCompetitorExistingRaces = async () => {
+    //   This is used to add a competitor into races retrospectively.
+    //   The competitor will be recorded as DNS, with bib 999.
+    const races = await window.api.select(`
+    SELECT
+      DISTINCT
+      rc.race_id
+      , r.number_runs
+    FROM race_competitor rc
+      LEFT JOIN races r ON r.race_id = rc.race_id
+      LEFT JOIN race_run rr ON rr.race_id = rc.race_id AND rr.run_number = 1
+    WHERE rc.competition_id = ? AND rr.is_complete`, [competitionId]);
+    if (races.length === 0) {
+      return;
+    }
+    const promises = [];
+    races.forEach((race) => {
+      const query = `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points) VALUES (?, ?, ?, ?, ?)`;
+      const params = [competitionId, race.race_id, competitorId, 999, null];
+      promises.push(window.api.insert(query, params));
+      const query2 = `INSERT INTO race_results (competition_id, race_id, run_number, racer_id, is_dns) VALUES (?, ?, ?, ?, ?)`;
+      const params2 = [competitionId, race.race_id, 1, competitorId, true];
+      promises.push(window.api.insert(query2, params2));
+      if (race.numberRuns === 2) {
+        const params3 = [competitionId, race.race_id, 2, competitorId, true];
+        promises.push(window.api.insert(query2, params3));
+      }
+    });
+    Promise.all(promises).catch((error) => {
+      console.error('Failed to insert new competitor into races:', error);
+    });
   };
 
   const registerNewCompetitor = async () => {
@@ -291,6 +323,8 @@ function CompetitorForm({
       `;
       const params3 = [competitionId, formData.team, competitorId];
       await window.api.insert(query3, params3);
+      await insertNewCompetitorExistingRaces(competitorId);
+
 
       navigate(`/competition/${competitionId}/competitor/manage`);
     } catch (error) {
@@ -384,6 +418,7 @@ function CompetitorForm({
       }
       const params3 = [formData.team, competitionId, competitorId];
       await window.api.insert(query3, params3);
+      await insertNewCompetitorExistingRaces(competitorId);
       navigate(-1);
     } catch (error) {
       console.error('Failed to update competitor:', error);
@@ -391,10 +426,8 @@ function CompetitorForm({
   };
 
   useEffect(() => {
-    console.log(editMode);
-    console.log(competitorId);
     fetchTeam();
-    if (editMode && competitorId) {
+    if (competitorId) {
       fetchCompetitorDetails();
     } else {
       setFormData(initialData);
@@ -404,13 +437,13 @@ function CompetitorForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editMode) {
+      await updateCompetitor();
+    } else {
       if (competitorId) {
         await registerNewCompetitor();
       } else {
-      await updateCompetitor();
+        await createCompetitor();
       }
-    } else {
-      await createCompetitor();
     }
   };
 
@@ -465,7 +498,6 @@ function CompetitorForm({
               InputLabelProps={{
                 shrink: true,
               }}
-              disabled={existingCompetitor}
             />
           </Grid>
           <Grid item xs={12}>
@@ -585,9 +617,7 @@ function CompetitorForm({
               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full my-2"
             >
               {editMode
-                ? existingCompetitor
-                  ? 'Register Competitor'
-                  : 'Update Competitor'
+                ? 'Update Competitor'
                 : 'Register Competitor'}
             </Button>
             {editMode && (
