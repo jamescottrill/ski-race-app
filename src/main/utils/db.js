@@ -213,6 +213,7 @@ class Database {
         is_dns BOOLEAN,
         is_dnf BOOLEAN,
         is_dsq BOOLEAN,
+        is_ns BOOLEAN,
         dsq_gate INTEGER,
         dsq_reason TEXT,
         PRIMARY KEY (competition_id, race_id, run_number, racer_id),
