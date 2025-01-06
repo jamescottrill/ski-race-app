@@ -18,6 +18,12 @@ const getRaceDetails = async (raceId, competitionId) => {
         , start_altitude - finish_altitude AS altitude_difference
         , race_date
         , race_name
+        , rr1.number_gates AS run1_number_gates
+        , rr1.turning_gates AS run1_turning_gates
+        , rr2.number_gates AS run2_number_gates
+        , rr2.turning_gates AS run2_turning_gates
+        , rr1.start_time AS run1_start_time
+        , rr2.start_time AS run2_start_time
         , c.competition_name
         , c.competition_description
         , CONCAT(td.title, ' ', UPPER(td.last_name), ' ', SUBSTR(td.first_name,1,1), ' ', UPPER(td.country)) AS tech_delegate

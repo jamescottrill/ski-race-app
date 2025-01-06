@@ -25,9 +25,9 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 'auto', text: 'Venue: ' },
-        { width: 'auto', text: raceDetails.venue },
+        { width: '*', text: raceDetails.venue },
         { width: 'auto', text: 'Date: ' },
-        { width: 'auto', text: raceDetails.race_date },
+        { width: '*', text: new Date(raceDetails.race_date).toLocaleString('default', { day: "numeric", month: 'long', year: "numeric" }) },
       ],
       columnGap: 10,
     },
@@ -37,6 +37,7 @@ const resultsTwoPdf = (
         { width: 'auto', text: raceDetails.course_name },
       ],
       columnGap: 10,
+      margin: [0, 0, 0, 10],
     },
     {
       columns: [
@@ -49,7 +50,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100,  text: 'TD: ', style: 'key' },
         { width: '*', text: raceDetails.tech_delegate.trim() || 'N/A', style: 'text' },
-        { width: 120, text: 'Start Height (m) ', style: 'key' },
+        { width: 120, text: 'Start Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.start_altitude, style: 'text' },
       ],
       columnGap: 5,
@@ -58,7 +59,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: 'Referee: ', style: 'key' },
         { width: '*', text: raceDetails.referee.trim() || 'N/A', style: 'text' },
-        { width: 120, text: 'Finish Height (m) ', style: 'key' },
+        { width: 120, text: 'Finish Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.finish_altitude, style: 'text' },
       ],
       columnGap: 5,
@@ -67,7 +68,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: 'Assistant Referee: ', style: 'key' },
         { width: '*', text: raceDetails.asst_referee.trim() || 'N/A', style: 'text' },
-        { width: 120, text: 'Vertical Difference (m) ', style: 'key' },
+        { width: 120, text: 'Vertical Difference (m): ', style: 'key' },
         { width: '*', text: raceDetails.altitude_difference, style: 'text' },
       ],
       columnGap: 5,
@@ -80,6 +81,7 @@ const resultsTwoPdf = (
         { width: '*', text: raceDetails.homologation, style: 'text' },
       ],
       columnGap: 5,
+      margin: [0, 0, 0, 20],
     },
     {
       columns: [
@@ -91,10 +93,35 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Course Setter: ', style: 'key' },
-        { width: '*', text: raceDetails.course_setter_1.trim()  || 'N/A', style: 'text' },
+        { width: '*', text: raceDetails.course_setter_1, style: 'text' },
         { width: '*', text: raceDetails.course_setter_2, style: 'text' },
       ],
       columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Number of Gates: ', style: 'key' },
+        { width: '*', text: raceDetails.run1_number_gates , style: 'text' },
+        { width: '*', text: raceDetails.run2_number_gates, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Turning Gates: ', style: 'key' },
+        { width: '*', text: raceDetails.run1_turning_gates , style: 'text' },
+        { width: '*', text: raceDetails.run2_turning_gates, style: 'text' },
+      ],
+      columnGap: 5,
+    },
+    {
+      columns: [
+        { width: 100, text: 'Start Time: ', style: 'key' },
+        { width: '*', text: raceDetails.run1_start_time, style: 'text' },
+        { width: '*', text: raceDetails.run2_start_time, style: 'text' },
+      ],
+      columnGap: 5,
+      margin: [0, 0, 0, 20],
     },
     {
       columns: [
@@ -135,6 +162,7 @@ const resultsTwoPdf = (
         { width: '*', text: raceDetails.forerunner_2_d.trim(), style: 'text' },
       ],
       columnGap: 5,
+      margin: [0, 0, 0, 20],
     },
     {
       columns: [

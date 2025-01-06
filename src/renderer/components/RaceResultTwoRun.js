@@ -227,7 +227,6 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
   const initRaceDetails = async () => {
     const details = await getRaceDetails(raceId, competitionId);
     setRaceDetails(details);
-    console.log(details);
   };
 
   useEffect(() => {
