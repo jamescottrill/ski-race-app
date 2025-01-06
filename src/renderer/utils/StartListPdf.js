@@ -7,7 +7,7 @@ import { tableStyles } from './PdfStyles';
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
-const startListPdf = (raceDetails, startList) => {
+const startListPdf = (raceDetails, startList, womensStartList) => {
   const docDefinition = {
     content: [
       { text: raceDetails.competition_name, style: 'header' },

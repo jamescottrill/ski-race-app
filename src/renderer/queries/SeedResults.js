@@ -102,14 +102,15 @@ const seedingPoints = `
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time
+                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
+                               , is_ns
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
                run2 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time
+                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 2
@@ -117,6 +118,7 @@ const seedingPoints = `
                data AS (SELECT run1.racer_id,
                                run1.race_id,
                                run1.race_time                                                            AS run_1_time,
+                               run1.is_ns                                                                AS is_ns,
                                run2.race_time                                                            AS run_2_time,
                                run1.race_time + run2.race_time                                           AS total_time,
                                f.factor                                                                  AS factor,
@@ -137,6 +139,7 @@ const seedingPoints = `
               s.racer_id,
               race_id,
               total_time,
+              is_ns,
               CASE
                 WHEN NOT seed_1 AND NOT seed_2 THEN NULL
                 WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < cc.arrival_corps_seed THEN seed_1

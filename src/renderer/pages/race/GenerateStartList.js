@@ -61,9 +61,9 @@ export default function GenerateStartList() {
   const getStartList = async () => {
     const query = `
     SELECT
-      p.id AS racer_id, p.first_name, p.last_name, rc.bib_number,
+      p.id AS racer_id, p.first_name, p.last_name, p.gender, rc.bib_number,
       cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, seed_points, cc.regiment AS team
+      cc.is_veteran, cc.is_female, cc.is_novice, seed_points, cc.regiment AS team
       FROM race_competitor rc
     INNER JOIN people p ON rc.racer_id = p.id
     INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id

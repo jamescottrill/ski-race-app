@@ -107,6 +107,7 @@ export default function RaceRun({
              , rr.is_dnf
              , rr.is_dns
              , rr.is_dsq
+             , rr.is_ns
              , NULL as prev_race_time
         FROM race_results rr
                INNER JOIN people p ON p.id = rr.racer_id
@@ -140,6 +141,7 @@ export default function RaceRun({
         , rr.is_dnf
         , rr.is_dns
         , rr.is_dsq
+        , rr.is_ns
         , rr1.race_time AS prev_race_time
       FROM race_results rr
       INNER JOIN people p ON p.id = rr.racer_id
@@ -185,9 +187,11 @@ export default function RaceRun({
               ? 'DNF'
               : result.is_dsq
                 ? 'DSQ'
-                : result.race_time
-                  ? 'Finished'
-                  : '',
+                : result.is_ns
+                  ? 'NS'
+                  : result.race_time
+                      ? 'Finished'
+                      : '',
           gateDisqualified: result.dsq_gate,
           dsqReason: result.dsq_reason,
           gender: result.gender || null,
@@ -271,18 +275,27 @@ export default function RaceRun({
       handleUpdatedField('is_dns', true, id);
       handleUpdatedField('is_dnf', false, id);
       handleUpdatedField('is_dsq', false, id);
+      handleUpdatedField('is_ns', false, id);
     } else if (value === 'DNF') {
       handleUpdatedField('is_dns', false, id);
       handleUpdatedField('is_dnf', true, id);
       handleUpdatedField('is_dsq', false, id);
+      handleUpdatedField('is_ns', false, id);
     } else if (value === 'DSQ') {
       handleUpdatedField('is_dns', false, id);
       handleUpdatedField('is_dnf', false, id);
       handleUpdatedField('is_dsq', true, id);
+      handleUpdatedField('is_ns', false, id);
+    } else if (value === 'NS') {
+      handleUpdatedField('is_dns', false, id);
+      handleUpdatedField('is_dnf', false, id);
+      handleUpdatedField('is_dsq', false, id);
+      handleUpdatedField('is_ns', true, id);
     } else {
       if (row.is_dns) handleUpdatedField('is_dns', false, id);
       if (row.is_dnf) handleUpdatedField('is_dnf', false, id);
       if (row.is_dsq) handleUpdatedField('is_dsq', false, id);
+      if (row.is_ns) handleUpdatedField('is_ns', false, id);
     }
   };
 
@@ -595,6 +608,7 @@ export default function RaceRun({
                         <MenuItem value="DNS">DNS</MenuItem>
                         <MenuItem value="DNF">DNF</MenuItem>
                         <MenuItem value="DSQ">DSQ</MenuItem>
+                        <MenuItem value="NS">Non-Starter</MenuItem>
                       </Select>
                     </TableCell>
                     <TableCell align="center">

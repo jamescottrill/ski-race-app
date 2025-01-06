@@ -14,6 +14,7 @@ import OtherResultTable from './DnsTable';
 import { resultsTwoPdf } from '../utils/ResultsTwoPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 import { convertRaceTime } from '../utils/TimeUtils';
+import ResultTable from './ResultTable';
 
 export default function RaceResultTwoRun({ raceId, competitionId }) {
   const [data, setData] = useState([]);
@@ -44,6 +45,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason,
                                competition_id
@@ -57,6 +59,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason
                         FROM race_results rr
@@ -74,6 +77,8 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                run2.is_dsq                                                               AS run_2_dsq,
                                run1.is_dnf                                                               AS run_1_dnf,
                                run2.is_dnf                                                               AS run_2_dnf,
+                               run1.is_ns                                                                AS run_1_ns,
+                               run2.is_ns                                                                AS run_2_ns,
                                run1.dsq_gate                                                             AS run_1_dsq_gate,
                                run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
@@ -85,7 +90,13 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                cc.regiment AS team,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
-                                   OVER (ORDER BY run1.race_id)                                          AS mintime
+                                   OVER (ORDER BY run1.race_id)                                          AS mintime,
+                               cc.is_novice,
+                               p.gender,
+                               cc.is_junior,
+                               cc.is_senior,
+                               cc.is_veteran,
+                               cc.is_reserve
                         FROM run1
                                LEFT JOIN run2 ON run1.racer_id = run2.racer_id
                                JOIN people p ON p.id = run1.racer_id
@@ -135,7 +146,9 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
           !result.run_1_dsq &&
           !result.run_2_dns &&
           !result.run_2_dnf &&
-          !result.run_2_dsq,
+          !result.run_2_dsq &&
+          !result.run_1_ns &&
+          !result.run_2_ns,
         totalTime: convertRaceTime(result.total_time),
         firstName: result.first_name,
         lastName: result.last_name,
@@ -144,6 +157,12 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
         seedPoints: result.seed_points,
         bibNumber: result.bib_number,
         position: result.position,
+        gender: result.gender,
+        is_novice: result.is_novice,
+        is_junior: result.is_junior,
+        is_senior: result.is_senior,
+        is_veteran: result.is_veteran,
+        is_reserve: result.is_reserve,
       };
     });
 
@@ -208,6 +227,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
   const initRaceDetails = async () => {
     const details = await getRaceDetails(raceId, competitionId);
     setRaceDetails(details);
+    console.log(details);
   };
 
   useEffect(() => {
@@ -249,7 +269,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                 <TableCell align="center">Time First Run</TableCell>
                 <TableCell align="center">Time Second Run</TableCell>
                 <TableCell align="center">Total Time</TableCell>
-                <TableCell align="center">Seed Points</TableCell>
+                <TableCell align="center">Race Points</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -323,6 +343,46 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
           <h1>DSQ Run 2</h1>
           <TableContainer>
             <OtherResultTable data={run2Dsq} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Junior Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_junior).slice(0,3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Novice Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_novice).slice(0,3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Veteran Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_veteran).slice(0,3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Female Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.gender === "F").slice(0,3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Open Results</h1>
+          <TableContainer>
+            <ResultTable data={data.slice(0,3)} />
           </TableContainer>
         </>
       )}

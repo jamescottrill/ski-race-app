@@ -103,6 +103,14 @@ const calculateRacerSeedPoints = async (
             .column(raceId)
             .dropNa();
           let sPoints = dfd.toJSON(sortedDf)[raceId][competitorRanking];
+          // console.log(sortedDf);
+          // let isNs = dfd.toJSON(sortedDf)[raceId]["isNs"];
+          // if (!sPoints && isNs) {
+          //   sPoints =
+          //     dfd.toJSON(sortedDf)[raceId][
+          //     dfd.toJSON(sortedDf)[raceId].length - 1
+          //       ];
+          // } else if (!sPoints) {
           if (!sPoints) {
             sPoints =
               dfd.toJSON(sortedDf)[raceId][
@@ -292,7 +300,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
     raceTypePromises.push(results);
   });
   if (raceIds.length === 0) {
-    const query = `SELECT COALESCE(cc.arrival_corps_seed, 2000) AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
+    const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
     return window.api.select(query, [competitionId]);
   }
   const resultsPromise = [];
@@ -315,6 +323,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
   });
 
   const seedPointResults = await Promise.all(resultsPromise);
+  console.log(seedPointResults);
   // Step 3: Process results into a dataframe.
   const seedData = [];
   seedPointResults.forEach((raceResults) => {

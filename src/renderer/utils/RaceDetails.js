@@ -20,10 +20,10 @@ const getRaceDetails = async (raceId, competitionId) => {
         , race_name
         , c.competition_name
         , c.competition_description
-        , CONCAT(td.title, ' ', UPPER(td.last_name), ' ', td.first_name, ' ', UPPER(td.country)) AS tech_delegate
-        , CONCAT(cor.title, ' ', UPPER(cor.last_name), ' ', cor.first_name, ' ', UPPER(cor.country)) AS chief_of_race
-        , CONCAT(rf.title, ' ', UPPER(rf.last_name), ' ', rf.first_name, ' ', UPPER(rf.country)) AS referee
-        , CONCAT(ar.title, ' ', UPPER(ar.last_name), ' ', ar.first_name, ' ', UPPER(ar.country)) AS asst_referee
+        , CONCAT(td.title, ' ', UPPER(td.last_name), ' ', SUBSTR(td.first_name,1,1), ' ', UPPER(td.country)) AS tech_delegate
+        , CONCAT(cor.title, ' ', UPPER(cor.last_name), ' ', SUBSTR(cor.first_name,1,1), ' ', UPPER(cor.country)) AS chief_of_race
+        , CONCAT(rf.title, ' ', UPPER(rf.last_name), ' ', SUBSTR(rf.first_name,1,1), ' ', UPPER(rf.country)) AS referee
+        , CONCAT(ar.title, ' ', UPPER(ar.last_name), ' ', SUBSTR(ar.first_name,1,1), ' ', UPPER(ar.country)) AS asst_referee
         , CONCAT(cs1.title, ' ', UPPER(cs1.last_name), ' ', cs1.first_name, ' ', UPPER(cs1.country)) AS course_setter_1
         , CONCAT(cs2.title, ' ', UPPER(cs2.last_name), ' ', cs2.first_name, ' ', UPPER(cs2.country)) AS course_setter_2
         , CONCAT(UPPER(fr1a.last_name), ' ', UPPER(fr1a.country)) AS forerunner_1_a
