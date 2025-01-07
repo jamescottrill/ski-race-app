@@ -32,7 +32,7 @@ export default function TeamListPage() {
         SELECT
           ct.team_id,
           ct.team_name,
-          COUNT(ctm.racer_id) AS num_members,
+--           COUNT(ctm.racer_id) AS num_members,
           ct.is_corps,
           ct.is_reserve,
           ct.is_female,

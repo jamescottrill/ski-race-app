@@ -34,7 +34,7 @@ export default function RaceTeamResultOneRun({
                            UNION ALL
                            SELECT 1010 AS factor, 'GS' AS race
                            UNION ALL
-                           SELECT 1130 AS factor, 'SG' AS race
+                           SELECT 1190 AS factor, 'SG' AS race
                            UNION ALL
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL
@@ -45,6 +45,7 @@ export default function RaceTeamResultOneRun({
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason,
                                competition_id
@@ -57,14 +58,15 @@ export default function RaceTeamResultOneRun({
                                run1.race_time AS run_1_time,
                                run1.is_dns AS run_1_dns,
                                run1.is_dsq AS run_1_dsq,
-                               run1.is_dnf AS run_1_dnf,
+                               run1.is_ns AS run_1_ns,
+                               run1.dsq_gate AS run_1_dsq_gate,
                                run1.dsq_gate AS run_1_dsq_gate,
                                run1.dsq_reason AS run_1_dsq_reason,
                                p.first_name,
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               cc.regiment AS team_name,
+                               ct.team_name AS team_name,
                                f.factor AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id) AS mintime
@@ -75,8 +77,8 @@ export default function RaceTeamResultOneRun({
                                LEFT JOIN competition_competitor cc ON cc.racer_id = run1.racer_id AND cc.competition_id = run1.competition_id
                                LEFT JOIN races r ON r.race_id = run1.race_id
                                LEFT JOIN factors f ON f.race = r.race_type
---                                LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id
---                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+                               LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id AND ctm.race_id = run1.race_id
+                               LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
 --                         WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         )
           SELECT
@@ -106,7 +108,7 @@ export default function RaceTeamResultOneRun({
         run1Dnf: result.run_1_dnf,
         run1DsqGate: result.run_1_dsq_gate,
         run1DsqReason: result.run_1_dsq_reason,
-        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq,
+        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq && !result.run_1_ns && result.run_1_time,
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
@@ -120,6 +122,7 @@ export default function RaceTeamResultOneRun({
       .filter((e) => {
         return e.completed;
       });
+
     const teamResults = [];
     const dnfTeams = [];
     const teamNames = mapped.map(r => r.teamName).filter((teamName, index, self) => {

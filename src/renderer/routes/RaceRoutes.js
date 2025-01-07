@@ -8,6 +8,7 @@ import RaceResultsPage from '../pages/race/RaceResultsPage';
 import Layout from '../components/Layout';
 import RaceDetailsPage from '../pages/race/RaceDetailsPage';
 import GenerateStartList from '../pages/race/GenerateStartList';
+import RaceTeamManagement from '../pages/race/RaceTeamManagement';
 
 function RaceRoutes() {
   return (
@@ -43,6 +44,10 @@ function RaceRoutes() {
       <Route
         path="competition/:competitionId/race/:raceId/start-list"
         element={<Layout><GenerateStartList /></Layout>}
+      />
+      <Route
+        path="competition/:competitionId/race/:raceId/teams"
+        element={<Layout><RaceTeamManagement /></Layout>}
       />
     </>
   );

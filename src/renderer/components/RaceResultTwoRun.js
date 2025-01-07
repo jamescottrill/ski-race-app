@@ -16,25 +16,12 @@ import { getRaceDetails } from '../utils/RaceDetails';
 import { convertRaceTime } from '../utils/TimeUtils';
 import ResultTable from './ResultTable';
 
-export default function RaceResultTwoRun({ raceId, competitionId }) {
-  const [data, setData] = useState([]);
-  const [run1Dnf, setRun1Dnf] = useState([]);
-  const [run1Dns, setRun1Dns] = useState([]);
-  const [run1Dsq, setRun1Dsq] = useState([]);
-  const [run2Dnf, setRun2Dnf] = useState([]);
-  const [run2Dns, setRun2Dns] = useState([]);
-  const [run2Dsq, setRun2Dsq] = useState([]);
-  const [raceDetails, setRaceDetails] = useState([]);
-
-
-
-  const initialData = async () => {
-    const raceQuery = `
+const raceQuery = `
           WITH factors AS (SELECT 730 AS factor, 'SL' AS race
                            UNION ALL
                            SELECT 1010 AS factor, 'GS' AS race
                            UNION ALL
-                           SELECT 1130 AS factor, 'SG' AS race
+                           SELECT 1190 AS factor, 'SG' AS race
                            UNION ALL
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL
@@ -77,12 +64,14 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                run2.is_dsq                                                               AS run_2_dsq,
                                run1.is_dnf                                                               AS run_1_dnf,
                                run2.is_dnf                                                               AS run_2_dnf,
-                               run1.is_ns                                                                AS run_1_ns,
-                               run2.is_ns                                                                AS run_2_ns,
+                               run1.is_ns                                                                AS is_ns,
                                run1.dsq_gate                                                             AS run_1_dsq_gate,
                                run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
                                run2.dsq_reason                                                           AS run_2_dsq_reason,
+                               CASE WHERE run1.is_dns OR run2.is_dns THEN 1 ELSE 0 END                   AS is_dns,
+                               CASE WHERE run1.is_dnf OR run2.is_dnf THEN 1 ELSE 0 END                   AS is_dnf,
+                               CASE WHERE run1.is_dsq OR run2.is_dsq THEN 1 ELSE 0 END                   AS is_dsq,
                                p.first_name,
                                p.last_name,
                                cc.title,
@@ -96,7 +85,8 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
                                cc.is_junior,
                                cc.is_senior,
                                cc.is_veteran,
-                               cc.is_reserve
+                               cc.is_reserve,
+                               RANK() OVER (PARTITION BY run1.race_id ORDER BY rc.seed_points)      AS seed_order
                         FROM run1
                                LEFT JOIN run2 ON run1.racer_id = run2.racer_id
                                JOIN people p ON p.id = run1.racer_id
@@ -115,6 +105,21 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
           FROM data
           ORDER BY total_time
         `;
+
+const RaceResultTwoRun = ({ raceId, competitionId }) => {
+  const [data, setData] = useState([]);
+  const [run1Dnf, setRun1Dnf] = useState([]);
+  const [run1Dns, setRun1Dns] = useState([]);
+  const [run1Dsq, setRun1Dsq] = useState([]);
+  const [run2Dnf, setRun2Dnf] = useState([]);
+  const [run2Dns, setRun2Dns] = useState([]);
+  const [run2Dsq, setRun2Dsq] = useState([]);
+  const [raceDetails, setRaceDetails] = useState([]);
+
+
+
+  const initialData = async () => {
+
     const raceQueryValues = [raceId, raceId];
     let results = [];
     try {
@@ -130,6 +135,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
         raceId: result.raceId,
         run1Time: convertRaceTime(result.run_1_time),
         run2Time: convertRaceTime(result.run_2_time),
+        run1Ns: result.is_ns,
         run1Dns: result.run_1_dns,
         run2Dns: result.run_2_dns,
         run1Dsq: result.run_1_dsq,
@@ -168,7 +174,7 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
 
     const r1Dnf = mapped
       .filter((e) => {
-        return e.run1Dnf;
+        return e.run1Dnf || e.run1Ns;
       })
       .sort(function (a, b) {
         return a.bibNumber - b.bibNumber;
@@ -391,3 +397,4 @@ export default function RaceResultTwoRun({ raceId, competitionId }) {
     </>
   );
 }
+ export {RaceResultTwoRun, raceQuery}

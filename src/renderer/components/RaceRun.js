@@ -24,7 +24,7 @@ import {
   formatTime,
 } from '../utils/TimeUtils';
 import PersonModal from './PersonModal';
-import { secondRunStartListPdf } from '../utils/SecondRunStartListPdf'
+import { secondRunStartListPdf } from '../utils/SecondRunStartListPdf';
 
 export default function RaceRun({
   raceId,
@@ -59,6 +59,7 @@ export default function RaceRun({
     const query = `SELECT id, first_name, last_name FROM people`;
     try {
       const result = await window.api.select(query);
+      result.push({ id: '', first_name: '', last_name: '' });
       setPeople(result);
     } catch (error) {
       console.error('Failed to fetch people:', error);
@@ -190,8 +191,8 @@ export default function RaceRun({
                 : result.is_ns
                   ? 'NS'
                   : result.race_time
-                      ? 'Finished'
-                      : '',
+                    ? 'Finished'
+                    : '',
           gateDisqualified: result.dsq_gate,
           dsqReason: result.dsq_reason,
           gender: result.gender || null,
@@ -292,10 +293,10 @@ export default function RaceRun({
       handleUpdatedField('is_dsq', false, id);
       handleUpdatedField('is_ns', true, id);
     } else {
-      if (row.is_dns) handleUpdatedField('is_dns', false, id);
-      if (row.is_dnf) handleUpdatedField('is_dnf', false, id);
-      if (row.is_dsq) handleUpdatedField('is_dsq', false, id);
-      if (row.is_ns) handleUpdatedField('is_ns', false, id);
+      handleUpdatedField('is_dns', false, id);
+      handleUpdatedField('is_dnf', false, id);
+      handleUpdatedField('is_dsq', false, id);
+      handleUpdatedField('is_ns', false, id);
     }
   };
 
@@ -382,13 +383,22 @@ export default function RaceRun({
     }
   };
 
-  const handleAutocompleteChange = (event, newValue) => {
-    setRunDetails({
-      ...runDetails,
-      [event.target.parentElement.id.split('-')[0]]: newValue
-        ? newValue.id
-        : '',
-    });
+  const handleAutocompleteChange = (event, newValue, reason) => {
+
+    if(reason === "clear"){
+      const id = event.target.closest('div.MuiInputBase-root').querySelector('input').id;
+      setRunDetails({
+        ...runDetails,
+        [id.split('-')[0]]: '',
+      });
+    } else {
+      setRunDetails({
+        ...runDetails,
+        [event.target.parentElement.id.split('-')[0]]: newValue
+          ? newValue.id
+          : '',
+      });
+    }
   };
 
   const handleSaveCourseDetails = async () => {
@@ -418,6 +428,7 @@ export default function RaceRun({
     ];
     try {
       await window.api.insert(query1, params1);
+      alert('Course details saved successfully.');
     } catch (e) {
       window.alert(e);
     }
@@ -479,65 +490,69 @@ export default function RaceRun({
             />
           </Grid>
           <Grid item xs={4}>
-          <TextField
-            label="Number of Turning Gates"
-            name="turningGates"
-            id="turningGates"
-            type="number"
-            variant="outlined"
-            onChange={handleChange}
-            placeholder="Enter number of turning gates"
-            value={runDetails.turningGates}
-          />
+            <TextField
+              label="Number of Turning Gates"
+              name="turningGates"
+              id="turningGates"
+              type="number"
+              variant="outlined"
+              onChange={handleChange}
+              placeholder="Enter number of turning gates"
+              value={runDetails.turningGates}
+            />
           </Grid>
           <Grid item xs={4}>
-          <TextField
-            label="Start Time"
-            variant="outlined"
-            type="text"
-            name="startTime"
-            id="startTime"
-            onChange={handleChange}
-            placeholder="HH:MM"
-            value={runDetails.startTime}
-            helperText="Use HH:MM format"
-          />
+            <TextField
+              label="Start Time"
+              variant="outlined"
+              type="text"
+              name="startTime"
+              id="startTime"
+              onChange={handleChange}
+              placeholder="HH:MM"
+              value={runDetails.startTime}
+              helperText="Use HH:MM format"
+            />
           </Grid>
           {[...Array(4)].map((_, index) => (
             <>
-            <Grid item xs={8}>
-            <Autocomplete
-              id={`forerunner${index + 1}`}
-              name={`forerunner${index + 1}`}
-              options={people}
-              getOptionLabel={(option) =>
-                `${option.first_name} ${option.last_name}`
-              }
-              onChange={handleAutocompleteChange}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={`Forerunner ${index + 1}`}
-                  inputProps={{
-                    ...params.inputProps,
-                  }}
+              <Grid item xs={8}>
+                <Autocomplete
+                  id={`forerunner${index + 1}`}
+                  name={`forerunner${index + 1}`}
+                  options={people}
+                  getOptionLabel={(option) =>
+                    `${option.first_name} ${option.last_name}`
+                  }
+                  onChange={handleAutocompleteChange}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={`Forerunner ${index + 1}`}
+                      inputProps={{
+                        ...params.inputProps,
+                      }}
+                    />
+                  )}
+                  value={
+                    runDetails[`forerunner${index + 1}`]
+                      ? people.find(
+                          (e) => e.id === runDetails[`forerunner${index + 1}`],
+                        )
+                      : null
+                  }
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
                 />
-              )}
-              value={
-                runDetails[`forerunner${index + 1}`]
-                  ? people.find(
-                      (e) => e.id === runDetails[`forerunner${index + 1}`],
-                    )
-                  : null
-              }
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-            />
-            </Grid>
-            <Grid item xs={1}>
-              <IconButton onClick={() => handleOpenModal(`forerunner${index + 1}`)}>
-                <AddIcon />
-              </IconButton>
-            </Grid>
+              </Grid>
+              <Grid item xs={1}>
+                <IconButton
+                  onClick={() => handleOpenModal(`forerunner${index + 1}`)}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Grid>
             </>
           ))}
         </Grid>
@@ -550,14 +565,15 @@ export default function RaceRun({
           Save Course Details
         </Button>
         {runId == 2 && (
-        <Button
-        variant="contained"
-        color="primary"
-        onClick={handlePrintStartlist}
-        className="block text-white py-2 px-4 rounded shadow-lg mt-4"
-      >Export Start List</Button>
-      )
-      }
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handlePrintStartlist}
+            className="block text-white py-2 px-4 rounded shadow-lg mt-4"
+          >
+            Export Start List
+          </Button>
+        )}
       </div>
       <TableContainer component={Paper}>
         {data.length > 0 && (
@@ -663,11 +679,7 @@ export default function RaceRun({
             finished.
           </div>
         )}
-        {data.length === 0 && !loaded && (
-          <div>
-            Loading, please wait...
-          </div>
-        )}
+        {data.length === 0 && !loaded && <div>Loading, please wait...</div>}
       </TableContainer>
       <PersonModal
         open={modalOpen}

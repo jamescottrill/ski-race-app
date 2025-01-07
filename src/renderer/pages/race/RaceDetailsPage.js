@@ -109,6 +109,17 @@ export default function RaceDetailsPage() {
               >
                 View Start List
               </Button>
+              {raceDetails.is_team > 0 && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  component={Link}
+                  to={`/competition/${competitionId}/race/${raceId}/teams`}
+                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg"
+                >
+                  Manage Teams
+                </Button>
+              )}
               <Button
                 variant="contained"
                 color="primary"

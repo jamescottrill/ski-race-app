@@ -16,10 +16,8 @@ import {
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import { useBackButton } from '../../utils/navigation';
 import { startListPdf } from '../../utils/StartListPdf';
-import { startListTwoRunPdf } from '../../utils/StartListTwoRunPdf';
 import { getRaceDetails } from '../../utils/RaceDetails';
 import { shuffleArray } from '../../utils/GenericUtils';
-import { useNavigate } from 'react-router-dom';
 
 export default function GenerateStartList() {
   const { competitionId, raceId } = useParams();
@@ -36,21 +34,10 @@ export default function GenerateStartList() {
 
   const handleBack = useBackButton();
 
-  function refreshPage(){
-    const navigate = useNavigate();
-    navigate(`/competition/${competitionId}/race/${raceId}/start-list`);
-  }
-
   const getFetchSeedList = async () => {
     let completedRaces;
     completedRaces = await window.api.select(
-      `SELECT DISTINCT rr.race_id AS raceId
-        FROM race_run rr
-        INNER JOIN races r ON r.race_id = rr.race_id
-        WHERE rr.competition_id = ?
-          AND NOT r.is_training
-          AND rr.is_complete
-        ORDER BY r.race_date ASC`,
+      `SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training ORDER BY r.race_date ASC`,
       [competitionId],
     );
     if (completedRaces.length > 3) {
@@ -111,7 +98,6 @@ export default function GenerateStartList() {
   };
 
   const generatePDF = () => {
-    raceDetails.number_runs === 2 ? startListTwoRunPdf(raceDetails, startList, womenStartList) :
     startListPdf(raceDetails, startList, womenStartList);
   };
 
@@ -174,8 +160,6 @@ export default function GenerateStartList() {
         ...activeCompetitors.slice(raceDetails.randomise_top),
       ];
     }
-    menStartList.map((competitor, index) => {competitor.bib_number = index+1; return competitor;})
-    tmpWomenStartList.map((competitor, index) => {competitor.bib_number = index+1; return competitor;})
     setStartList(menStartList);
     setWomenStartList(raceDetails.is_women_separate ? tmpWomenStartList : null);
   };
@@ -188,7 +172,6 @@ export default function GenerateStartList() {
   }, [competitionId, raceId]);
 
   const saveStartList = async (list, gender) => {
-    console.log(list);
     const query = `
       INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
       VALUES (?, ?, ?, ?, ?);
@@ -205,7 +188,7 @@ export default function GenerateStartList() {
           competitionId,
           raceId,
           list[i].racer_id,
-          list[i].bib_number,
+          i + 1,
           list[i].seed_points,
         ]);
         promises.push(res);
@@ -254,15 +237,6 @@ export default function GenerateStartList() {
       saveStartList(startList, 'Congratulations, ');
     }
   };
-
-  const changeBibNumber = (e) => {
-    const {id, value} = e.target;
-    const index = startList.findIndex(competitor => competitor.racer_id === id);
-    const competitor = startList[index];
-    competitor.bib_number = parseInt(value, 10);
-    startList[index] = competitor;
-    setStartList([...startList]);
-  }
 
   const generateNewStartList = (
     <Container className="generate-start-list-page flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -333,7 +307,7 @@ export default function GenerateStartList() {
                 label=""
               />
               <ListItemText
-                primary={`${i + 1}: ${competitor.last_name.toUpperCase()} ${competitor.first_name} (${competitor.gender})`}
+                primary={`${i + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.gender})`}
                 secondary={`Seed: ${competitor.seed_points.toFixed(2)}`}
               />
             </ListItem>
@@ -362,13 +336,8 @@ export default function GenerateStartList() {
             <List>
               {startList.map((competitor, index) => (
                 <ListItem key={competitor.racer_id}>
-                  <TextField
-                    defaultValue={index+1}
-                    id={competitor.racer_id}
-                    onChange={changeBibNumber}
-                  ></TextField>
                   <ListItemText
-                    primary={`${competitor.last_name.toUpperCase()} ${competitor.first_name} (${competitor.seed_points.toFixed(2)})`}
+                    primary={`Bib ${index + 1}: ${competitor.first_name} ${competitor.last_name} (${competitor.seed_points.toFixed(2)})`}
                   />
                 </ListItem>
               ))}

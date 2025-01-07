@@ -26,6 +26,7 @@ const getRaceDetails = async (raceId, competitionId) => {
         , rr2.start_time AS run2_start_time
         , c.competition_name
         , c.competition_description
+        , r.number_runs
         , CONCAT(td.title, ' ', UPPER(td.last_name), ' ', SUBSTR(td.first_name,1,1), ' ', UPPER(td.country)) AS tech_delegate
         , CONCAT(cor.title, ' ', UPPER(cor.last_name), ' ', SUBSTR(cor.first_name,1,1), ' ', UPPER(cor.country)) AS chief_of_race
         , CONCAT(rf.title, ' ', UPPER(rf.last_name), ' ', SUBSTR(rf.first_name,1,1), ' ', UPPER(rf.country)) AS referee

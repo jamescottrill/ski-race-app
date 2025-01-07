@@ -3,7 +3,7 @@ const seedResults = `
                            UNION ALL
                            SELECT 1010 AS factor, 'GS' AS race
                            UNION ALL
-                           SELECT 1130 AS factor, 'SG' AS race
+                           SELECT 1190 AS factor, 'SG' AS race
                            UNION ALL
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL
@@ -95,7 +95,7 @@ const seedingPoints = `
                            UNION ALL
                            SELECT 1010 AS factor, 'GS' AS race
                            UNION ALL
-                           SELECT 1130 AS factor, 'SG' AS race
+                           SELECT 1190 AS factor, 'SG' AS race
                            UNION ALL
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL

@@ -14,23 +14,14 @@ import OtherResultTable from './DnsTable';
 import { convertRaceTime } from '../utils/TimeUtils';
 import { resultsPdf } from '../utils/ResultsPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
+import ResultTable from './ResultTable';
 
-export default function RaceResultOneRun({ raceId, competitionId }) {
-  const [raceDetails, setRaceDetails] = useState([]);
-  const [data, setData] = useState([]);
-  const [run1Dnf, setRun1Dnf] = useState([]);
-  const [run1Dns, setRun1Dns] = useState([]);
-  const [run1Dsq, setRun1Dsq] = useState([]);
-
-  const initialData = async () => {
-    const rd = await getRaceDetails(raceId, competitionId);
-    setRaceDetails(rd);
-    const raceQuery = `
+const raceQueryOneRun = `
           WITH factors AS (SELECT 730 AS factor, 'SL' AS race
                            UNION ALL
                            SELECT 1010 AS factor, 'GS' AS race
                            UNION ALL
-                           SELECT 1130 AS factor, 'SG' AS race
+                           SELECT 1190 AS factor, 'SG' AS race
                            UNION ALL
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL
@@ -41,6 +32,7 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason,
                                competition_id
@@ -54,6 +46,10 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                run1.is_dns AS run_1_dns,
                                run1.is_dsq AS run_1_dsq,
                                run1.is_dnf AS run_1_dnf,
+                               run1.is_ns AS is_ns,
+                               run1.is_dnf AS is_dnf,
+                               run1.is_dns AS is_dns,
+                               run1.is_dsq AS is_dsq,
                                run1.dsq_gate AS run_1_dsq_gate,
                                run1.dsq_reason AS run_1_dsq_reason,
                                p.first_name,
@@ -62,6 +58,13 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                rc.bib_number,
                                cc.regiment AS team,
                                f.factor AS factor,
+                               p.gender,
+                               cc.is_novice,
+                               cc.is_junior,
+                               cc.is_veteran,
+                               cc.is_reserve,
+                               cc.is_senior,
+                               RANK() OVER (PARTITION BY run1.race_id ORDER BY rc.seed_points)      AS seed_order,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id) AS mintime
                         FROM run1
@@ -71,21 +74,30 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
                                LEFT JOIN competition_competitor cc ON cc.racer_id = run1.racer_id AND cc.competition_id = run1.competition_id
                                LEFT JOIN races r ON r.race_id = run1.race_id
                                LEFT JOIN factors f ON f.race = r.race_type
---                                LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id
---                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
---                         WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         )
           SELECT
             *,
             ROUND((run_1_time - mintime) / mintime * factor, 2) AS seed_points,
             RANK() OVER (ORDER BY run_1_time NULLS LAST) AS position
           FROM data
-          ORDER BY run_1_time
+          ORDER BY run_1_time NULLS LAST, bib_number
         `;
+
+function RaceResultOneRun({ raceId, competitionId }) {
+  const [raceDetails, setRaceDetails] = useState([]);
+  const [data, setData] = useState([]);
+  const [run1Dnf, setRun1Dnf] = useState([]);
+  const [run1Dns, setRun1Dns] = useState([]);
+  const [run1Dsq, setRun1Dsq] = useState([]);
+
+  const initialData = async () => {
+    const rd = await getRaceDetails(raceId, competitionId);
+    setRaceDetails(rd);
+
     const raceQueryValues = [raceId];
     let results = [];
     try {
-      results = await window.api.select(raceQuery, raceQueryValues);
+      results = await window.api.select(raceQueryOneRun, raceQueryValues);
     } catch (e) {
       console.error('Failed to fetch competitors:', e);
       return;
@@ -99,9 +111,10 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
         run1Dns: result.run_1_dns,
         run1Dsq: result.run_1_dsq,
         run1Dnf: result.run_1_dnf,
+        run1Ns: result.is_ns,
         run1DsqGate: result.run_1_dsq_gate,
         run1DsqReason: result.run_1_dsq_reason,
-        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq,
+        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq && !result.is_ns,
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
@@ -109,6 +122,12 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
         seedPoints: result.seed_points,
         bibNumber: result.bib_number,
         position: result.position,
+        gender: result.gender,
+        is_novice: result.is_novice,
+        is_junior: result.is_junior,
+        is_senior: result.is_senior,
+        is_veteran: result.is_veteran,
+        is_reserve: result.is_reserve,
       };
     });
     const r1Dnf = mapped
@@ -121,7 +140,7 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
     setRun1Dnf(r1Dnf);
     const r1Dns = mapped
       .filter((e) => {
-        return e.run1Dns;
+        return e.run1Dns || e.run1Ns;
       })
       .sort(function (a, b) {
         return a.bibNumber - b.bibNumber;
@@ -216,9 +235,53 @@ export default function RaceResultOneRun({ raceId, competitionId }) {
           </TableContainer>
         </>
       )}
+      {data.length > 0 && (
+        <>
+          <h1>Junior Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_junior).slice(0, 3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Novice Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_novice).slice(0, 3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Veteran Results</h1>
+          <TableContainer>
+            <ResultTable data={data.filter((e) => e.is_veteran).slice(0, 3)} />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Female Results</h1>
+          <TableContainer>
+            <ResultTable
+              data={data.filter((e) => e.gender === 'F').slice(0, 3)}
+            />
+          </TableContainer>
+        </>
+      )}
+      {data.length > 0 && (
+        <>
+          <h1>Open Results</h1>
+          <TableContainer>
+            <ResultTable data={data.slice(0, 3)} />
+          </TableContainer>
+        </>
+      )}
       <Button variant="contained" onClick={generatePDF}>
         Download PDF
       </Button>
     </>
   );
 }
+
+export { RaceResultOneRun, raceQueryOneRun };

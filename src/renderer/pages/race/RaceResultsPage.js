@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
-import RaceResultTwoRun from '../../components/RaceResultTwoRun';
-import RaceResult from '../../components/RaceResult';
+import {RaceResultTwoRun} from '../../components/RaceResultTwoRun';
+import { RaceResultOneRun } from '../../components/RaceResult';
 import RaceResultSeed from '../../components/RaceResultSeed';
 import { getRaceDetails } from '../../utils/RaceDetails';
 import RaceTeamResultTwoRun from '../../components/RaceTeamResultTwoRun';
@@ -26,7 +26,7 @@ function RaceResultTabPanel(props) {
         <RaceResultTwoRun raceId={raceId} competitionId={competitionId} />
       )}
       {runs === 1 && (
-        <RaceResult raceId={raceId} competitionId={competitionId} />
+        <RaceResultOneRun raceId={raceId} competitionId={competitionId} />
       )}
     </div>
   );

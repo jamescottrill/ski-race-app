@@ -49,7 +49,6 @@ export default function TeamResults() {
         ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
     setRaces(res);
-    console.log(res);
     return res;
   };
 
