@@ -69,9 +69,9 @@ const raceQuery = `
                                run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
                                run2.dsq_reason                                                           AS run_2_dsq_reason,
-                               CASE WHERE run1.is_dns OR run2.is_dns THEN 1 ELSE 0 END                   AS is_dns,
-                               CASE WHERE run1.is_dnf OR run2.is_dnf THEN 1 ELSE 0 END                   AS is_dnf,
-                               CASE WHERE run1.is_dsq OR run2.is_dsq THEN 1 ELSE 0 END                   AS is_dsq,
+                               CASE WHEN run1.is_dns OR run2.is_dns THEN 1 ELSE 0 END                   AS is_dns,
+                               CASE WHEN run1.is_dnf OR run2.is_dnf THEN 1 ELSE 0 END                   AS is_dnf,
+                               CASE WHEN run1.is_dsq OR run2.is_dsq THEN 1 ELSE 0 END                   AS is_dsq,
                                p.first_name,
                                p.last_name,
                                cc.title,
@@ -244,6 +244,7 @@ const RaceResultTwoRun = ({ raceId, competitionId }) => {
     initRaceDetails().catch(console.error);
     // init();
     // init().catch(console.error);
+    console.log(data);
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
