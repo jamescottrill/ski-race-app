@@ -80,22 +80,7 @@ const calculateRacerSeedPoints = async (
     case 3:
       // Seeding after the second Championship Race: sum of the best two divided by 2
       // Seeding after the third championship Race: sum of the best two divided by 2, Initial Seed Points Dropped
-      // if (nonNullRaces.length >= 2) {
-      //   if (row.racer_id === '3a3f7ae6-a493-4cef-a3e0-8c8a810bac86') {
-      //     console.error('--------------------------------');
-      //     console.log(nonNullRaces);
-      //     console.log(row);
-      //     console.error('--------------------------------');
-      //   }
-      //
-      // }
       if (nonNullRaces.length < 2) {
-        // if (row.racer_id === '3a3f7ae6-a493-4cef-a3e0-8c8a810bac86') {
-        //   console.error('--------------------------------');
-        //   console.log(nonNullRaces);
-        //   console.log(row);
-        //   console.error('--------------------------------');
-        // }
         /*
         If the competitor has failed to complete 2 races (i.e. only has initial, or only has 1st)
         we need to use the penalty points. This is explained below:
@@ -141,6 +126,8 @@ const calculateRacerSeedPoints = async (
         let log;
         let mostRecentRace = raceIds[2];
         if (row[mostRecentRace] !== null) {
+          // If we're not using the most recent race then we also need to get the seed list at the time of the previous race.
+          // so that we have the competitors correct position in the seed list.
           mostRecentRace = raceIds[1];
           previousRaces = previousRaces.slice(0, 2);
           if (!raceIds.includes(sRId)) {
@@ -166,17 +153,6 @@ const calculateRacerSeedPoints = async (
           sPoints = finishedResults[competitorRanking].seed_points;
         } else {
           sPoints = finishedResults[finishedResults.length - 1].seed_points;
-        }
-        if (row.racer_id === '53ca4021-739c-43a2-ba8f-b183297d8d40') {
-          // console.log(raceStart);
-          console.log(previousSeedList);
-          console.log(competitorRanking);
-          console.log(results);
-        //   console.log(previousSeedList);
-        //   console.log(competitorRanking);
-        //   console.log(competitorResult);
-        //   console.log(finishedResults);
-        //   console.log(sPoints);
         }
         let penaltyAdd = 10;
         let penaltyMultiply = 1.2;
@@ -209,27 +185,9 @@ const calculateRacerSeedPoints = async (
             }
           }
         }
-        if (row.racer_id === '3a3f7ae6-a493-4cef-a3e0-8c8a810bac86') {
-          // console.warn('--------------------------------');
-          // console.log(raceIds);
-          // console.log(results[competitorResult]);
-          // console.log('previous', previousSeedList);
-          // console.log('sPoints', sPoints);
-          // console.log('results', results);
-          // console.log('competitorRanking', competitorRanking);
-          // console.log('nonNull', nonNullRaces);
-          // console.log('row', row);
-          // console.warn('--------------------------------');
-        }
       }
       const bestTwo = nonNullRaces.sort((a, b) => a - b).slice(0, 2);
       finalSeedPoints = (bestTwo[0] + bestTwo[1]) / 2;
-      if (row.racer_id === '3a3f7ae6-a493-4cef-a3e0-8c8a810bac86') {
-        // console.warn('--------------------------------');
-        // console.log(bestTwo);
-        // console.log(finalSeedPoints);
-        // console.warn('--------------------------------');
-      }
       break;
     case 4:
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
@@ -439,6 +397,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
     on: ['racer_id'],
     how: 'left',
   });
+  finalResults.sortValues('last_name', { inplace: true, ascending: true });
   finalResults.sortValues('seed_points', { inplace: true, ascending: true });
   // Add position as a column to deal with ties
   const ranks = [];
