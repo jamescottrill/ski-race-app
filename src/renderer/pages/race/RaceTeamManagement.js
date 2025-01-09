@@ -26,9 +26,9 @@ import { shuffleArray } from '../../utils/GenericUtils';
 export default function RaceTeamManagement() {
   const { competitionId, raceId } = useParams();
   const [struckOutCompetitors, setStruckOutCompetitors] = useState({});
-  const [startList, setStartList] = useState(null);
-  const [teams, setTeams] = useState(null);
-  const [womenStartList, setWomenStartList] = useState(null);
+  const [startList, setStartList] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [womenStartList, setWomenStartList] = useState([null]);
   const [startListExists, setStartListExists] = useState(false);
   const [raceDetails, setRaceDetails] = useState({
     is_women_separate: false,
@@ -76,27 +76,36 @@ export default function RaceTeamManagement() {
     }
   };
 
-  const teamExists = async (userId, teamId) => {
+  const teamExists = async (userId) => {
     const query = `
     SELECT
      COUNT(*) AS count
     FROM competition_team_members ct
-    WHERE ct.competition_id = ? AND ct.team_id = ? AND ct.racer_id = ?
+    WHERE ct.competition_id = ? AND ct.racer_id = ? AND ct.race_id = ?
     `;
-    const results = await window.api.select(query, [competitionId, teamId, userId]);
+    const results = await window.api.select(query, [
+      competitionId,
+      userId,
+      raceId,
+    ]);
     if (results) {
       return results[0].count > 0;
     }
     return false;
-  }
+  };
 
   const newTeam = async (userId, teamId) => {
     const query = `
     INSERT INTO competition_team_members (competition_id, team_id, racer_id, race_id)
      VALUES (?, ?, ?, ?)
     `;
-    const results = await window.api.select(query, [competitionId, teamId, userId, raceId]);
-  }
+    const results = await window.api.select(query, [
+      competitionId,
+      teamId,
+      userId,
+      raceId,
+    ]);
+  };
 
   const updateTeam = async (userId, teamId) => {
     const query = `
@@ -105,7 +114,7 @@ export default function RaceTeamManagement() {
     WHERE competition_id = ? AND racer_id = ? AND race_id = ?
     `;
     await window.api.select(query, [teamId, competitionId, userId, raceId]);
-  }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -113,15 +122,21 @@ export default function RaceTeamManagement() {
       (competitor) => competitor.racer_id === name,
     );
     startList[comp].team_id = value;
-  setStartList(startList);
-  teamExists(name, value)
-    .then(exists => {
-      if (exists) {
-        updateTeam(name, value);
-      } else {
-        newTeam(name, value);
-      }
-    });
+    console.log(startList);
+    setStartList(startList);
+    teamExists(name)
+      .then((exists) => {
+        console.log(exists);
+        if (exists) {
+          updateTeam(name, value);
+        } else {
+          newTeam(name, value);
+          console.log('new team');
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+      });
   };
 
   useEffect(() => {
@@ -156,25 +171,22 @@ export default function RaceTeamManagement() {
                   {competitor.last_name.toUpperCase()} {competitor.first_name}
                 </p>
                 <FormControl fullWidth>
-                  <InputLabel id="multi-select-label">Team Name</InputLabel>
+                  <InputLabel id="teamSelect">Team Name</InputLabel>
                   <Select
-                    labelId="multi-select-label"
-                    value={competitor.team_id}
+                    labelId="teamSelect"
                     onChange={handleChange}
                     className="mb-2"
                     name={competitor.racer_id}
                     id={competitor.racer_id}
                     label="Team Name"
+                    value={competitor.team_id}
                   >
                     <MenuItem value="">
                       <em>None</em>
                     </MenuItem>
-                    {teams &&
-                      teams.map((team) => (
-                        <MenuItem value={team.team_id}>
-                          {team.team_name}
-                        </MenuItem>
-                      ))}
+                    {teams.map((team) => (
+                      <MenuItem value={team.team_id}>{team.team_name}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </>

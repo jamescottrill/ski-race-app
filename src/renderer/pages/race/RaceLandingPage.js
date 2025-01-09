@@ -25,6 +25,7 @@ export default function RaceLandingPage() {
       SELECT race_id AS id, race_name, race_type, is_team, race_date, venue, number_runs
       FROM races
       WHERE competition_id = ?
+      ORDER BY race_date
     `;
     const params = [competitionId];
 

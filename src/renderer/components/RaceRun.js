@@ -606,7 +606,7 @@ export default function RaceRun({
                         placeholder="MM:SS.SS"
                         inputProps={{ className: 'race-time-input' }}
                         type="text"
-                        disabled={!edit}
+                        // disabled={!edit}
                       />
                     </TableCell>
                     <TableCell align="center">

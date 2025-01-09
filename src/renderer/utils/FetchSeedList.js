@@ -4,7 +4,7 @@ import { seedPointsOneRun, seedPointsTwoRun } from '../queries/SeedPoints';
 import { seedingPoints } from '../queries/SeedResults';
 import { raceQuery } from '../components/RaceResultTwoRun';
 import { raceQueryOneRun } from '../components/RaceResult';
-import { round} from './MathFx';
+import { round } from './MathFx';
 
 const raceMultipliers = {
   Downhill: 1250,
@@ -48,11 +48,19 @@ const getRaceResult = async (competitionId, raceId) => {
   return results2;
 };
 
+const getSeedingRace = async (competitionId) => {
+  const query = `SELECT race_id FROM races WHERE competition_id = ? AND is_seeding = 1`;
+  const results = await window.api.select(query, [competitionId]);
+  return results[0].race_id;
+};
+
 const calculateRacerSeedPoints = async (
   row,
   raceIds,
   competitionId,
   seedResultDf,
+  prevSL,
+  // prevSL2,
 ) => {
   // Extract all UUID keys (assuming UUIDs are non-standard alphanumeric)
   const racePoints = Object.keys(row)
@@ -65,7 +73,7 @@ const calculateRacerSeedPoints = async (
     .map((key) => row[key]);
 
   const numRaces = racePoints.length;
-  const nonNullRaces = racePoints.filter((x) => x !== null);
+  const nonNullRaces = racePoints.filter((x) => x !== null && !Number.isNaN(x));
   let finalSeedPoints;
   switch (numRaces) {
     case 1:
@@ -101,6 +109,7 @@ const calculateRacerSeedPoints = async (
          */
         // eslint-disable-next-line no-use-before-define
         // Racers get the seed results they should have had from the most recent, non-successful race.
+        // let previousSeedList = prevSL;
         let previousRaces = raceIds.slice(0, 2);
         const sR = await window.api.select(
           `SELECT race_id
@@ -129,6 +138,7 @@ const calculateRacerSeedPoints = async (
           // If we're not using the most recent race then we also need to get the seed list at the time of the previous race.
           // so that we have the competitors correct position in the seed list.
           mostRecentRace = raceIds[1];
+          // previousSeedList = prevSL2;
           previousRaces = previousRaces.slice(0, 2);
           if (!raceIds.includes(sRId)) {
             previousRaces.unshift(sRId);
@@ -147,9 +157,17 @@ const calculateRacerSeedPoints = async (
           (x) => x.racer_id === row.racer_id,
         );
         const raceStart = results[competitorResult].bib_number;
-        const finishedResults = results.filter((x) => { return x.seed_points !== null && !x.is_ns && !x.is_dnf && !x.is_dsq && !x.is_dns});
+        const finishedResults = results.filter((x) => {
+          return (
+            x.seed_points !== null &&
+            !x.is_ns &&
+            !x.is_dnf &&
+            !x.is_dsq &&
+            !x.is_dns
+          );
+        });
         let sPoints;
-        if(finishedResults[competitorRanking]){
+        if (finishedResults[competitorRanking]) {
           sPoints = finishedResults[competitorRanking].seed_points;
         } else {
           sPoints = finishedResults[finishedResults.length - 1].seed_points;
@@ -161,12 +179,7 @@ const calculateRacerSeedPoints = async (
             penaltyAdd = 0;
             penaltyMultiply = 1;
           }
-        } catch(e) {
-          console.error(row);
-          console.error(results);
-          console.error(results[competitorResult]);
-          console.error(competitorResult);
-        }
+        } catch (e) {}
         if (sPoints < 50) {
           sPoints += penaltyAdd;
         } else {
@@ -177,10 +190,11 @@ const calculateRacerSeedPoints = async (
 
         if (nonNullRaces.length < 2) {
           for (const raceId of raceIds) {
-            if(previousSeedList[competitorRanking][raceId] !== null) {
-              // console.warn(previousSeedList[competitorRanking]);
+            if (previousSeedList[competitorRanking][raceId] !== null) {
               row[raceId] = round(previousSeedList[competitorRanking][raceId]);
-              nonNullRaces.push(round(previousSeedList[competitorRanking][raceId]));
+              nonNullRaces.push(
+                round(previousSeedList[competitorRanking][raceId]),
+              );
               break;
             }
           }
@@ -193,47 +207,72 @@ const calculateRacerSeedPoints = async (
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
 
       if (nonNullRaces.length < 3) {
+        const mostRecentRace = raceIds[3];
+
         const previousRaces = raceIds.slice(0, 3);
-        const previousSeedList = await fetchSeedList(
-          competitionId,
-          previousRaces,
-        );
-        const competitorRanking = previousSeedList.findIndex(
+        const competitorRanking = prevSL.findIndex(
           (x) => x.racer_id === row.racer_id,
         );
-        for (let i = 0; i < raceIds.length; i++) {
-          const raceId = raceIds[i];
-          const hasResult = row[raceId] !== null;
-          if (hasResult) {
-            continue;
+
+        const compSL = prevSL[competitorRanking];
+        raceIds.forEach((raceId) => {
+          if (compSL[raceId] !== null && !Number.isNaN(compSL[raceId]) && (row[raceId] === null || Number.isNaN(row[raceId]) )) {
+            row[raceId] = round(compSL[raceId]);
+            nonNullRaces.push(round(compSL[raceId]));
           }
-          const sortedDf = seedResultDf
-            .sortValues(raceId, { inplace: false, ascending: true })
-            .column(raceId)
-            .dropNa();
-          let sPoints = dfd.toJSON(sortedDf)[raceId][competitorRanking];
-          if (!sPoints) {
-            sPoints = dfd.toJSON(sortedDf)[raceId].pop() * 1.2;
-            const userSeedPoints = previousSeedList.find(
-              (x) => x.racer_id === row.racer_id,
-            ).seed_points;
-            if (sPoints < userSeedPoints) {
-              sPoints = userSeedPoints;
-            }
+        });
+
+        if (
+          row[mostRecentRace] === null ||
+          isNaN(row[mostRecentRace]) ||
+          row[mostRecentRace] === undefined
+        ) {
+          //   In this case the racer has a result in the 4th race, but must be missing one of the previous races.
+          //   For this, we use the see lists from the first three, which will have two seed points.
+          // The racer doesn't have a result here, but has two others,
+          // give penalty points here
+          const results = await getRaceResult(competitionId, mostRecentRace);
+          const competitorResult = results.findIndex(
+            (x) => x.racer_id === row.racer_id,
+          );
+          const raceStart = results[competitorResult].bib_number;
+          const finishedResults = results.filter((x) => {
+            return (
+              x.seed_points !== null &&
+              !x.is_ns &&
+              !x.is_dnf &&
+              !x.is_dsq &&
+              !x.is_dns
+            );
+          });
+          let sPoints;
+          if (finishedResults[competitorRanking]) {
+            sPoints = finishedResults[competitorRanking].seed_points;
           } else {
-            sPoints *= 1.2;
-            if (sPoints < 10) {
-              sPoints = 10;
-            }
+            sPoints = finishedResults[finishedResults.length - 1].seed_points;
           }
-          nonNullRaces.push(sPoints);
-          row[raceId] = `${sPoints}`;
-          if (nonNullRaces.length === 3) break;
+          let penaltyAdd = 10;
+          let penaltyMultiply = 1.2;
+          try {
+            if (results[competitorResult].is_ns) {
+              penaltyAdd = 0;
+              penaltyMultiply = 1;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+          if (sPoints < 50) {
+            sPoints += penaltyAdd;
+          } else {
+            sPoints *= penaltyMultiply;
+          }
+          nonNullRaces.push(round(sPoints));
+          row[mostRecentRace] = round(sPoints);
         }
       }
-
-      const bestThree4 = nonNullRaces.sort((a, b) => a - b).slice(0, 3);
+      const bestThree4 = nonNullRaces.sort((a, b) => a - b || isNaN(a)-isNaN(b) ).slice(0, 3);
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
+      finalSeedPoints = round(finalSeedPoints);
       break;
     default:
       const numMinusTwo = numRaces - 2;
@@ -285,6 +324,9 @@ const calculateRacerSeedPoints = async (
       break;
   }
   row.seed_points = round(finalSeedPoints);
+  if (row.racer_id === "995adccb-cd10-44b7-8c6a-cec7775d98b2"){
+    console.warn(row);
+  }
   return row;
 };
 
@@ -373,22 +415,52 @@ const fetchSeedList = async (competitionId, raceIds) => {
   });
   const pivotDf = new dfd.DataFrame(pivotData);
 
-  async function processArray(array) {
-    const result = [];
-    for (let i = 0; i < array.length; i++) {
-      const x = array[i];
-      const res = await calculateRacerSeedPoints(
+  async function processArray(array, pivDf) {
+    const resultP = [];
+    const previousRaces = raceIds.slice(0, raceIds.length - 1);
+    const previousSeedList = await fetchSeedList(competitionId, previousRaces);
+
+    const previousRaces2 = raceIds.slice(0, raceIds.length - 2);
+    if (previousSeedList.length === 2) {
+      const sRId = await getSeedingRace(competitionId);
+      if (!raceIds.includes(sRId)) {
+        previousRaces2.unshift(sRId);
+      }
+    }
+    const previousSeedList2 = await fetchSeedList(
+      competitionId,
+      previousRaces2,
+    );
+
+    array.forEach((x) => {
+      const res = calculateRacerSeedPoints(
         x,
         raceIds,
         competitionId,
-        pivotDf,
+        pivDf,
+        previousSeedList,
+        // previousSeedList2,
       );
-      result.push(res);
-    }
-    return result;
+      resultP.push(res);
+    });
+    // for (let i = 0; i < array.length; i++) {
+    //   const x = array[i];
+    //   const res = await calculateRacerSeedPoints(
+    //     x,
+    //     raceIds,
+    //     competitionId,
+    //     pivotDf,
+    //     previousSeedList,
+    //   );
+    //   if(x.racer_id === "995adccb-cd10-44b7-8c6a-cec7775d98b2"){
+    //   console.log(res);
+    //   }
+    //   result.push(res);
+    // }
+    return Promise.all(resultP);
   }
 
-  const totalSeed = await processArray(pivotData);
+  const totalSeed = await processArray(pivotData, pivotDf);
 
   const totalSeedDf = new dfd.DataFrame(totalSeed);
   const finalResults = dfd.merge({
