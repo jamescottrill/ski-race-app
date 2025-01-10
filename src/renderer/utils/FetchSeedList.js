@@ -184,9 +184,10 @@ const calculateRacerSeedPoints = async (
         }
         nonNullRaces.push(round(sPoints));
         row[mostRecentRace] = round(sPoints);
+        row[`${mostRecentRace}-penalty`] = true;
         // row[mostRecentRace] = `${round(sPoints)}*`;
 
-        
+
         if (nonNullRaces.length < 2) {
           for (const raceId of raceIds) {
             if (previousSeedList[competitorRanking][raceId] !== null) {
@@ -270,6 +271,7 @@ const calculateRacerSeedPoints = async (
           }
           nonNullRaces.push(round(sPoints));
           row[mostRecentRace] = round(sPoints);
+          row[`${mostRecentRace}-penalty`] = true;
         }
       }
       const bestThree4 = nonNullRaces
@@ -353,6 +355,7 @@ const calculateRacerSeedPoints = async (
           }
           nonNullRaces.push(round(sPoints));
           row[mostRecentRace] = round(sPoints);
+          row[`${mostRecentRace}-penalty`] = true;
         }
       }
       // Seeding after the fifth or more races: sum of the best (n - 2) divided by (n - 2)
