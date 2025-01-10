@@ -7,7 +7,7 @@ const generateSeedList = (seedList) => {
       {
         table: {
           headerRows: 1,
-          widths: [20, 40 '*', 'auto', 'auto'],
+          widths: [20, 40, '*', 'auto', 'auto'],
           body: [
             [
               { text: 'Position', style: 'tableHeader' },

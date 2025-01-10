@@ -281,12 +281,6 @@ const calculateRacerSeedPoints = async (
       finalSeedPoints = round(finalSeedPoints);
       break;
     default:
-      if(row.racer_id === "8e95a3c7-70eb-41d9-9149-1374a5365ad8"){
-        console.log(nonNullRaces);
-        console.log(raceIds);
-        console.log(row);
-        console.log(numRaces - 2);
-      }
       const numMinusTwo = numRaces - 2;
 
       const competitorRanking = prevSL.findIndex(
@@ -299,25 +293,26 @@ const calculateRacerSeedPoints = async (
           !Number.isNaN(compSL[raceId]) &&
           (row[raceId] === null || Number.isNaN(row[raceId]))
         ) {
-          row[raceId] = round(compSL[raceId]);
-          nonNullRaces.push(round(compSL[raceId]));
+          const sp = round(compSL[raceId]);
+          if (sp){
+            row[raceId] = round(sp);
+            nonNullRaces.push(sp);
+          }
         }
+        // if (row[`${raceId}-penalty`]) {
+        //
+        // }
       });
-
 
       if (nonNullRaces.length < numMinusTwo) {
         const mostRecentRace = raceIds[raceIds.length - 1];
         const previousRaces = raceIds.slice(0, raceIds.length - 1);
-
         if (
           row[mostRecentRace] === null ||
           isNaN(row[mostRecentRace]) ||
           row[mostRecentRace] === undefined
         ) {
-          //   In this case the racer has a result in the 4th race, but must be missing one of the previous races.
-          //   For this, we use the see lists from the first three, which will have two seed points.
-          // The racer doesn't have a result here, but has two others,
-          // give penalty points here
+          // The racer doesn't have a result for the most recent races, so give penalty points here;
           const results = await getRaceResult(competitionId, mostRecentRace);
           const competitorResult = results.findIndex(
             (x) => x.racer_id === row.racer_id,
@@ -471,9 +466,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
       competitionId,
       previousRaces2,
     );
-    if(raceIds.length === 5){
-      console.log(previousSeedList);
-    }
+
 
     array.forEach((x) => {
       const res = calculateRacerSeedPoints(

@@ -26,7 +26,7 @@ const generatePDF = (seedList, races) => {
   };
 
   const tableWidths = (r) => {
-    const base = [25, 30, 'auto', 80, 30];
+    const base = [15, 20, 'auto', 50, 20];
     r.forEach(() => {
       base.push('auto');
     });
@@ -59,6 +59,7 @@ const generatePDF = (seedList, races) => {
       {
         style: 'table',
         layout: 'lightHorizontalLines',
+        columnGap: 0,
         table: {
           headerRows: 1,
           widths: tableWidths(races),
@@ -67,6 +68,7 @@ const generatePDF = (seedList, races) => {
       },
     ],
     styles: tableStyles,
+    pageMargins: [10, 50, 10, 50],
   };
   const pdfDoc = pdfMake.createPdf(docDefinition);
   // Use Electron's dialog to choose save location
