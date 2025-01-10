@@ -53,12 +53,22 @@ export default function GenerateStartList() {
         ORDER BY r.race_date ASC`,
       [competitionId],
     );
+    console.log(completedRaces);
     if (completedRaces.length > 3) {
       completedRaces = await window.api.select(
-        `SELECT DISTINCT rr.race_id AS raceId FROM race_results rr INNER JOIN races r ON r.race_id = rr.race_id  WHERE rr.competition_id = ? AND NOT r.is_training AND NOT r.is_seeding ORDER BY r.race_date ASC`,
+        `SELECT
+            DISTINCT rr.race_id AS raceId
+        FROM race_results rr
+        INNER JOIN races r
+          ON r.race_id = rr.race_id
+        WHERE rr.competition_id = ?
+          AND NOT r.is_training
+          AND NOT r.is_seeding
+        ORDER BY r.race_date ASC`,
         [competitionId],
       );
     }
+    console.log(completedRaces);
     const seedlist = await fetchSeedList(
       competitionId,
       completedRaces.map((e) => e.raceId),

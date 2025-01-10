@@ -143,10 +143,7 @@ const calculateRacerSeedPoints = async (
           if (!raceIds.includes(sRId)) {
             previousRaces.unshift(sRId);
           }
-          previousSeedList = await fetchSeedList(
-            competitionId,
-            previousRaces,
-          );
+          previousSeedList = await fetchSeedList(competitionId, previousRaces);
         }
         const competitorRanking = previousSeedList.findIndex(
           (x) => x.racer_id === row.racer_id,
@@ -187,7 +184,9 @@ const calculateRacerSeedPoints = async (
         }
         nonNullRaces.push(round(sPoints));
         row[mostRecentRace] = round(sPoints);
+        // row[mostRecentRace] = `${round(sPoints)}*`;
 
+        
         if (nonNullRaces.length < 2) {
           for (const raceId of raceIds) {
             if (previousSeedList[competitorRanking][raceId] !== null) {
@@ -205,7 +204,6 @@ const calculateRacerSeedPoints = async (
       break;
     case 4:
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
-
       if (nonNullRaces.length < 3) {
         const mostRecentRace = raceIds[3];
 
@@ -216,7 +214,11 @@ const calculateRacerSeedPoints = async (
 
         const compSL = prevSL[competitorRanking];
         raceIds.forEach((raceId) => {
-          if (compSL[raceId] !== null && !Number.isNaN(compSL[raceId]) && (row[raceId] === null || Number.isNaN(row[raceId]) )) {
+          if (
+            compSL[raceId] !== null &&
+            !Number.isNaN(compSL[raceId]) &&
+            (row[raceId] === null || Number.isNaN(row[raceId]))
+          ) {
             row[raceId] = round(compSL[raceId]);
             nonNullRaces.push(round(compSL[raceId]));
           }
@@ -270,63 +272,98 @@ const calculateRacerSeedPoints = async (
           row[mostRecentRace] = round(sPoints);
         }
       }
-      const bestThree4 = nonNullRaces.sort((a, b) => a - b || isNaN(a)-isNaN(b) ).slice(0, 3);
+      const bestThree4 = nonNullRaces
+        .sort((a, b) => a - b || isNaN(a) - isNaN(b))
+        .slice(0, 3);
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
       finalSeedPoints = round(finalSeedPoints);
       break;
     default:
+      if(row.racer_id === "8e95a3c7-70eb-41d9-9149-1374a5365ad8"){
+        console.log(nonNullRaces);
+        console.log(raceIds);
+        console.log(row);
+        console.log(numRaces - 2);
+      }
       const numMinusTwo = numRaces - 2;
+
+      const competitorRanking = prevSL.findIndex(
+        (x) => x.racer_id === row.racer_id,
+      );
+      const compSL = prevSL[competitorRanking];
+      raceIds.forEach((raceId) => {
+        if (
+          compSL[raceId] !== null &&
+          !Number.isNaN(compSL[raceId]) &&
+          (row[raceId] === null || Number.isNaN(row[raceId]))
+        ) {
+          row[raceId] = round(compSL[raceId]);
+          nonNullRaces.push(round(compSL[raceId]));
+        }
+      });
+
+
       if (nonNullRaces.length < numMinusTwo) {
-        const previousRaces = raceIds.slice(0, numMinusTwo);
-        const previousSeedList = await fetchSeedList(
-          competitionId,
-          previousRaces,
-        );
-        const competitorRanking = previousSeedList.findIndex(
-          (x) => x.racer_id === row.racer_id,
-        );
-        for (let i = 0; i < raceIds.length; i++) {
-          const raceId = raceIds[i];
-          const hasResult = row[raceId] !== null;
-          if (hasResult) {
-            continue;
-          }
-          const sortedDf = seedResultDf
-            .sortValues(raceId, { inplace: false, ascending: true })
-            .column(raceId)
-            .dropNa();
-          let sPoints = dfd.toJSON(sortedDf)[raceId][competitorRanking];
-          if (!sPoints) {
-            sPoints = dfd.toJSON(sortedDf)[raceId].pop() * 1.2;
-            const userSeedPoints = previousSeedList.find(
-              (x) => x.racer_id === row.racer_id,
-            ).seed_points;
-            if (sPoints < userSeedPoints) {
-              sPoints = userSeedPoints;
-            }
+        const mostRecentRace = raceIds[raceIds.length - 1];
+        const previousRaces = raceIds.slice(0, raceIds.length - 1);
+
+        if (
+          row[mostRecentRace] === null ||
+          isNaN(row[mostRecentRace]) ||
+          row[mostRecentRace] === undefined
+        ) {
+          //   In this case the racer has a result in the 4th race, but must be missing one of the previous races.
+          //   For this, we use the see lists from the first three, which will have two seed points.
+          // The racer doesn't have a result here, but has two others,
+          // give penalty points here
+          const results = await getRaceResult(competitionId, mostRecentRace);
+          const competitorResult = results.findIndex(
+            (x) => x.racer_id === row.racer_id,
+          );
+          const raceStart = results[competitorResult].bib_number;
+          const finishedResults = results.filter((x) => {
+            return (
+              x.seed_points !== null &&
+              !x.is_ns &&
+              !x.is_dnf &&
+              !x.is_dsq &&
+              !x.is_dns
+            );
+          });
+          let sPoints;
+          if (finishedResults[competitorRanking]) {
+            sPoints = finishedResults[competitorRanking].seed_points;
           } else {
-            sPoints *= 1.2;
-            if (sPoints < 10) {
-              sPoints = 10;
-            }
+            sPoints = finishedResults[finishedResults.length - 1].seed_points;
           }
-          nonNullRaces.push(sPoints);
-          row[raceId] = `${sPoints}*`;
-          if (nonNullRaces.length === numMinusTwo) break;
+          let penaltyAdd = 10;
+          let penaltyMultiply = 1.2;
+          try {
+            if (results[competitorResult].is_ns) {
+              penaltyAdd = 0;
+              penaltyMultiply = 1;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+          if (sPoints < 50) {
+            sPoints += penaltyAdd;
+          } else {
+            sPoints *= penaltyMultiply;
+          }
+          nonNullRaces.push(round(sPoints));
+          row[mostRecentRace] = round(sPoints);
         }
       }
       // Seeding after the fifth or more races: sum of the best (n - 2) divided by (n - 2)
       const bestNMinusTwo = nonNullRaces
-        .sort((a, b) => a - b)
+        .sort((a, b) => a - b || Number.isNaN(a) - Number.isNaN(b))
         .slice(0, numRaces - 2);
       finalSeedPoints =
         bestNMinusTwo.reduce((acc, val) => acc + val, 0) / bestNMinusTwo.length;
       break;
   }
   row.seed_points = round(finalSeedPoints);
-  if (row.racer_id === "995adccb-cd10-44b7-8c6a-cec7775d98b2"){
-    console.warn(row);
-  }
   return row;
 };
 
@@ -431,6 +468,9 @@ const fetchSeedList = async (competitionId, raceIds) => {
       competitionId,
       previousRaces2,
     );
+    if(raceIds.length === 5){
+      console.log(previousSeedList);
+    }
 
     array.forEach((x) => {
       const res = calculateRacerSeedPoints(
