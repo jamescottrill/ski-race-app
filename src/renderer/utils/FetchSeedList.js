@@ -281,6 +281,12 @@ const calculateRacerSeedPoints = async (
       finalSeedPoints = round(finalSeedPoints);
       break;
     default:
+      if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700"){
+        console.log(nonNullRaces);
+        console.log(raceIds);
+        console.log(row);
+        console.log(numRaces - 2);
+      }
       const numMinusTwo = numRaces - 2;
 
       const competitorRanking = prevSL.findIndex(
@@ -293,6 +299,9 @@ const calculateRacerSeedPoints = async (
           !Number.isNaN(compSL[raceId]) &&
           (row[raceId] === null || Number.isNaN(row[raceId]))
         ) {
+          if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
+            console.log(compSL[raceId]);
+          }
           const sp = round(compSL[raceId]);
           if (sp){
             row[raceId] = round(sp);
@@ -304,9 +313,20 @@ const calculateRacerSeedPoints = async (
         // }
       });
 
+      if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
+        console.log(nonNullRaces);
+        console.log(numMinusTwo);
+      }
+
+
       if (nonNullRaces.length < numMinusTwo) {
+        console.log(row.racer_id);
         const mostRecentRace = raceIds[raceIds.length - 1];
         const previousRaces = raceIds.slice(0, raceIds.length - 1);
+        if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
+          console.log(mostRecentRace);
+          console.log(compSL[previousRaces]);
+        }
         if (
           row[mostRecentRace] === null ||
           isNaN(row[mostRecentRace]) ||
