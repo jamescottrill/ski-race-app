@@ -21,6 +21,7 @@ export default function RaceTeamResultOneRun({
   competitionId,
 }) {
   const [data, setData] = useState([]);
+  const [dnfTeam, setDnfTeam] = useState([]);
   const [raceDetails, setRaceDetails] = useState([]);
 
   const initRaceDetails = async () => {
@@ -143,6 +144,7 @@ export default function RaceTeamResultOneRun({
     });
     teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
     setData(teamResults);
+    setDnfTeam(dnfTeams)
   };
 
   useEffect(() => {
@@ -153,7 +155,8 @@ export default function RaceTeamResultOneRun({
   const generatePDF = () => {
     resultsTeamPdf(
       raceDetails,
-      data
+      data,
+      dnfTeam,
     );
   };
 
@@ -198,6 +201,15 @@ export default function RaceTeamResultOneRun({
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+      {dnfTeam.length > 0 && (
+        <>
+          <h1>Disqualified Teams</h1>
+          {dnfTeam.map((row) => (
+            <p>{row.teamName}</p>
+          ))
+          }
+        </>
       )}
       {data.length === 0 && (
         <div>

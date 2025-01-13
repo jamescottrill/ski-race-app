@@ -33,6 +33,7 @@ function CompetitorForm({
     gender: 'M',
     team: '',
     arrivalSeed: 2000,
+    armySeed: '',
     isNovice: false,
     isJunior: false,
     isSenior: false,
@@ -108,6 +109,8 @@ function CompetitorForm({
       query = `
         SELECT p.*,
                0 AS arrival_corps_seed,
+               NULL AS arrival_army_seed,
+               FALSE AS is_novice,
                FALSE AS is_junior,
                FALSE AS is_senior,
                FALSE AS is_veteran,
@@ -127,24 +130,22 @@ function CompetitorForm({
                p.service_number,
                p.gender,
                cc.title,
-               ct.team_id AS team,
+--                ct.team_id AS team,
                cc.is_junior,
                cc.is_senior,
                cc.is_veteran,
                cc.is_reserve,
                cc.is_female,
                cc.arrival_corps_seed,
+               cc.arrival_army_seed,
                cc.regiment
         FROM people p
          LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
-         LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND  ctm.competition_id = cc.competition_id
-         LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id
+--          LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND  ctm.competition_id = cc.competition_id
+--          LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id
         WHERE p.id = ? AND cc.competition_id = ?
-        AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
+--         AND NOT COALESCE(ct.is_female, FALSE) AND NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_hc, FALSE)
       `;
-      console.log(query);
-      console.log(competitorId);
-      console.log(competitionId);
       params = [competitorId, competitionId];
     }
     try {
@@ -160,6 +161,7 @@ function CompetitorForm({
           gender: result[0].gender || 'M',
           team: result[0].team || '',
           arrivalSeed: result[0].arrival_corps_seed || 2000,
+          armySeed: result[0].arrival_army_seed,
           isJunior: result[0].is_junior || false,
           isSenior: result[0].is_senior || false,
           isVeteran: result[0].is_veteran || false,
@@ -167,7 +169,6 @@ function CompetitorForm({
           isFemale: result[0].gender === 'F',
           regiment: result[0].regiment || '',
         });
-        console.log(result[0]);
       } else {
         console.error('Competitor not found');
       }
@@ -178,7 +179,6 @@ function CompetitorForm({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     // Update formData based on user input
     const updatedFormData = {
       ...formData,
@@ -225,7 +225,7 @@ function CompetitorForm({
       const query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, arrival_corps_seed, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title, regiment)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_army_seed)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const params2 = [
@@ -240,15 +240,15 @@ function CompetitorForm({
         formData.isFemale,
         formData.title,
         formData.regiment,
+        formData.armySeed,
       ];
-
       await window.api.insert(query2, params2);
 
-      const query3 = `
-      INSERT INTO competition_team_members (competition_id, team_id, racer_id) VALUES (?, ?, ?)
-      `;
-      const params3 = [competitionId, formData.team, id];
-      await window.api.insert(query3, params3);
+      // const query3 = `
+      // INSERT INTO competition_team_members (competition_id, team_id, racer_id) VALUES (?, ?, ?)
+      // `;
+      // const params3 = [competitionId, formData.team, id];
+      // await window.api.insert(query3, params3);
       await insertNewCompetitorExistingRaces(competitorId);
       navigate(`/competition/${competitionId}/competitor/manage`);
     } catch (error) {
@@ -299,8 +299,8 @@ function CompetitorForm({
       const query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, arrival_corps_seed, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title, regiment)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_army_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const params2 = [
         competitionId,
@@ -314,6 +314,7 @@ function CompetitorForm({
         formData.isFemale,
         formData.title,
         formData.regiment,
+        formData.armySeed,
       ];
 
       await window.api.insert(query2, params2);
@@ -374,7 +375,8 @@ function CompetitorForm({
               is_reserve   = ?,
               is_female    = ?,
               title        = ?,
-              regiment     = ?
+              regiment     = ?,
+              arrival_army_seed = ?
           WHERE competition_id = ?
             AND racer_id = ?
         `;
@@ -388,36 +390,37 @@ function CompetitorForm({
         formData.isFemale || false,
         formData.title,
         formData.regiment || '',
+        formData.armySeed,
         competitionId,
         competitorId,
       ];
       await window.api.insert(query2, params2);
-      const primaryTeam = await window.api.select(
-        `
-      SELECT ctm.team_id
-      FROM competition_team_members ctm
-      LEFT JOIN competition_team ct USING(team_id, competition_id)
-      WHERE racer_id = ?
-        AND competition_id = ?
-        AND NOT COALESCE(ct.is_hc, FALSE)
-        AND NOT COALESCE(ct.is_corps, FALSE)
-        AND NOT COALESCE(ct.is_female, FALSE)
-      `,
-        [competitorId, competitionId],
-      );
-      let query3;
-      if (primaryTeam && primaryTeam.length > 0) {
-        query3 = `
-        UPDATE competition_team_members
-        SET team_id = ?
-        WHERE competition_id = ?
-          AND racer_id = ?
-      `;
-      } else {
-        query3 = `INSERT INTO main.competition_team_members (team_id, competition_id, racer_id) VALUES (?,?,?)`;
-      }
-      const params3 = [formData.team, competitionId, competitorId];
-      await window.api.insert(query3, params3);
+      // const primaryTeam = await window.api.select(
+      //   `
+      // SELECT ctm.team_id
+      // FROM competition_team_members ctm
+      // LEFT JOIN competition_team ct USING(team_id, competition_id)
+      // WHERE racer_id = ?
+      //   AND competition_id = ?
+      //   AND NOT COALESCE(ct.is_hc, FALSE)
+      //   AND NOT COALESCE(ct.is_corps, FALSE)
+      //   AND NOT COALESCE(ct.is_female, FALSE)
+      // `,
+      //   [competitorId, competitionId],
+      // );
+      // let query3;
+      // if (primaryTeam && primaryTeam.length > 0) {
+      //   query3 = `
+      //   UPDATE competition_team_members
+      //   SET team_id = ?
+      //   WHERE competition_id = ?
+      //     AND racer_id = ?
+      // `;
+      // } else {
+      //   query3 = `INSERT INTO main.competition_team_members (team_id, competition_id, racer_id) VALUES (?,?,?)`;
+      // }
+      // const params3 = [formData.team, competitionId, competitorId];
+      // await window.api.insert(query3, params3);
       await insertNewCompetitorExistingRaces(competitorId);
       navigate(-1);
     } catch (error) {
@@ -541,31 +544,31 @@ function CompetitorForm({
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={11}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel id="team-label">Team</InputLabel>
-              <Select
-                labelId="team-label"
-                id="team"
-                name="team"
-                value={formData.team}
-                onChange={handleChange}
-                label="Team"
-                required
-              >
-                {teams.map((team) => (
-                  <MenuItem key={team.team_id} value={team.team_id}>
-                    {team.team_name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={1}>
-            <IconButton onClick={() => handleOpenModal('team')}>
-              <AddIcon />
-            </IconButton>
-          </Grid>
+          {/*<Grid item xs={11}>*/}
+          {/*  <FormControl fullWidth variant="outlined">*/}
+          {/*    <InputLabel id="team-label">Team</InputLabel>*/}
+          {/*    <Select*/}
+          {/*      labelId="team-label"*/}
+          {/*      id="team"*/}
+          {/*      name="team"*/}
+          {/*      value={formData.team}*/}
+          {/*      onChange={handleChange}*/}
+          {/*      label="Team"*/}
+          {/*      required*/}
+          {/*    >*/}
+          {/*      {teams.map((team) => (*/}
+          {/*        <MenuItem key={team.team_id} value={team.team_id}>*/}
+          {/*          {team.team_name}*/}
+          {/*        </MenuItem>*/}
+          {/*      ))}*/}
+          {/*    </Select>*/}
+          {/*  </FormControl>*/}
+          {/*</Grid>*/}
+          {/*<Grid item xs={1}>*/}
+          {/*  <IconButton onClick={() => handleOpenModal('team')}>*/}
+          {/*    <AddIcon />*/}
+          {/*  </IconButton>*/}
+          {/*</Grid>*/}
           <Grid item xs={12}>
             <TextField
               label="Regiment"
@@ -576,7 +579,7 @@ function CompetitorForm({
               onChange={handleChange}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={6}>
             <TextField
               label="Starting Seed Points"
               variant="outlined"
@@ -585,6 +588,16 @@ function CompetitorForm({
               value={formData.arrivalSeed}
               onChange={handleChange}
               required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Army Seed Points"
+              variant="outlined"
+              fullWidth
+              name="armySeed"
+              value={formData.armySeed}
+              onChange={handleChange}
             />
           </Grid>
           <Grid item xs={12}>

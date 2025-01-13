@@ -11,27 +11,24 @@ import {
   TableHead,
   TableRow,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  Checkbox,
-  ListItemText,
-  MenuItem,
 } from '@mui/material';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import { useBackButton } from '../../utils/navigation';
 import { generatePDF } from '../../pdfs/SeedList';
 
 export default function IndividualResults() {
-  const [results, setResults] = useState([]);
   const [races, setRaces] = useState([]);
   const [selectedRaces, setSelectedRaces] = useState([]);
   const [seedList, setSeedList] = useState([]);
+  const [junior, setJunior] = useState([]);
+  const [veteran, setVeteran] = useState([]);
+  const [novice, setNovice] = useState([]);
+  const [female, setFemale] = useState([]);
   const { competitionId } = useParams();
   const handleBack = useBackButton();
 
   const seedListPdf = () => {
-    generatePDF(results, races);
+    generatePDF(seedList, races);
   };
 
   const completedRaces = async () => {
@@ -68,7 +65,19 @@ export default function IndividualResults() {
           initialRaces.map((e) => e.id),
         );
       }
-      // setResults(data);
+      data = data.filter((e) => {
+        for (const race of initialRaces) {
+          if (e[race.id] === null) {
+            return false;
+          }
+        }
+        return true;
+      });
+      console.log(data);
+      setNovice(data.filter((e) => e.is_novice));
+      setJunior(data.filter((e) => e.is_junior));
+      setVeteran(data.filter((e) => e.is_veteran));
+      setFemale(data.filter((e) => e.gender === 'F'));
       setSeedList(data);
     };
     fetchList();
@@ -110,13 +119,14 @@ export default function IndividualResults() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {seedList.map((competitor) => (
+                  {seedList.map((competitor, i) => (
                     <TableRow key={competitor.id}>
                       <TableCell align="center">
-                        {competitor.position}
+                        {i + 1}
                       </TableCell>
                       <TableCell align="left">{competitor.title}</TableCell>
-                      <TableCell align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
+                      <TableCell
+                        align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
                       <TableCell align="left">{competitor.team_name}</TableCell>
                       {races
                         .filter((e) => selectedRaces.includes(e.id))
@@ -133,14 +143,197 @@ export default function IndividualResults() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <div className="mt-4 flex justify-center space-x-4">
-              <Button variant="contained" onClick={seedListPdf}>
-                Download PDF
-              </Button>
-            </div>
           </>
         )}
-
+        {selectedRaces.length > 0 && female && (
+          <>
+            <h1>Female Results</h1>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center">Position</TableCell>
+                    <TableCell align="center">Rank</TableCell>
+                    <TableCell align="center">Name</TableCell>
+                    <TableCell align="center">Team</TableCell>
+                    {races
+                      .filter((e) => selectedRaces.includes(e.id))
+                      .map((e) => (
+                        <TableCell align="center">{e.text}</TableCell>
+                      ))}
+                    <TableCell align="center">Overall Points</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {female.map((competitor, i) => (
+                    <TableRow key={competitor.id}>
+                      <TableCell align="center">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell align="left">{competitor.title}</TableCell>
+                      <TableCell
+                        align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
+                      <TableCell align="left">{competitor.team_name}</TableCell>
+                      {races
+                        .filter((e) => selectedRaces.includes(e.id))
+                        .map((e) => (
+                          <TableCell align="center">
+                            {competitor[e.id]}
+                          </TableCell>
+                        ))}
+                      <TableCell align="center">
+                        {competitor.seed_points.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+        {selectedRaces.length > 0 && junior && (
+          <>
+            <h1>Junior Results</h1>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center">Position</TableCell>
+                    <TableCell align="center">Rank</TableCell>
+                    <TableCell align="center">Name</TableCell>
+                    <TableCell align="center">Team</TableCell>
+                    {races
+                      .filter((e) => selectedRaces.includes(e.id))
+                      .map((e) => (
+                        <TableCell align="center">{e.text}</TableCell>
+                      ))}
+                    <TableCell align="center">Overall Points</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {junior.map((competitor, i) => (
+                    <TableRow key={competitor.id}>
+                      <TableCell align="center">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell align="left">{competitor.title}</TableCell>
+                      <TableCell
+                        align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
+                      <TableCell align="left">{competitor.team_name}</TableCell>
+                      {races
+                        .filter((e) => selectedRaces.includes(e.id))
+                        .map((e) => (
+                          <TableCell align="center">
+                            {competitor[e.id]}
+                          </TableCell>
+                        ))}
+                      <TableCell align="center">
+                        {competitor.seed_points.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+        {selectedRaces.length > 0 && veteran && (
+          <>
+            <h1>Veteran Results</h1>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center">Position</TableCell>
+                    <TableCell align="center">Rank</TableCell>
+                    <TableCell align="center">Name</TableCell>
+                    <TableCell align="center">Team</TableCell>
+                    {races
+                      .filter((e) => selectedRaces.includes(e.id))
+                      .map((e) => (
+                        <TableCell align="center">{e.text}</TableCell>
+                      ))}
+                    <TableCell align="center">Overall Points</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {veteran.map((competitor, i) => (
+                    <TableRow key={competitor.id}>
+                      <TableCell align="center">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell align="left">{competitor.title}</TableCell>
+                      <TableCell
+                        align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
+                      <TableCell align="left">{competitor.team_name}</TableCell>
+                      {races
+                        .filter((e) => selectedRaces.includes(e.id))
+                        .map((e) => (
+                          <TableCell align="center">
+                            {competitor[e.id]}
+                          </TableCell>
+                        ))}
+                      <TableCell align="center">
+                        {competitor.seed_points.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+        {selectedRaces.length > 0 && novice && (
+          <>
+            <h1>Novice Results</h1>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center">Position</TableCell>
+                    <TableCell align="center">Rank</TableCell>
+                    <TableCell align="center">Name</TableCell>
+                    <TableCell align="center">Team</TableCell>
+                    {races
+                      .filter((e) => selectedRaces.includes(e.id))
+                      .map((e) => (
+                        <TableCell align="center">{e.text}</TableCell>
+                      ))}
+                    <TableCell align="center">Overall Points</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {novice.map((competitor, i) => (
+                    <TableRow key={competitor.id}>
+                      <TableCell align="center">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell align="left">{competitor.title}</TableCell>
+                      <TableCell
+                        align="left">{`${competitor.last_name.toUpperCase()} ${competitor.first_name}`}</TableCell>
+                      <TableCell align="left">{competitor.team_name}</TableCell>
+                      {races
+                        .filter((e) => selectedRaces.includes(e.id))
+                        .map((e) => (
+                          <TableCell align="center">
+                            {competitor[e.id]}
+                          </TableCell>
+                        ))}
+                      <TableCell align="center">
+                        {competitor.seed_points.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+        <div className="mt-4 flex justify-center space-x-4">
+          <Button variant="contained" onClick={seedListPdf}>
+            Download PDF
+          </Button>
+        </div>
         <Button variant="contained" onClick={handleBack}>
           Back
         </Button>

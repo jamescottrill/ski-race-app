@@ -2,13 +2,14 @@ import { tableStyles, teamTableLayout } from './PdfStyles';
 import { getFormattedDate } from './DateUtils';
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
+import {round} from './MathFx';
 // pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 pdfMake.tableLayouts = {
   teamLayout: teamTableLayout
 };
 
-const resultsTeamPdf = (raceDetails, finished) => {
+const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
   const agg = [];
   finished.forEach((row, index) => {
     row.racers.forEach((racer, idx) => {
@@ -26,7 +27,7 @@ const resultsTeamPdf = (raceDetails, finished) => {
       result.push(`${racer.lastName.toUpperCase()} ${racer.firstName}`);
       result.push(racer.run1Time);
       if (idx === 0) {
-        result.push(row.points);
+        result.push(round(row.points));
       } else {
         result.push(null);
       }
@@ -55,14 +56,18 @@ const resultsTeamPdf = (raceDetails, finished) => {
               { text: 'Individual Time', style: 'tableHeader' },
               { text: 'Points', style: 'tableHeader' },
             ],
-            ...agg
+            ...agg,
           ],
         },
       },
+      { text: 'Disqualified Teams', style: 'subheader' },
     ],
     styles: tableStyles,
     pageMargins: [40, 50, 40, 50],
   };
+  for (const team of dsqTeams) {
+    docDefinition.content.push({ text: team.teamName, style: 'text' });
+  }
 
   const pdfDoc = pdfMake.createPdf(docDefinition);
 

@@ -21,6 +21,7 @@ export default function RaceTeamResultTwoRun({
                                                competitionId,
                                              }) {
   const [data, setData] = useState([]);
+  const [dnfTeams, setDnfTeams] = useState([]);
   const [raceDetails, setRaceDetails] = useState([]);
 
   const initRaceDetails = async () => {
@@ -177,6 +178,7 @@ export default function RaceTeamResultTwoRun({
     });
     teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
     setData(teamResults);
+    setDnfTeams(dnfTeams);
   };
 
   useEffect(() => {
@@ -187,7 +189,8 @@ export default function RaceTeamResultTwoRun({
   const generatePDF = () => {
     resultsTeamPdf(
       raceDetails,
-      data
+      data,
+      dnfTeams
     );
   };
 
@@ -233,12 +236,22 @@ export default function RaceTeamResultTwoRun({
           </Table>
         </TableContainer>
       )}
+      {dnfTeams.length > 0 && (
+        <>
+        <h1>Disqualified Teams</h1>
+        {dnfTeams.map((row) => (
+          <p>{row.teamName}</p>
+        ))
+        }
+        </>
+      )}
       {data.length === 0 && (
         <div>
           No Competitors found, make sure you&apos;ve marked the previous run as
           finished.
         </div>
       )}
+
       <Button variant="contained" onClick={generatePDF}>
         Download PDF
       </Button>
