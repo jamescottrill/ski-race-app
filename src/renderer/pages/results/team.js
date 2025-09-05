@@ -45,7 +45,7 @@ export default function TeamResults() {
         WHERE rr.competition_id = ?
           AND NOT r.is_training
           AND rr.is_complete
-          AND r.is_individual
+          AND r.is_team
         ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
     setRaces(res);

@@ -167,7 +167,7 @@ export default function SeedListPage() {
                         .filter((e) => selectedRaces.includes(e.id))
                         .map((e) => (
                           <TableCell align="center">
-                            {competitor[e.id]}
+                            {competitor[`${e.id}-penalty`] ? `${competitor[e.id]}*` : competitor[e.id] }
                           </TableCell>
                         ))}
                       <TableCell align="center">

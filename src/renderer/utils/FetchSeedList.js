@@ -5,6 +5,7 @@ import { seedingPoints } from '../queries/SeedResults';
 import { raceQuery } from '../components/RaceResultTwoRun';
 import { raceQueryOneRun } from '../components/RaceResult';
 import { round } from './MathFx';
+// import { race } from 'eslint-plugin-promise/rules/lib/promise-statics';
 
 const raceMultipliers = {
   Downhill: 1250,
@@ -132,13 +133,11 @@ const calculateRacerSeedPoints = async (
         // they keep them for the rest of the competition.
         // They never need to get the first race as it's either the initial seeding points,
         // or if they've missed all three races they'll have previous seed points from the race
-        let log;
         let mostRecentRace = raceIds[2];
         if (row[mostRecentRace] !== null) {
           // If we're not using the most recent race then we also need to get the seed list at the time of the previous race.
           // so that we have the competitors correct position in the seed list.
           mostRecentRace = raceIds[1];
-          // previousSeedList = prevSL2;
           previousRaces = previousRaces.slice(0, 2);
           if (!raceIds.includes(sRId)) {
             previousRaces.unshift(sRId);
@@ -192,6 +191,10 @@ const calculateRacerSeedPoints = async (
           for (const raceId of raceIds) {
             if (previousSeedList[competitorRanking][raceId] !== null) {
               row[raceId] = round(previousSeedList[competitorRanking][raceId]);
+              console.log(previousSeedList[competitorRanking]);
+              if(previousSeedList[competitorRanking][`${raceId}-penalty`]){
+                row[`${raceId}-penalty`] = true;
+              }
               nonNullRaces.push(
                 round(previousSeedList[competitorRanking][raceId]),
               );
@@ -221,6 +224,9 @@ const calculateRacerSeedPoints = async (
             (row[raceId] === null || Number.isNaN(row[raceId]))
           ) {
             row[raceId] = round(compSL[raceId]);
+            if(compSL[`${raceId}-penalty`]){
+              row[`${raceId}-penalty`] = true;
+            }
             nonNullRaces.push(round(compSL[raceId]));
           }
         });
@@ -281,12 +287,6 @@ const calculateRacerSeedPoints = async (
       finalSeedPoints = round(finalSeedPoints);
       break;
     default:
-      if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700"){
-        console.log(nonNullRaces);
-        console.log(raceIds);
-        console.log(row);
-        console.log(numRaces - 2);
-      }
       const numMinusTwo = numRaces - 2;
 
       const competitorRanking = prevSL.findIndex(
@@ -299,12 +299,12 @@ const calculateRacerSeedPoints = async (
           !Number.isNaN(compSL[raceId]) &&
           (row[raceId] === null || Number.isNaN(row[raceId]))
         ) {
-          if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
-            console.log(compSL[raceId]);
-          }
           const sp = round(compSL[raceId]);
           if (sp){
             row[raceId] = round(sp);
+            if(compSL[`${raceId}-penalty`]){
+              row[`${raceId}-penalty`] = true;
+            }
             nonNullRaces.push(sp);
           }
         }
@@ -313,20 +313,9 @@ const calculateRacerSeedPoints = async (
         // }
       });
 
-      if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
-        console.log(nonNullRaces);
-        console.log(numMinusTwo);
-      }
-
-
       if (nonNullRaces.length < numMinusTwo) {
-        console.log(row.racer_id);
         const mostRecentRace = raceIds[raceIds.length - 1];
         const previousRaces = raceIds.slice(0, raceIds.length - 1);
-        if(row.racer_id === "fec86da2-b0ec-47a9-bf62-accde0ba5700") {
-          console.log(mostRecentRace);
-          console.log(compSL[previousRaces]);
-        }
         if (
           row[mostRecentRace] === null ||
           isNaN(row[mostRecentRace]) ||
@@ -517,7 +506,9 @@ const fetchSeedList = async (competitionId, raceIds) => {
   }
 
   const totalSeed = await processArray(pivotData, pivotDf);
-
+  if (raceIds.length === 6) {
+    console.log(totalSeed);
+  }
   const totalSeedDf = new dfd.DataFrame(totalSeed);
   const finalResults = dfd.merge({
     left: peopleDf,
