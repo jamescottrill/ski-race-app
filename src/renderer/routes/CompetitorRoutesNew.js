@@ -7,44 +7,44 @@ import RegisterCompetitorPageNew from '../pages/competitor/RegisterCompetitorPag
 import ViewCompetitorsPageNew from '../pages/competitor/ViewCompetitorsPageNew';
 import UploadCompetitorsPageNew from '../pages/competitor/UploadCompetitorsPageNew';
 import TeamListPageNew from '../pages/team/TeamListPageNew';
-import Layout from '../components/Layout';
+import LayoutNew from '../components/LayoutNew';
 
-function CompetitorRoutes() {
+function CompetitorRoutesNew() {
   return (
     <>
       <Route
         path="competition/:competitionId/competitor/manage"
         element={
-        <Layout>
+        <LayoutNew>
           <ManageCompetitorsPageNew />
-        </Layout>}
+        </LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/edit"
-        element={<Layout><EditCompetitorsPageNew /></Layout>}
+        element={<LayoutNew><EditCompetitorsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/:competitorId/edit"
-        element={<Layout><EditCompetitorPageNew /></Layout>}
+        element={<LayoutNew><EditCompetitorPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/new"
-        element={<Layout><RegisterCompetitorPageNew /></Layout>}
+        element={<LayoutNew><RegisterCompetitorPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/list"
-        element={<Layout><ViewCompetitorsPageNew /></Layout>}
+        element={<LayoutNew><ViewCompetitorsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/bulk"
-        element={<Layout><UploadCompetitorsPageNew /></Layout>}
+        element={<LayoutNew><UploadCompetitorsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/team/list"
-        element={<Layout><TeamListPageNew /></Layout>}
+        element={<LayoutNew><TeamListPageNew /></LayoutNew>}
       />
     </>
   );
 }
 
-export default CompetitorRoutes;
+export default CompetitorRoutesNew;

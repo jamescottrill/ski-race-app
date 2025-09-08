@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppShell, PageContainer } from '../design-system/layouts/AppShell';
+import { AppShell } from '../design-system/layouts/AppShell';
 import SidebarNew from './SidebarNew';
 
 export default function LayoutNew({ children }) {
@@ -8,9 +8,7 @@ export default function LayoutNew({ children }) {
       sidebar={<SidebarNew />}
       className="bg-gradient-to-br from-alpine-ice to-neutral-50"
     >
-      <PageContainer maxWidth="full" className="p-0">
-        {children}
-      </PageContainer>
+      {children}
     </AppShell>
   );
 }

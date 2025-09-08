@@ -1,18 +1,18 @@
 import { Route } from 'react-router-dom';
 import LandingPageNew from './pages/landingPageNew';
-import CreateCompetitionPage from './pages/createCompetition';
+import CreateCompetitionPageNew from './pages/createCompetitionNew';
 import CompetitionManagementPageNew from './pages/competitionManagementPageNew';
-import CompetitorRoutes from './routes/CompetitorRoutes';
-import ResultsRoutes from './routes/ResultsRoutes';
-import RaceRoutes from './routes/RaceRoutes';
-import SeedListRoutes from './routes/SeedListRoutes';
+import CompetitorRoutesNew from './routes/CompetitorRoutesNew';
+import ResultsRoutesNew from './routes/ResultsRoutesNew';
+import RaceRoutesNew from './routes/RaceRoutesNew';
+import SeedListRoutesNew from './routes/SeedListRoutesNew';
 import LayoutNew from './components/LayoutNew';
 
 export default function MyRoutesNew() {
   return (
     <>
       <Route path="/" element={<LandingPageNew />} />
-      <Route path="/new-competition" element={<CreateCompetitionPage />} />
+      <Route path="/new-competition" element={<CreateCompetitionPageNew />} />
       <Route
         path="/competition/:competitionId"
         element={
@@ -22,10 +22,10 @@ export default function MyRoutesNew() {
         }
       />
       {/* Temporarily keeping old routes but wrapped in new layout */}
-      {CompetitorRoutes()}
-      {RaceRoutes()}
-      {SeedListRoutes()}
-      {ResultsRoutes()}
+      {CompetitorRoutesNew()}
+      {RaceRoutesNew()}
+      {SeedListRoutesNew()}
+      {ResultsRoutesNew()}
     </>
   );
 }

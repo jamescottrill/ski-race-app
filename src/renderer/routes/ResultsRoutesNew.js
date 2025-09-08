@@ -3,53 +3,53 @@ import { Route } from 'react-router-dom';
 import ResultsPageNew from '../pages/results/resultsPageNew';
 import IndividualResultsNew from '../pages/results/individualNew';
 import TeamResultsNew from '../pages/results/teamNew';
-import Layout from '../components/Layout';
+import LayoutNew from '../components/LayoutNew';
 
-function RaceRoutes() {
+function ResultsRoutesNew() {
   return (
     <>
       <Route
         path="/competition/:competitionId/results"
         element={
-          <Layout>
+          <LayoutNew>
             <ResultsPageNew />
-          </Layout>
+          </LayoutNew>
         }
       />
       <Route
         path="/competition/:competitionId/results/team"
         element={
-          <Layout>
-            <TeamResultsNew />
-          </Layout>
+          <LayoutNew>
+            <ResultsPageNew />
+          </LayoutNew>
         }
       />
       <Route
         path="/competition/:competitionId/results/individual"
         element={
-          <Layout>
+          <LayoutNew>
             <IndividualResultsNew />
-          </Layout>
+          </LayoutNew>
         }
       />
       <Route
         path="/competition/:competitionId/results/races"
         element={
-          <Layout>
-            <ResultsPageNew />
-          </Layout>
+          <LayoutNew>
+            <TeamResultsNew />
+          </LayoutNew>
         }
       />
       <Route
         path="/competition/:competitionId/results/races/:raceId"
         element={
-          <Layout>
+          <LayoutNew>
             <ResultsPageNew />
-          </Layout>
+          </LayoutNew>
         }
       />
     </>
   );
 }
 
-export default RaceRoutes;
+export default ResultsRoutesNew;

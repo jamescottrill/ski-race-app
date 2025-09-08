@@ -14,6 +14,29 @@ export {
   SelectItem, 
   SelectSeparator 
 } from './components/forms/Select';
+export { SimpleSelect } from './components/forms/SimpleSelect';
+export { SearchableSelect } from './components/forms/SearchableSelect';
+export { Checkbox } from './components/forms/Checkbox';
+export { Input } from './components/forms/Input';
+export { Label } from './components/forms/Label';
+
+// Navigation
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/navigation/Tabs';
+
+// Display
+export { DataTable } from './components/display/DataTable';
+export { Badge } from './components/display/Badge';
+
+// Overlays
+export {
+  Modal,
+  ModalTrigger,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalTitle,
+  ModalDescription,
+} from './components/overlays/Modal';
 
 // Layouts
 export { AppShell, PageContainer, PageHeader, ContentCard } from './layouts/AppShell';

@@ -5,52 +5,52 @@ import CreateRacePageNew from '../pages/race/CreateRacePageNew';
 import EditRacePageNew from '../pages/race/EditRacePageNew';
 import RecordRaceResultsPageNew from '../pages/race/RecordRaceResultsPageNew';
 import RaceResultsPageNew from '../pages/race/RaceResultsPageNew';
-import Layout from '../components/Layout';
+import LayoutNew from '../components/LayoutNew';
 import RaceDetailsPageNew from '../pages/race/RaceDetailsPageNew';
 import GenerateStartListNew from '../pages/race/GenerateStartListNew';
 import RaceTeamManagementNew from '../pages/race/RaceTeamManagementNew';
 
-function RaceRoutes() {
+function RaceRoutesNew() {
   return (
     <>
       <Route
         path="competition/:competitionId/race"
         element={
-          <Layout>
+          <LayoutNew>
             <RaceLandingPageNew />
-          </Layout>
+          </LayoutNew>
         }
       />
       <Route
         path="competition/:competitionId/race/new"
-        element={<Layout><CreateRacePageNew /></Layout>}
+        element={<LayoutNew><CreateRacePageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId"
-        element={<Layout><RaceDetailsPageNew /></Layout>}
+        element={<LayoutNew><RaceDetailsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/edit"
-        element={<Layout><EditRacePageNew /></Layout>}
+        element={<LayoutNew><EditRacePageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/results"
-        element={<Layout><RaceResultsPageNew /></Layout>}
+        element={<LayoutNew><RaceResultsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/results/edit"
-        element={<Layout><RecordRaceResultsPageNew /></Layout>}
+        element={<LayoutNew><RecordRaceResultsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/start-list"
-        element={<Layout><GenerateStartListNew /></Layout>}
+        element={<LayoutNew><GenerateStartListNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/teams"
-        element={<Layout><RaceTeamManagementNew /></Layout>}
+        element={<LayoutNew><RaceTeamManagementNew /></LayoutNew>}
       />
     </>
   );
 }
 
-export default RaceRoutes;
+export default RaceRoutesNew;

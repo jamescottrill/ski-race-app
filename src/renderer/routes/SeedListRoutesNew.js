@@ -2,37 +2,29 @@ import React from 'react';
 import { Route } from 'react-router-dom';
 import GenerateSeedListNew from '../pages/seedList/GenerateSeedListNew';
 import RaceLandingPageNew from '../pages/race/RaceLandingPageNew';
-import Layout from '../components/Layout';
+import LayoutNew from '../components/LayoutNew';
 
-function RaceRoutes() {
+function SeedListRoutesNew() {
   return (
     <>
       <Route
         path="/competition/:competitionId/seed-list"
         element={
-          <Layout>
+          <LayoutNew>
             <RaceLandingPageNew />
-          </Layout>
+          </LayoutNew>
         }
       />
       <Route
         path="/competition/:competitionId/seed-list/generate"
         element={
-          <Layout>
+          <LayoutNew>
             <GenerateSeedListNew />
-          </Layout>
-        }
-      />
-      <Route
-        path="/competition/:competitionId/race/:raceId/edit"
-        element={
-          <Layout>
-            <RaceLandingPageNew />
-          </Layout>
+          </LayoutNew>
         }
       />
     </>
   );
 }
 
-export default RaceRoutes;
+export default SeedListRoutesNew;

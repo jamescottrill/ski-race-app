@@ -8,6 +8,8 @@ import { tableStyles } from './PdfStyles';
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
 const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
+  console.log('StartListTwoRunPdf', raceDetails);
+  console.log('StartListTwoRunPdf', startList);
   const runDetailsSection = [
     {
       columns: [
@@ -45,7 +47,7 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
         { width: 100, text: 'TD: ', style: 'key' },
         {
           width: '*',
-          text: raceDetails.tech_delegate.trim() || 'N/A',
+          text: raceDetails?.tech_delegate || 'N/A',
           style: 'text',
         },
         { width: 120, text: 'Start Height (m): ', style: 'key' },
@@ -58,7 +60,7 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
         { width: 100, text: 'Referee: ', style: 'key' },
         {
           width: '*',
-          text: raceDetails.referee.trim() || 'N/A',
+          text: raceDetails.referee || 'N/A',
           style: 'text',
         },
         { width: 120, text: 'Finish Height (m): ', style: 'key' },
@@ -71,7 +73,7 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
         { width: 100, text: 'Assistant Referee: ', style: 'key' },
         {
           width: '*',
-          text: raceDetails.asst_referee.trim() || 'N/A',
+          text: raceDetails?.asst_referee || 'N/A',
           style: 'text',
         },
         { width: 120, text: 'Vertical Difference (m): ', style: 'key' },
@@ -84,7 +86,7 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
         { width: 100, text: 'Chief of Race: ', style: 'key' },
         {
           width: '*',
-          text: raceDetails.chief_of_race.trim() || 'N/A',
+          text: raceDetails.chief_of_race || 'N/A',
           style: 'text',
         },
         { width: 120, text: 'Homologation: ', style: 'key' },
@@ -161,9 +163,9 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
       columns: [
         { width: 100, text: 'Forerunners: ', style: 'key' },
         { width: 10, text: 'A: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_a.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_a, style: 'text' },
         { width: 10, text: 'A: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_2_a.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_2_a, style: 'text' },
       ],
       columnGap: 5,
     },
@@ -171,9 +173,9 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'B: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_b.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_b, style: 'text' },
         { width: 10, text: 'B: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_2_b.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_2_b, style: 'text' },
       ],
       columnGap: 5,
     },
@@ -181,9 +183,9 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'C: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_c.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_c, style: 'text' },
         { width: 10, text: 'C: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_2_c.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_2_c, style: 'text' },
       ],
       columnGap: 5,
     },
@@ -191,9 +193,9 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'D: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_d.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_d, style: 'text' },
         { width: 10, text: 'D: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_2_d.trim(), style: 'text' },
+        { width: '*', text: raceDetails.forerunner_2_d, style: 'text' },
       ],
       columnGap: 5,
       margin: [0, 0, 0, 20],

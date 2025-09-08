@@ -61,7 +61,7 @@ function CompetitionManagementPageNew() {
       const competitorResult = await window.api.select(competitorQuery, [competitionId]);
       
       // Get race count
-      const raceQuery = 'SELECT COUNT(*) as total, SUM(CASE WHEN is_complete = 1 THEN 1 ELSE 0 END) as completed FROM races WHERE competition_id = ?';
+      const raceQuery = 'SELECT COUNT(*) as total FROM races WHERE competition_id = ?';
       const raceResult = await window.api.select(raceQuery, [competitionId]);
       
       // Get team count
@@ -71,7 +71,7 @@ function CompetitionManagementPageNew() {
       setStats({
         competitors: competitorResult[0]?.count || 0,
         races: raceResult[0]?.total || 0,
-        completedRaces: raceResult[0]?.completed || 0,
+        completedRaces: 0, // No is_complete column in database
         teams: teamResult[0]?.count || 0
       });
     } catch (error) {

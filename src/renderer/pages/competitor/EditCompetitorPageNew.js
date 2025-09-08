@@ -1,0 +1,494 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Save,
+  ArrowLeft,
+  Trash2,
+  User,
+  Shield,
+  Calendar,
+  Hash,
+  AlertCircle
+} from 'lucide-react';
+import {
+  PageContainer,
+  PageHeader,
+  Card,
+  CardContent,
+  Button,
+  TextField,
+  SimpleSelect,
+  Checkbox,
+  cn
+} from '../../design-system';
+import { useBackButton } from '../../utils/navigation';
+
+function EditCompetitorPageNew() {
+  const { competitionId, competitorId } = useParams();
+  const navigate = useNavigate();
+  const handleBack = useBackButton();
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    title: '',
+    dob: '',
+    country: 'GBR',
+    serviceNumber: '',
+    gender: 'M',
+    team: '',
+    arrivalSeed: 2000,
+    armySeed: '',
+    isNovice: false,
+    isJunior: false,
+    isSenior: false,
+    isVeteran: false,
+    isReserve: false,
+    regiment: '',
+  });
+
+  const fetchTeams = async () => {
+    const query = `SELECT team_id, team_name FROM competition_team WHERE competition_id = ?`;
+    try {
+      const result = await window.api.select(query, [competitionId]);
+      setTeams(result);
+    } catch (error) {
+      console.error('Failed to fetch teams:', error);
+    }
+  };
+
+  const fetchCompetitorDetails = async () => {
+    if (!competitorId) return;
+
+    setLoading(true);
+    try {
+      // Fetch person details
+      const personQuery = `
+        SELECT p.first_name, p.last_name, p.dob, p.country, p.service_number, p.gender,
+               cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
+               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title,
+               ctm.team_id
+        FROM people p
+        INNER JOIN competition_competitor cc ON p.id = cc.racer_id
+        LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND ctm.competition_id = cc.competition_id
+        WHERE p.id = ? AND cc.competition_id = ?
+      `;
+
+      const result = await window.api.select(personQuery, [competitorId, competitionId]);
+
+      if (result && result.length > 0) {
+        const competitor = result[0];
+        setFormData({
+          firstName: competitor.first_name || '',
+          lastName: competitor.last_name || '',
+          title: competitor.title || '',
+          dob: competitor.dob || '',
+          country: competitor.country || 'GBR',
+          serviceNumber: competitor.service_number || '',
+          gender: competitor.gender || 'M',
+          team: competitor.team_id || '',
+          arrivalSeed: competitor.arrival_seed || 2000,
+          armySeed: competitor.army_seed || '',
+          isNovice: competitor.is_novice === 1,
+          isJunior: competitor.is_junior === 1,
+          isSenior: competitor.is_senior === 1,
+          isVeteran: competitor.is_veteran === 1,
+          isReserve: competitor.is_reserve === 1,
+          regiment: competitor.regiment || '',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch competitor details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+    fetchCompetitorDetails();
+  }, [competitorId, competitionId]);
+
+  const handleInputChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value,
+    });
+
+    if (name === 'dob') {
+      const currentYear = new Date().getFullYear();
+      const birthYear = new Date(value).getFullYear();
+      const age = currentYear - birthYear;
+
+      setFormData(prev => ({
+        ...prev,
+        isJunior: age < 20,
+        isSenior: age >= 20 && age < 35,
+        isVeteran: age >= 35,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Update person details
+      const personQuery = `
+        UPDATE people
+        SET first_name = ?, last_name = ?, dob = ?, country = ?, service_number = ?, gender = ?
+        WHERE id = ?
+      `;
+      const personParams = [
+        formData.firstName,
+        formData.lastName,
+        formData.dob,
+        formData.country,
+        formData.serviceNumber,
+        formData.gender,
+        competitorId
+      ];
+
+      await window.api.update(personQuery, personParams);
+
+      // Update competitor details
+      const competitorQuery = `
+        UPDATE competition_competitor
+        SET arrival_seed = ?, army_seed = ?, is_novice = ?, is_junior = ?,
+            is_senior = ?, is_veteran = ?, is_reserve = ?, regiment = ?, title = ?
+        WHERE racer_id = ? AND competition_id = ?
+      `;
+      const competitorParams = [
+        formData.arrivalSeed,
+        formData.armySeed || null,
+        formData.isNovice ? 1 : 0,
+        formData.isJunior ? 1 : 0,
+        formData.isSenior ? 1 : 0,
+        formData.isVeteran ? 1 : 0,
+        formData.isReserve ? 1 : 0,
+        formData.regiment,
+        formData.title,
+        competitorId,
+        competitionId
+      ];
+
+      await window.api.update(competitorQuery, competitorParams);
+
+      // Update team membership
+      // First remove existing team membership
+      const deleteTeamQuery = `
+        DELETE FROM competition_team_members
+        WHERE racer_id = ? AND competition_id = ?
+      `;
+      await window.api.delete(deleteTeamQuery, [competitorId, competitionId]);
+
+      // Add new team membership if selected
+      if (formData.team) {
+        const teamQuery = `
+          INSERT INTO competition_team_members (competition_id, team_id, racer_id)
+          VALUES (?, ?, ?)
+        `;
+        await window.api.insert(teamQuery, [competitionId, formData.team, competitorId]);
+      }
+
+      navigate(-1);
+    } catch (error) {
+      console.error('Failed to update competitor:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to remove this competitor from the competition?')) {
+      try {
+        const query = `DELETE FROM competition_competitor WHERE racer_id = ? AND competition_id = ?`;
+        await window.api.delete(query, [competitorId, competitionId]);
+
+        const query2 = `DELETE FROM competition_team_members WHERE racer_id = ? AND competition_id = ?`;
+        await window.api.delete(query2, [competitorId, competitionId]);
+
+        navigate(-1);
+      } catch (error) {
+        console.error('Failed to delete competitor:', error);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title="Edit Competitor"
+          subtitle="Loading competitor details..."
+          actions={
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Back
+            </Button>
+          }
+        />
+        <Card>
+          <CardContent>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-neutral-500">Loading...</div>
+            </div>
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Edit Competitor"
+        subtitle={`${formData.firstName} ${formData.lastName}`}
+        actions={
+          <div className="flex gap-3">
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Remove from Competition
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Back
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <Card>
+            <CardContent>
+              <form onSubmit={handleSubmit}>
+                {/* Personal Details */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary-600" />
+                      Personal Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <TextField
+                        label="First Name"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <TextField
+                        label="Last Name"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <TextField
+                        label="Rank/Title"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Capt, Lt, Sgt"
+                      />
+                      <SimpleSelect
+                        label="Gender"
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                      >
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                      </SimpleSelect>
+                      <TextField
+                        label="Date of Birth"
+                        name="dob"
+                        type="date"
+                        value={formData.dob}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <TextField
+                        label="Service Number"
+                        name="serviceNumber"
+                        value={formData.serviceNumber}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Military Details */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-primary-600" />
+                      Military Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <TextField
+                        label="Regiment/Unit"
+                        name="regiment"
+                        value={formData.regiment}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Royal Engineers"
+                      />
+                      <SimpleSelect
+                        label="Team"
+                        name="team"
+                        value={formData.team}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">No Team</option>
+                        {teams.map((team) => (
+                          <option key={team.team_id} value={team.team_id}>
+                            {team.team_name}
+                          </option>
+                        ))}
+                      </SimpleSelect>
+                      <SimpleSelect
+                        label="Country"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                      >
+                        <option value="GBR">Great Britain</option>
+                        <option value="USA">United States</option>
+                        <option value="CAN">Canada</option>
+                        <option value="FRA">France</option>
+                        <option value="GER">Germany</option>
+                        <option value="ITA">Italy</option>
+                        <option value="AUT">Austria</option>
+                        <option value="SUI">Switzerland</option>
+                      </SimpleSelect>
+                    </div>
+                  </div>
+
+                  {/* Competition Categories */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                      <Hash className="w-5 h-5 text-primary-600" />
+                      Competition Categories
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <TextField
+                        label="Arrival Seed Points"
+                        name="arrivalSeed"
+                        type="number"
+                        value={formData.arrivalSeed}
+                        onChange={handleInputChange}
+                      />
+                      <TextField
+                        label="Army Seed Points"
+                        name="armySeed"
+                        type="number"
+                        value={formData.armySeed}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <Checkbox
+                        label="Novice"
+                        name="isNovice"
+                        checked={formData.isNovice}
+                        onChange={handleInputChange}
+                      />
+                      <Checkbox
+                        label="Junior (Under 20)"
+                        name="isJunior"
+                        checked={formData.isJunior}
+                        onChange={handleInputChange}
+                        disabled
+                      />
+                      <Checkbox
+                        label="Senior (20-34)"
+                        name="isSenior"
+                        checked={formData.isSenior}
+                        onChange={handleInputChange}
+                        disabled
+                      />
+                      <Checkbox
+                        label="Veteran (35+)"
+                        name="isVeteran"
+                        checked={formData.isVeteran}
+                        onChange={handleInputChange}
+                        disabled
+                      />
+                      <Checkbox
+                        label="Reserve"
+                        name="isReserve"
+                        checked={formData.isReserve}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-3 pt-6 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBack}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      leftIcon={<Save className="w-4 h-4" />}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Info Sidebar */}
+        <div className="col-span-1">
+          <Card className="sticky top-4">
+            <CardContent>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-4">Edit Guidelines</h3>
+              <div className="space-y-4 text-sm">
+                <div className="p-3 bg-info/10 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-4 h-4 text-info mt-0.5" />
+                    <div>
+                      <p className="font-medium text-info">Age Categories</p>
+                      <p className="text-neutral-600 mt-1">
+                        Age categories are automatically calculated based on date of birth and cannot be edited manually.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 bg-warning/10 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
+                    <div>
+                      <p className="font-medium text-warning">Removing Competitor</p>
+                      <p className="text-neutral-600 mt-1">
+                        This only removes them from this competition, not from the system.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </PageContainer>
+  );
+}
+
+export default EditCompetitorPageNew;
