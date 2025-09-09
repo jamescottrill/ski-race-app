@@ -147,16 +147,16 @@ export default function EditRacePageNew() {
           course_name = ?,
           start_altitude = ?,
           finish_altitude = ?,
-          homologation = ?,
+          homologation = ?
         WHERE race_id = ? AND competition_id = ?
       `;
 
-      await window.api.update(updateQuery, [
+      await window.api.select(updateQuery, [
         formData.race_name,
         formData.race_type,
         formData.race_date,
         formData.venue,
-        parseInt(formData.number_runs),
+        parseInt(formData.number_runs, 10),
         formData.is_individual ? 1 : 0,
         formData.is_team ? 1 : 0,
         formData.is_training ? 1 : 0,
@@ -175,7 +175,7 @@ export default function EditRacePageNew() {
         formData.finish_altitude,
         formData.homologation,
         raceId,
-        competitionId
+        competitionId,
       ]);
 
       navigate(`/competition/${competitionId}/race/${raceId}`);
