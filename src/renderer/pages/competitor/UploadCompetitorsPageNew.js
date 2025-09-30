@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Upload, 
+import {
+  Upload,
   ArrowLeft,
   FileText,
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -35,7 +35,7 @@ export default function UploadCompetitorsPageNew() {
     }
 
     setUploadStatus({ type: 'info', message: 'Processing file...' });
-    
+
     // In a real implementation, parse CSV and insert competitors
     setTimeout(() => {
       setUploadStatus({ type: 'success', message: 'Successfully imported competitors!' });
@@ -53,7 +53,7 @@ export default function UploadCompetitorsPageNew() {
           </Button>
         }
       />
-      
+
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardContent>
@@ -81,7 +81,7 @@ export default function UploadCompetitorsPageNew() {
                 </p>
               )}
             </div>
-            
+
             {uploadStatus && (
               <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
                 uploadStatus.type === 'success' ? 'bg-success/10 text-success' :
@@ -93,7 +93,7 @@ export default function UploadCompetitorsPageNew() {
                 <span>{uploadStatus.message}</span>
               </div>
             )}
-            
+
             <div className="mt-6 flex justify-end gap-3">
               <Button variant="outline" onClick={handleBack}>
                 Cancel
@@ -104,7 +104,7 @@ export default function UploadCompetitorsPageNew() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="mt-6">
           <CardContent>
             <h3 className="font-semibold mb-3">CSV Format</h3>
@@ -114,7 +114,7 @@ export default function UploadCompetitorsPageNew() {
             <ul className="text-sm space-y-1 text-neutral-600">
               <li>• First Name</li>
               <li>• Last Name</li>
-              <li>• Date of Birth (YYYY-MM-DD)</li>
+              <li>• Year of Birth (YYYY)</li>
               <li>• Gender (M/F)</li>
               <li>• Service Number</li>
               <li>• Regiment/Unit</li>

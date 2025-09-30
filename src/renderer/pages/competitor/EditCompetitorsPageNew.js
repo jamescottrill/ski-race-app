@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
+import {
+  Users,
   ArrowLeft,
   Search,
   Edit2,
@@ -9,8 +9,8 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -53,7 +53,7 @@ export default function EditCompetitorsPageNew() {
   const fetchCompetitors = async () => {
     try {
       const query = `
-        SELECT 
+        SELECT
           p.id,
           p.first_name,
           p.last_name,
@@ -102,11 +102,11 @@ export default function EditCompetitorsPageNew() {
         'UPDATE people SET first_name = ?, last_name = ? WHERE id = ?',
         [editForm.first_name, editForm.last_name, editingId]
       );
-      
+
       // Update competition_competitor table
       await window.api.update(
-        `UPDATE competition_competitor 
-         SET regiment = ?, 
+        `UPDATE competition_competitor
+         SET regiment = ?,
              arrival_corps_seed = ?, arrival_army_seed = ?
          WHERE racer_id = ? AND competition_id = ?`,
         [
@@ -117,7 +117,7 @@ export default function EditCompetitorsPageNew() {
           competitionId
         ]
       );
-      
+
       setEditingId(null);
       await fetchCompetitors();
     } catch (error) {
@@ -182,13 +182,13 @@ export default function EditCompetitorsPageNew() {
       accessorKey: 'category',
       cell: ({ row }) => {
         const categories = [];
-        if (row.original.is_female) categories.push('F');
-        if (row.original.is_junior) categories.push('JR');
-        if (row.original.is_senior) categories.push('SR');
-        if (row.original.is_veteran) categories.push('VET');
-        if (row.original.is_novice) categories.push('NOV');
-        if (row.original.is_reserve) categories.push('RES');
-        
+        if (row.original.gender === 'F') categories.push('F');
+        if (row.original.is_junior) categories.push('J');
+        if (row.original.is_senior) categories.push('S');
+        if (row.original.is_veteran) categories.push('V');
+        if (row.original.is_novice) categories.push('N');
+        if (row.original.is_reserve) categories.push('R');
+
         return categories.length > 0 ? (
           <div className="flex gap-1">
             {categories.map(cat => (
@@ -241,7 +241,7 @@ export default function EditCompetitorsPageNew() {
         return (
           <div className="text-sm">
             <span className="font-mono">
-              C: {row.original.arrival_corps_seed || '-'} / 
+              C: {row.original.arrival_corps_seed || '-'} /
               A: {row.original.arrival_army_seed || '-'}
             </span>
           </div>
@@ -313,7 +313,7 @@ export default function EditCompetitorsPageNew() {
           </Button>
         }
       />
-      
+
       <Card className="mb-6">
         <CardContent>
           <div className="flex gap-4">
@@ -330,7 +330,7 @@ export default function EditCompetitorsPageNew() {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardContent noPadding>
           {loading ? (

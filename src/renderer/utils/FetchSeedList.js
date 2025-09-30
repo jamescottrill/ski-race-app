@@ -381,7 +381,7 @@ const getPeople = async (competitionId) => {
     `SELECT cc.*
      , p.first_name
      , p.last_name
-     , p.dob
+     , p.birth_year
      , p.gender
      , cc.regiment AS team_name
     FROM competition_competitor cc
@@ -406,7 +406,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
     raceTypePromises.push(results);
   });
   if (raceIds.length === 0) {
-    const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.dob, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
+    const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
     return window.api.select(query, [competitionId]);
   }
   const resultsPromise = [];

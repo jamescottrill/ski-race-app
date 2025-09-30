@@ -72,7 +72,7 @@ const navigate = useNavigate();
             {competitors.map((competitor, index) => (
               <li
                 key={index}
-              >{`${competitor.firstName} ${competitor.lastName}  - ${competitor.title} - ${competitor.dob}`}</li>
+              >{`${competitor.firstName} ${competitor.lastName}  - ${competitor.title} - ${competitor.birthYear}`}</li>
             ))}
           </ul>
         </div>

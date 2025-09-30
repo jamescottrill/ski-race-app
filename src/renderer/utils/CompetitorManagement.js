@@ -1,9 +1,8 @@
 import { v4 as uuid4 } from 'uuid';
 
-const calculateAgeCategory = (dob) => {
+const calculateAgeCategory = (birthYear) => {
   const currentYear = new Date().getFullYear();
-  const birthYear = new Date(dob).getFullYear();
-  const age = currentYear - birthYear;
+  const age = currentYear - parseInt(birthYear);
 
   return {
     isJunior: age < 20,
@@ -45,9 +44,9 @@ const updateCompetitor = async (
       let isJunior = false;
       let isVeteran = false;
       let isSenior = true;
-      if (formData.dob) {
+      if (formData.birthYear) {
         ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(
-          formData.dob,
+          formData.birthYear,
         ));
       }
       query2 = `
@@ -112,12 +111,12 @@ const updateCompetitor = async (
 const createCompetitor = async (formData, competitionId) => {
   let { isJunior, isVeteran } = false;
   let isSenior = true;
-  if (formData.dob) {
-    ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.dob));
+  if (formData.birthYear) {
+    ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
   }
   const id = uuid4();
   const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, dob, country, service_number, gender)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
   const params1 = [
@@ -125,7 +124,7 @@ const createCompetitor = async (formData, competitionId) => {
     formData.firstName,
     formData.lastName,
     formData.title,
-    formData.dob,
+    formData.birthYear,
     formData.country,
     formData.serviceNumber,
     formData.gender,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Hash, 
+import {
+  Hash,
   Download,
   ArrowLeft,
   Calculator,
@@ -9,8 +9,8 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -110,11 +110,13 @@ function GenerateSeedListNew() {
       accessorKey: 'category',
       cell: ({ row }) => {
         const categories = [];
-        if (row.original.is_novice) categories.push('Novice');
-        if (row.original.is_junior) categories.push('Junior');
-        if (row.original.is_senior) categories.push('Senior');
-        if (row.original.is_veteran) categories.push('Veteran');
-        
+        if (row.original.gender === 'F') categories.push('F');
+        if (row.original.is_junior) categories.push('J');
+        if (row.original.is_senior) categories.push('S');
+        if (row.original.is_veteran) categories.push('V');
+        if (row.original.is_novice) categories.push('N');
+        if (row.original.is_reserve) categories.push('R');
+
         return (
           <div className="flex gap-1">
             {categories.map(cat => (

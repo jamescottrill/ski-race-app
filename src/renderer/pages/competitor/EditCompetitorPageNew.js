@@ -33,7 +33,7 @@ function EditCompetitorPageNew() {
     firstName: '',
     lastName: '',
     title: '',
-    dob: '',
+    birthYear: '',
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
@@ -65,7 +65,7 @@ function EditCompetitorPageNew() {
     try {
       // Fetch person details
       const personQuery = `
-        SELECT p.first_name, p.last_name, p.dob, p.country, p.service_number, p.gender,
+        SELECT p.first_name, p.last_name, p.birth_year, p.country, p.service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
                cc.is_veteran, cc.is_reserve, cc.regiment, cc.title,
                ctm.team_id
@@ -83,7 +83,7 @@ function EditCompetitorPageNew() {
           firstName: competitor.first_name || '',
           lastName: competitor.last_name || '',
           title: competitor.title || '',
-          dob: competitor.dob || '',
+          birthYear: competitor.birth_year || '',
           country: competitor.country || 'GBR',
           serviceNumber: competitor.service_number || '',
           gender: competitor.gender || 'M',
@@ -117,10 +117,9 @@ function EditCompetitorPageNew() {
       [name]: type === 'checkbox' ? checked : value,
     });
 
-    if (name === 'dob') {
+    if (name === 'birthYear') {
       const currentYear = new Date().getFullYear();
-      const birthYear = new Date(value).getFullYear();
-      const age = currentYear - birthYear;
+      const age = currentYear - parseInt(value);
 
       setFormData(prev => ({
         ...prev,
@@ -138,13 +137,13 @@ function EditCompetitorPageNew() {
       // Update person details
       const personQuery = `
         UPDATE people
-        SET first_name = ?, last_name = ?, dob = ?, country = ?, service_number = ?, gender = ?
+        SET first_name = ?, last_name = ?, birth_year = ?, country = ?, service_number = ?, gender = ?
         WHERE id = ?
       `;
       const personParams = [
         formData.firstName,
         formData.lastName,
-        formData.dob,
+        formData.birthYear,
         formData.country,
         formData.serviceNumber,
         formData.gender,
@@ -311,11 +310,14 @@ function EditCompetitorPageNew() {
                         <option value="F">Female</option>
                       </SimpleSelect>
                       <TextField
-                        label="Date of Birth"
-                        name="dob"
-                        type="date"
-                        value={formData.dob}
+                        label="Birth Year"
+                        name="birthYear"
+                        type="number"
+                        value={formData.birthYear}
                         onChange={handleInputChange}
+                        placeholder="e.g., 1995"
+                        min="1900"
+                        max={new Date().getFullYear()}
                         required
                       />
                       <TextField

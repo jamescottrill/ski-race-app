@@ -27,7 +27,7 @@ function CompetitorForm({
     firstName: '',
     lastName: '',
     title: '',
-    dob: '',
+    birthYear: '',
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
@@ -84,9 +84,8 @@ function CompetitorForm({
     setModalOpen(false); // Close the modal after saving
   };
 
-  const calculateAgeCategory = (dob) => {
+  const calculateAgeCategory = (birthYear) => {
     const currentYear = new Date().getFullYear();
-    const birthYear = new Date(dob).getFullYear();
     const age = currentYear - birthYear;
 
     return {
@@ -124,7 +123,7 @@ function CompetitorForm({
       query = `
         SELECT p.first_name,
                p.last_name,
-               p.dob,
+               p.birth_year,
                p.id,
                p.country,
                p.service_number,
@@ -155,7 +154,7 @@ function CompetitorForm({
           firstName: result[0].first_name,
           lastName: result[0].last_name,
           title: result[0].title || '',
-          dob: result[0].dob,
+          birthYear: result[0].birth_year,
           country: result[0].country || 'GBR',
           serviceNumber: result[0].service_number || '',
           gender: result[0].gender || 'M',
@@ -185,9 +184,9 @@ function CompetitorForm({
       [name]: type === 'checkbox' ? checked : value,
     };
 
-    // If the date of birth changes, recalculate novice and veteran status
-    if (name === 'dob') {
-      const { isJunior, isSenior, isVeteran } = calculateAgeCategory(value);
+    // If the birth year changes, recalculate age categories
+    if (name === 'birthYear') {
+      const { isJunior, isSenior, isVeteran} = calculateAgeCategory(value);
       updatedFormData.isJunior = isJunior;
       updatedFormData.isSenior = isSenior;
       updatedFormData.isVeteran = isVeteran;
@@ -199,13 +198,13 @@ function CompetitorForm({
   const createCompetitor = async () => {
     let { isJunior, isVeteran } = false;
     let isSenior = true;
-    if (formData.dob) {
-      ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.dob));
+    if (formData.birthYear) {
+      ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
     }
     const id = uuid4();
 
     const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, dob, country, service_number, gender)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params1 = [
@@ -213,7 +212,7 @@ function CompetitorForm({
       formData.firstName,
       formData.lastName,
       formData.title,
-      formData.dob,
+      formData.birthYear,
       formData.country,
       formData.serviceNumber,
       formData.gender,
@@ -292,8 +291,8 @@ function CompetitorForm({
   const registerNewCompetitor = async () => {
     let { isJunior, isVeteran } = false;
     let isSenior = true;
-    if (formData.dob) {
-      ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.dob));
+    if (formData.birthYear) {
+      ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
     }
     try {
       const query2 = `
@@ -341,14 +340,14 @@ function CompetitorForm({
   const updateCompetitor = async () => {
     const query1 = `
       UPDATE people
-      SET first_name = ?, last_name = ?, title = ?, dob = ?, country = ?, service_number = ?, gender = ?
+      SET first_name = ?, last_name = ?, title = ?, birth_year = ?, country = ?, service_number = ?, gender = ?
       WHERE id = ?
     `;
     const params1 = [
       formData.firstName,
       formData.lastName,
       formData.title,
-      formData.dob,
+      formData.birthYear,
       formData.country,
       formData.serviceNumber,
       formData.gender,
@@ -360,9 +359,9 @@ function CompetitorForm({
       let isJunior = false;
       let isVeteran = false;
       let isSenior = true;
-      if (formData.dob) {
+      if (formData.birthYear) {
         ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(
-          formData.dob,
+          formData.birthYear,
         ));
       }
       const query2 = `
@@ -491,15 +490,17 @@ function CompetitorForm({
           </Grid>
           <Grid item xs={12}>
             <TextField
-              label="Date of Birth"
+              label="Birth Year"
               variant="outlined"
               fullWidth
-              name="dob"
-              type="date"
-              value={formData.dob}
+              name="birthYear"
+              type="number"
+              value={formData.birthYear}
               onChange={handleChange}
-              InputLabelProps={{
-                shrink: true,
+              placeholder="e.g., 1995"
+              inputProps={{
+                min: 1900,
+                max: new Date().getFullYear()
               }}
             />
           </Grid>

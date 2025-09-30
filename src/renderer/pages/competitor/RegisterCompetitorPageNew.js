@@ -35,7 +35,7 @@ function RegisterCompetitorPageNew() {
     firstName: '',
     lastName: '',
     title: '',
-    dob: '',
+    birthYear: '',
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
@@ -79,19 +79,19 @@ function RegisterCompetitorPageNew() {
 
   const fetchCompetitorDetails = async (competitorId) => {
     const query = `
-      SELECT first_name, last_name, dob, country, service_number, gender
+      SELECT first_name, last_name, birth_year, country, service_number, gender
       FROM people WHERE id = ?
     `;
     try {
       const result = await window.api.select(query, [competitorId]);
       if (result && result.length > 0) {
         const competitor = result[0];
-        const ageCategory = calculateAgeCategory(competitor.dob);
+        const ageCategory = calculateAgeCategory(competitor.birth_year);
         setFormData({
           ...formData,
           firstName: competitor.first_name,
           lastName: competitor.last_name,
-          dob: competitor.dob,
+          birthYear: competitor.birth_year,
           country: competitor.country || 'GBR',
           serviceNumber: competitor.service_number,
           gender: competitor.gender || 'M',
@@ -103,10 +103,9 @@ function RegisterCompetitorPageNew() {
     }
   };
 
-  const calculateAgeCategory = (dob) => {
+  const calculateAgeCategory = (birthYear) => {
     const currentYear = new Date().getFullYear();
-    const birthYear = new Date(dob).getFullYear();
-    const age = currentYear - birthYear;
+    const age = currentYear - parseInt(birthYear);
 
     return {
       isJunior: age < 20,
@@ -133,7 +132,7 @@ function RegisterCompetitorPageNew() {
       [name]: type === 'checkbox' ? checked : value,
     });
 
-    if (name === 'dob') {
+    if (name === 'birthYear') {
       const ageCategory = calculateAgeCategory(value);
       setFormData(prev => ({ ...prev, ...ageCategory }));
     }
@@ -150,14 +149,14 @@ function RegisterCompetitorPageNew() {
       // Create new person
       racerId = uuid4();
       const personQuery = `
-        INSERT INTO people (id, first_name, last_name, dob, country, service_number, gender)
+        INSERT INTO people (id, first_name, last_name, birth_year, country, service_number, gender)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
       const personParams = [
         racerId,
         formData.firstName,
         formData.lastName,
-        formData.dob,
+        formData.birthYear,
         formData.country,
         formData.serviceNumber,
         formData.gender,
@@ -288,11 +287,14 @@ function RegisterCompetitorPageNew() {
                         <option value="F">Female</option>
                       </SimpleSelect>
                       <TextField
-                        label="Date of Birth"
-                        name="dob"
-                        type="date"
-                        value={formData.dob}
+                        label="Birth Year"
+                        name="birthYear"
+                        type="number"
+                        value={formData.birthYear}
                         onChange={handleInputChange}
+                        placeholder="e.g., 1995"
+                        min="1900"
+                        max={new Date().getFullYear()}
                         required
                         disabled={!!selectedCompetitorId}
                       />

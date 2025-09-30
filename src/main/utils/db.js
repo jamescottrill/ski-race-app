@@ -92,7 +92,7 @@ class Database {
         first_name TEXT,
         last_name TEXT,
         title TEXT,
-        dob INT,
+        birth_year INT,
         country TEXT,
         service_number TEXT,
         gender TEXT,
