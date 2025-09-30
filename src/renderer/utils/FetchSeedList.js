@@ -175,7 +175,9 @@ const calculateRacerSeedPoints = async (
             penaltyAdd = 0;
             penaltyMultiply = 1;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Failed to check NS status for competitor:', e);
+        }
         if (sPoints < 50) {
           sPoints += penaltyAdd;
         } else {

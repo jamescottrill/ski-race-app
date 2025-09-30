@@ -60,12 +60,7 @@ function TeamResultsNew() {
       setTeamResults(rankedResults);
     } catch (error) {
       console.error('Failed to fetch team results:', error);
-      // Use mock data for now
-      setTeamResults([
-        { position: 1, team_name: 'Royal Engineers', team_size: 4, total_points: 400, best_time: '1:23.45' },
-        { position: 2, team_name: 'Coldstream Guards', team_size: 4, total_points: 380, best_time: '1:24.12' },
-        { position: 3, team_name: 'RAF Regiment', team_size: 4, total_points: 365, best_time: '1:25.33' },
-      ]);
+      setTeamResults([]);
     } finally {
       setLoading(false);
     }

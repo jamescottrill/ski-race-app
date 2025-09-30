@@ -71,8 +71,14 @@ async function createWindow() {
   // Now that we have a valid DB path, create the database
   const db = new Database(dbPath);
 
-  ipcMain.handle('db-select', (event, query, params) => {
-    return db.all(query, params);
+  ipcMain.handle('db-select', async (event, query, params) => {
+    try {
+      const results = await db.all(query, params);
+      return results;
+    } catch (error: any) {
+      console.error('Error selecting data:', error);
+      throw error;
+    }
   });
 
   ipcMain.handle('db-insert', async (event, query, params) => {
@@ -81,12 +87,18 @@ async function createWindow() {
       return { success: true, id: result.id };
     } catch (error: any) {
       console.error('Error inserting data:', error);
-      return { success: false, error: error.message };
+      throw error;
     }
   });
 
-  ipcMain.handle('db-delete', (event, query, params) => {
-    return db.delete(query, params);
+  ipcMain.handle('db-delete', async (event, query, params) => {
+    try {
+      const result = await db.delete(query, params);
+      return result;
+    } catch (error: any) {
+      console.error('Error deleting data:', error);
+      throw error;
+    }
   });
 
   const RESOURCES_PATH = app.isPackaged
@@ -154,20 +166,20 @@ app
   .catch(console.log);
 
 ipcMain.handle('save-pdf', async (event, buffer, defaultFileName) => {
-  const { filePath } = await dialog.showSaveDialog({
-    title: 'Save PDF',
-    defaultPath: defaultFileName,
-    filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
-  });
+  try {
+    const { filePath } = await dialog.showSaveDialog({
+      title: 'Save PDF',
+      defaultPath: defaultFileName,
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+    });
 
-  if (filePath) {
-    try {
+    if (filePath) {
       fs.writeFileSync(filePath, Buffer.from(buffer));
-      return filePath;
-    } catch (err) {
-      console.error('Failed to save PDF:', err);
-      throw err;
+      return { success: true, filePath };
     }
+    return { success: false, cancelled: true };
+  } catch (error: any) {
+    console.error('Failed to save PDF:', error);
+    throw error;
   }
-  return null;
 });

@@ -7,18 +7,29 @@ class AppPreferences {
   static preferencesPath = path.join(app.getPath('userData'), 'config.json');
 
   static loadPreferences() {
-    if (fs.existsSync(this.preferencesPath)) {
-      return JSON.parse(fs.readFileSync(this.preferencesPath, 'utf-8'));
+    try {
+      if (fs.existsSync(this.preferencesPath)) {
+        const data = fs.readFileSync(this.preferencesPath, 'utf-8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+      // Return defaults instead of crashing
     }
     this.savePreferences({});
     return {};
   }
 
   static savePreferences(preferences) {
-    fs.writeFileSync(
-      this.preferencesPath,
-      JSON.stringify(preferences, null, 2),
-    );
+    try {
+      fs.writeFileSync(
+        this.preferencesPath,
+        JSON.stringify(preferences, null, 2),
+      );
+    } catch (error) {
+      console.error('Failed to save preferences:', error);
+      throw new Error('Could not save preferences: ' + error.message);
+    }
   }
 }
 
@@ -72,6 +83,7 @@ class Database {
   }
 
   initializeDatabase() {
+    const errors = [];
     // List all the table creation queries
     const tableCreationQueries = [
       `
@@ -239,16 +251,25 @@ class Database {
     ];
 
     // Execute each query to create tables
-    tableCreationQueries.forEach((query) => {
-      this.db.run(query, (err) => {
-        if (err) {
-          console.log(query);
-          console.error('Error creating table:', err.message);
-          alert(err.message);
-        } else {
-          console.log('Table created or already exists.');
-        }
+    const promises = tableCreationQueries.map((query) => {
+      return new Promise((resolve, reject) => {
+        this.db.run(query, (err) => {
+          if (err) {
+            console.error('Error creating table:', err.message);
+            errors.push(err.message);
+            reject(err);
+          } else {
+            console.log('Table created or already exists.');
+            resolve();
+          }
+        });
       });
+    });
+
+    Promise.allSettled(promises).then((results) => {
+      if (errors.length > 0) {
+        console.error(`Failed to create ${errors.length} table(s):`, errors);
+      }
     });
   }
 

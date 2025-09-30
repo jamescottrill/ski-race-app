@@ -113,9 +113,9 @@ export class BaseRepository {
     const keys = Object.keys(data);
     const setClause = keys.map(key => `${key} = ?`).join(', ');
     const values = [...keys.map(key => data[key]), id];
-    
+
     const query = `UPDATE ${this.tableName} SET ${setClause} WHERE ${idColumn} = ?`;
-    return this.select(query, values);
+    return this.insert(query, values);
   }
 
   /**
