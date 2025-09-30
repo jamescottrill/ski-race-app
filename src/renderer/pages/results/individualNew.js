@@ -21,6 +21,7 @@ export default function IndividualResultsNew() {
   const [veteran, setVeteran] = useState([]);
   const [novice, setNovice] = useState([]);
   const [female, setFemale] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { competitionId } = useParams();
   const handleBack = useBackButton();
 
@@ -47,33 +48,45 @@ export default function IndividualResultsNew() {
 
   useEffect(() => {
     const fetchList = async () => {
-      const initialRaces = await completedRaces();
-      let data;
-      if (initialRaces.length > 3) {
-        data = await fetchSeedList(
-          competitionId,
-          initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
-        );
-      } else {
-        data = await fetchSeedList(
-          competitionId,
-          initialRaces.map((e) => e.id),
-        );
-      }
-      data = data.filter((e) => {
-        for (const race of initialRaces) {
-          if (e[race.id] === null) {
-            return false;
-          }
+      try {
+        setLoading(true);
+        const initialRaces = await completedRaces();
+
+        if (initialRaces.length === 0) {
+          setLoading(false);
+          return;
         }
-        return true;
-      });
-      console.log(data);
-      setNovice(data.filter((e) => e.is_novice));
-      setJunior(data.filter((e) => e.is_junior));
-      setVeteran(data.filter((e) => e.is_veteran));
-      setFemale(data.filter((e) => e.gender === 'F'));
-      setSeedList(data);
+
+        let data;
+        if (initialRaces.length > 3) {
+          data = await fetchSeedList(
+            competitionId,
+            initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
+          );
+        } else {
+          data = await fetchSeedList(
+            competitionId,
+            initialRaces.map((e) => e.id),
+          );
+        }
+        data = data.filter((e) => {
+          for (const race of initialRaces) {
+            if (e[race.id] === null) {
+              return false;
+            }
+          }
+          return true;
+        });
+        setNovice(data.filter((e) => e.is_novice));
+        setJunior(data.filter((e) => e.is_junior));
+        setVeteran(data.filter((e) => e.is_veteran));
+        setFemale(data.filter((e) => e.gender === 'F'));
+        setSeedList(data);
+      } catch (error) {
+        console.error('Failed to fetch individual results:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchList();
   }, [competitionId]);
@@ -133,6 +146,38 @@ export default function IndividualResultsNew() {
 
     return [...baseColumns, ...raceColumns, totalColumn];
   };
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title="Individual Results"
+          subtitle="Overall competition standings"
+          actions={
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Back
+            </Button>
+          }
+        />
+        <Card>
+          <CardContent>
+            <div className="text-center py-12">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-neutral-200 rounded w-1/4 mx-auto"></div>
+                <div className="h-4 bg-neutral-200 rounded w-1/2 mx-auto"></div>
+                <div className="h-4 bg-neutral-200 rounded w-3/4 mx-auto"></div>
+              </div>
+              <p className="text-neutral-500 mt-4">Loading results...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
+  }
 
   if (selectedRaces.length === 0) {
     return (
