@@ -25,7 +25,7 @@ export {
   teamRepository,
   resultRepository,
   personRepository,
-  competitionRepository
+  competitionRepository,
 };
 
 // Also export classes for custom instantiation if needed
@@ -36,5 +36,5 @@ export {
   ResultRepository,
   PersonRepository,
   CompetitionRepository,
-  BaseRepository
+  BaseRepository,
 } from './BaseRepository';

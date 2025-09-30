@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import ResultsPageNew from '../pages/results/resultsPageNew';
 import IndividualResultsNew from '../pages/results/individualNew';
 import TeamResultsNew from '../pages/results/teamNew';
+import RacesListNew from '../pages/results/RacesListNew';
 import Layout from '../components/Layout';
 
 function RaceRoutes() {
@@ -36,15 +37,7 @@ function RaceRoutes() {
         path="/competition/:competitionId/results/races"
         element={
           <Layout>
-            <ResultsPageNew />
-          </Layout>
-        }
-      />
-      <Route
-        path="/competition/:competitionId/results/races/:raceId"
-        element={
-          <Layout>
-            <ResultsPageNew />
+            <RacesListNew />
           </Layout>
         }
       />
