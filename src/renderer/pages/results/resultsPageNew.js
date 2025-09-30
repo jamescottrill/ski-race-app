@@ -1,171 +1,180 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Trophy, 
-  Users, 
+import {
+  Trophy,
+  Users,
   User,
-  Medal,
   ArrowLeft,
-  ChartBar,
-  Award
+  Calendar,
+  MapPin
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
-  Button,
-  cn
+  Button
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
 function ResultsPageNew() {
   const { competitionId } = useParams();
+  const [races, setRaces] = useState([]);
   const [competitionName, setCompetitionName] = useState('');
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const handleBack = useBackButton();
 
   useEffect(() => {
-    const fetchCompetitionDetails = async () => {
-      const query = 'SELECT competition_name FROM competitions WHERE id = ?';
-      const params = [competitionId];
-
+    const fetchData = async () => {
       try {
-        const result = await window.api.select(query, params);
-        setCompetitionName(result[0].competition_name);
+        // Fetch competition name
+        const compQuery = 'SELECT competition_name FROM competitions WHERE id = ?';
+        const compResult = await window.api.select(compQuery, [competitionId]);
+        setCompetitionName(compResult[0].competition_name);
+
+        // Fetch races
+        const racesQuery = `
+          SELECT
+            r.race_id,
+            r.race_name,
+            r.race_date,
+            r.venue,
+            r.is_seeding,
+            r.is_team,
+            COUNT(DISTINCT rc.racer_id) as participant_count
+          FROM races r
+          LEFT JOIN race_competitor rc ON r.race_id = rc.race_id AND r.competition_id = rc.competition_id
+          WHERE r.competition_id = ?
+            AND NOT r.is_training
+          GROUP BY r.race_id, r.race_name, r.race_date, r.venue, r.is_seeding, r.is_team
+          ORDER BY r.race_date ASC
+        `;
+        const racesResult = await window.api.select(racesQuery, [competitionId]);
+        setRaces(racesResult);
       } catch (error) {
-        console.error('Failed to fetch competition details:', error);
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchCompetitionDetails();
+    fetchData();
   }, [competitionId]);
 
-  const resultCategories = [
-    {
-      title: 'Individual Results',
-      description: 'View individual competitor standings and times',
-      icon: User,
-      color: 'primary',
-      onClick: () => navigate(`/competition/${competitionId}/results/individual`),
-    },
-    {
-      title: 'Team Results',
-      description: 'View team standings and combined scores',
-      icon: Users,
-      color: 'success',
-      onClick: () => navigate(`/competition/${competitionId}/results/team`),
-    },
-    {
-      title: 'Race Results',
-      description: 'View results by individual races',
-      icon: Trophy,
-      color: 'warning',
-      onClick: () => navigate(`/competition/${competitionId}/results/races`),
-    },
-  ];
-
-  const getColorClasses = (color) => {
-    const colors = {
-      primary: 'bg-primary-100 text-primary-700 group-hover:bg-primary-700 group-hover:text-white',
-      success: 'bg-success/10 text-success group-hover:bg-success group-hover:text-white',
-      warning: 'bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white',
-      info: 'bg-info/10 text-info group-hover:bg-info group-hover:text-white',
-    };
-    return colors[color] || colors.primary;
-  };
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader title="Loading..." />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
       <PageHeader
-        title={competitionName || 'Competition Results'}
-        subtitle="View competition standings and race outcomes"
+        title={`${competitionName} - Results`}
+        subtitle="View race results and standings"
         actions={
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-          >
-            Back
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/competition/${competitionId}/results/individual`)}
+              leftIcon={<User className="w-4 h-4" />}
+            >
+              Overall Standings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/competition/${competitionId}/results/team`)}
+              leftIcon={<Users className="w-4 h-4" />}
+            >
+              Team Standings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Back
+            </Button>
+          </div>
         }
       />
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-neutral-600">Total Races</p>
-              <p className="text-2xl font-bold text-primary-700">--</p>
+      {races.length === 0 ? (
+        <Card>
+          <CardContent>
+            <div className="text-center py-12">
+              <Trophy className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-600">
+                No races found for this competition.
+              </p>
             </div>
-            <Trophy className="w-8 h-8 text-primary-300" />
-          </div>
+          </CardContent>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-neutral-600">Competitors</p>
-              <p className="text-2xl font-bold text-success">--</p>
-            </div>
-            <User className="w-8 h-8 text-success/30" />
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-neutral-600">Teams</p>
-              <p className="text-2xl font-bold text-info">--</p>
-            </div>
-            <Users className="w-8 h-8 text-info/30" />
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-neutral-600">Medals Awarded</p>
-              <p className="text-2xl font-bold text-warning">--</p>
-            </div>
-            <Medal className="w-8 h-8 text-warning/30" />
-          </div>
-        </Card>
-      </div>
-
-      {/* Result Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {resultCategories.map((category) => {
-          const Icon = category.icon;
-          return (
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {races.map((race) => (
             <Card
-              key={category.title}
+              key={race.race_id}
               interactive
-              className="group cursor-pointer"
-              onClick={category.onClick}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => navigate(`/competition/${competitionId}/race/${race.race_id}/results`)}
             >
               <CardContent>
-                <div className={cn(
-                  'w-16 h-16 rounded-lg flex items-center justify-center mb-4 transition-all duration-300',
-                  getColorClasses(category.color)
-                )}>
-                  <Icon className="w-8 h-8" />
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-1">
+                      {race.race_name}
+                    </h3>
+                    <div className="flex gap-2 flex-wrap">
+                      {race.is_seeding && (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-info/10 text-info rounded">
+                          Seeding Race
+                        </span>
+                      )}
+                      {race.is_team && (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-success/10 text-success rounded">
+                          Team Race
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Trophy className="w-6 h-6 text-primary-600 flex-shrink-0" />
                 </div>
-                
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2 group-hover:text-primary-700 transition-colors">
-                  {category.title}
-                </h3>
-                <p className="text-sm text-neutral-600">
-                  {category.description}
-                </p>
 
-                <div className="mt-4 flex items-center text-primary-600 group-hover:text-primary-700">
-                  <span className="text-sm font-medium">View Results</span>
-                  <ChartBar className="w-4 h-4 ml-2" />
+                <div className="space-y-2 text-sm text-neutral-600">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Date:</span>
+                    <span>
+                      {new Date(race.race_date).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Venue:</span>
+                    <span>{race.venue}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Participants:</span>
+                    <span>{race.participant_count || 0}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-neutral-200">
+                  <span className="text-sm font-medium text-primary-600">
+                    View Results →
+                  </span>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </PageContainer>
   );
 }
