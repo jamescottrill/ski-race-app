@@ -27,6 +27,8 @@ import { startListPdf } from '../../utils/StartListPdf';
 import { startListTwoRunPdf } from '../../utils/StartListTwoRunPdf';
 import { getRaceDetails } from '../../utils/RaceDetails';
 import { shuffleArray } from '../../utils/GenericUtils';
+import { handleDatabaseError, handlePdfError, showSuccess } from '../../utils/ErrorHandler';
+import toast from 'react-hot-toast';
 
 export default function GenerateStartListNew() {
   const { competitionId, raceId } = useParams();
@@ -51,136 +53,164 @@ export default function GenerateStartListNew() {
   }
 
   const getFetchSeedList = async () => {
-    let completedRaces;
-    completedRaces = await window.api.select(
-      `SELECT DISTINCT rr.race_id AS raceId
-        FROM race_run rr
-        INNER JOIN races r ON r.race_id = rr.race_id
-        WHERE rr.competition_id = ?
-          AND NOT r.is_training
-          AND rr.is_complete
-        ORDER BY r.race_date ASC`,
-      [competitionId],
-    );
-    if (completedRaces.length > 3) {
+    try {
+      let completedRaces;
       completedRaces = await window.api.select(
-        `SELECT
-            DISTINCT rr.race_id AS raceId
-        FROM race_results rr
-        INNER JOIN races r
-          ON r.race_id = rr.race_id
-        WHERE rr.competition_id = ?
-          AND NOT r.is_training
-          AND NOT r.is_seeding
-        ORDER BY r.race_date ASC`,
+        `SELECT DISTINCT rr.race_id AS raceId
+          FROM race_run rr
+          INNER JOIN races r ON r.race_id = rr.race_id
+          WHERE rr.competition_id = ?
+            AND NOT r.is_training
+            AND rr.is_complete
+          ORDER BY r.race_date ASC`,
         [competitionId],
       );
+      if (completedRaces.length > 3) {
+        completedRaces = await window.api.select(
+          `SELECT
+              DISTINCT rr.race_id AS raceId
+          FROM race_results rr
+          INNER JOIN races r
+            ON r.race_id = rr.race_id
+          WHERE rr.competition_id = ?
+            AND NOT r.is_training
+            AND NOT r.is_seeding
+          ORDER BY r.race_date ASC`,
+          [competitionId],
+        );
+      }
+      const seedlist = await fetchSeedList(
+        competitionId,
+        completedRaces.map((e) => e.raceId),
+      );
+      setSeedList(seedlist);
+    } catch (error) {
+      handleDatabaseError('load seed list', error);
+      setSeedList([]);
     }
-    const seedlist = await fetchSeedList(
-      competitionId,
-      completedRaces.map((e) => e.raceId),
-    );
-    setSeedList(seedlist);
   };
 
   const fetchRaceDetails = async () => {
-    const details = await getRaceDetails(raceId, competitionId);
-    setRaceDetails(details);
+    try {
+      const details = await getRaceDetails(raceId, competitionId);
+      if (!details) {
+        throw new Error('Race details not found');
+      }
+      setRaceDetails(details);
+    } catch (error) {
+      handleDatabaseError('load race details', error);
+      // Keep default race details
+    }
   };
 
   const getStartList = async () => {
-    const query = `
-    SELECT
-      p.id AS racer_id, p.first_name, p.last_name, p.gender, rc.bib_number,
-      cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
-      cc.is_veteran, cc.is_female, cc.is_novice, seed_points, cc.regiment AS team
-      FROM race_competitor rc
-    INNER JOIN people p ON rc.racer_id = p.id
-    INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
---     LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
---     LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
-    WHERE rc.competition_id = ? AND rc.race_id = ?
---     AND NOT COALESCE(ct.is_female, FALSE)
---     AND NOT COALESCE(ct.is_hc, FALSE)
-    ORDER BY bib_number
-    `;
-    const results = await window.api.select(query, [competitionId, raceId]);
-    if (results.length > 0) {
-      setStartListExists(true);
-      if (raceDetails.women_separate) {
-        setStartList(results.filter((r) => r.gender === 'M'));
-        setWomenStartList(results.filter((r) => r.gender === 'F'));
-      } else {
-        setStartList(results);
+    try {
+      const query = `
+      SELECT
+        p.id AS racer_id, p.first_name, p.last_name, p.gender, rc.bib_number,
+        cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
+        cc.is_veteran, cc.is_female, cc.is_novice, seed_points, cc.regiment AS team
+        FROM race_competitor rc
+      INNER JOIN people p ON rc.racer_id = p.id
+      INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
+--       LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
+--       LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+      WHERE rc.competition_id = ? AND rc.race_id = ?
+--       AND NOT COALESCE(ct.is_female, FALSE)
+--       AND NOT COALESCE(ct.is_hc, FALSE)
+      ORDER BY bib_number
+      `;
+      const results = await window.api.select(query, [competitionId, raceId]);
+      if (results.length > 0) {
+        setStartListExists(true);
+        if (raceDetails.women_separate) {
+          setStartList(results.filter((r) => r.gender === 'M'));
+          setWomenStartList(results.filter((r) => r.gender === 'F'));
+        } else {
+          setStartList(results);
+        }
       }
+    } catch (error) {
+      handleDatabaseError('load start list', error);
+      setStartList([]);
+      setWomenStartList([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const generateStart = async () => {
-    // Clear existing start list for this race
-    await window.api.delete(
-      `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
-      [competitionId, raceId],
-    );
+    try {
+      setLoading(true);
 
-    let filteredSeedList = seedList.filter(
-      (competitor) => !struckOutCompetitors[competitor.racer_id],
-    );
-
-    // Separate women if needed
-    if (raceDetails.women_separate) {
-      const womenSeedList = filteredSeedList.filter((c) => c.gender === 'F');
-      const menSeedList = filteredSeedList.filter((c) => c.gender === 'M');
-
-      // Process women's list
-      if (womenSeedList.length > raceDetails.randomise_top_women) {
-        const topWomen = shuffleArray(womenSeedList.slice(0, raceDetails.randomise_top_women));
-        const restWomen = womenSeedList.slice(raceDetails.randomise_top_women);
-        filteredSeedList = [...topWomen, ...restWomen];
-      } else {
-        filteredSeedList = shuffleArray(womenSeedList);
-      }
-
-      // Process men's list
-      if (menSeedList.length > raceDetails.randomise_top) {
-        const topMen = shuffleArray(menSeedList.slice(0, raceDetails.randomise_top));
-        const restMen = menSeedList.slice(raceDetails.randomise_top);
-        const menList = [...topMen, ...restMen];
-        filteredSeedList = [...filteredSeedList, ...menList];
-      } else {
-        filteredSeedList = [...filteredSeedList, ...shuffleArray(menSeedList)];
-      }
-    } else {
-      // Mixed start list
-      if (filteredSeedList.length > raceDetails.randomise_top) {
-        const topCompetitors = shuffleArray(filteredSeedList.slice(0, raceDetails.randomise_top));
-        const restCompetitors = filteredSeedList.slice(raceDetails.randomise_top);
-        filteredSeedList = [...topCompetitors, ...restCompetitors];
-      } else {
-        filteredSeedList = shuffleArray(filteredSeedList);
-      }
-    }
-
-    // Insert into race_competitor table
-    for (let i = 0; i < filteredSeedList.length; i++) {
-      const competitor = filteredSeedList[i];
-      const bibNumber = i + 1;
-
-      await window.api.insert(
-        `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          competitionId,
-          raceId,
-          competitor.racer_id,
-          bibNumber,
-          competitor.seed_points || 0,
-        ],
+      // Clear existing start list for this race
+      await window.api.delete(
+        `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
+        [competitionId, raceId],
       );
-    }
 
-    await getStartList();
+      let filteredSeedList = seedList.filter(
+        (competitor) => !struckOutCompetitors[competitor.racer_id],
+      );
+
+      // Separate women if needed
+      if (raceDetails.women_separate) {
+        const womenSeedList = filteredSeedList.filter((c) => c.gender === 'F');
+        const menSeedList = filteredSeedList.filter((c) => c.gender === 'M');
+
+        // Process women's list
+        if (womenSeedList.length > raceDetails.randomise_top_women) {
+          const topWomen = shuffleArray(womenSeedList.slice(0, raceDetails.randomise_top_women));
+          const restWomen = womenSeedList.slice(raceDetails.randomise_top_women);
+          filteredSeedList = [...topWomen, ...restWomen];
+        } else {
+          filteredSeedList = shuffleArray(womenSeedList);
+        }
+
+        // Process men's list
+        if (menSeedList.length > raceDetails.randomise_top) {
+          const topMen = shuffleArray(menSeedList.slice(0, raceDetails.randomise_top));
+          const restMen = menSeedList.slice(raceDetails.randomise_top);
+          const menList = [...topMen, ...restMen];
+          filteredSeedList = [...filteredSeedList, ...menList];
+        } else {
+          filteredSeedList = [...filteredSeedList, ...shuffleArray(menSeedList)];
+        }
+      } else {
+        // Mixed start list
+        if (filteredSeedList.length > raceDetails.randomise_top) {
+          const topCompetitors = shuffleArray(filteredSeedList.slice(0, raceDetails.randomise_top));
+          const restCompetitors = filteredSeedList.slice(raceDetails.randomise_top);
+          filteredSeedList = [...topCompetitors, ...restCompetitors];
+        } else {
+          filteredSeedList = shuffleArray(filteredSeedList);
+        }
+      }
+
+      // Insert into race_competitor table
+      const insertPromises = filteredSeedList.map((competitor, i) => {
+        const bibNumber = i + 1;
+        return window.api.insert(
+          `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            competitionId,
+            raceId,
+            competitor.racer_id,
+            bibNumber,
+            competitor.seed_points || 0,
+          ],
+        );
+      });
+
+      await Promise.all(insertPromises);
+      await getStartList();
+      showSuccess('Start list generated successfully!');
+    } catch (error) {
+      handleDatabaseError('generate start list', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStrikeOut = (racerId) => {
@@ -191,18 +221,29 @@ export default function GenerateStartListNew() {
   };
 
   const handleDownloadPDF = async () => {
-    if (raceDetails.number_runs === 2) {
-      await startListTwoRunPdf(raceDetails, startList, womenStartList);
-    } else {
-      await startListPdf(raceDetails, startList, womenStartList);
+    try {
+      if (raceDetails.number_runs === 2) {
+        await startListTwoRunPdf(raceDetails, startList, womenStartList);
+      } else {
+        await startListPdf(raceDetails, startList, womenStartList);
+      }
+      showSuccess('PDF generated successfully!');
+    } catch (error) {
+      handlePdfError('start list', error);
     }
   };
 
   useEffect(() => {
     const init = async () => {
-      await fetchRaceDetails();
-      await getFetchSeedList();
-      await getStartList();
+      try {
+        setLoading(true);
+        await fetchRaceDetails();
+        await getFetchSeedList();
+        await getStartList();
+      } catch (error) {
+        handleDatabaseError('initialise race page', error);
+        setLoading(false);
+      }
     };
     init();
   }, [raceId]);
