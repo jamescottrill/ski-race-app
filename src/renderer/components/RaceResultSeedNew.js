@@ -219,8 +219,8 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         <div className="text-center">
           {['DNS', 'DNF', 'DSQ'].includes(row.original.run1Time) ? (
             <Badge variant={
-              row.original.run1Time === 'DNS' ? 'warning' : 
-              row.original.run1Time === 'DNF' ? 'danger' : 
+              row.original.run1Time === 'DNS' ? 'warning' :
+              row.original.run1Time === 'DNF' ? 'danger' :
               'info'
             }>
               {row.original.run1Time}
@@ -238,8 +238,8 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         <div className="text-center">
           {['DNS', 'DNF', 'DSQ'].includes(row.original.run2Time) ? (
             <Badge variant={
-              row.original.run2Time === 'DNS' ? 'warning' : 
-              row.original.run2Time === 'DNF' ? 'danger' : 
+              row.original.run2Time === 'DNS' ? 'warning' :
+              row.original.run2Time === 'DNF' ? 'danger' :
               'info'
             }>
               {row.original.run2Time}
@@ -316,7 +316,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
               columns={columns}
               data={data}
               showPagination={true}
-              pageSize={50}
+              pageSize={25}
               className="w-full"
             />
           </CardContent>
@@ -365,7 +365,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={otherResultsColumns}
               data={run1Dsq}
-              showPagination={false}
+              showPagination={run1Dsq.length > 30}
               className="w-full"
             />
           </CardContent>
@@ -378,7 +378,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={otherResultsColumns}
               data={run2Dns}
-              showPagination={false}
+              showPagination={run2Dns.length > 30}
               className="w-full"
             />
           </CardContent>
@@ -391,7 +391,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={otherResultsColumns}
               data={run2Dnf}
-              showPagination={false}
+              showPagination={run2Dnf.length > 30}
               className="w-full"
             />
           </CardContent>
@@ -404,7 +404,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={otherResultsColumns}
               data={run2Dsq}
-              showPagination={false}
+              showPagination={run2Dsq.length > 30}
               className="w-full"
             />
           </CardContent>

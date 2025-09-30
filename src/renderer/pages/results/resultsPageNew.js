@@ -129,12 +129,12 @@ function ResultsPageNew() {
                       {race.race_name}
                     </h3>
                     <div className="flex gap-2 flex-wrap">
-                      {race.is_seeding && (
+                      {race.is_seeding === 1 && (
                         <span className="inline-block px-2 py-1 text-xs font-medium bg-info/10 text-info rounded">
                           Seeding Race
                         </span>
                       )}
-                      {race.is_team && (
+                      {race.is_team === 1 && (
                         <span className="inline-block px-2 py-1 text-xs font-medium bg-success/10 text-success rounded">
                           Team Race
                         </span>

@@ -17,7 +17,7 @@ function ResultsRoutesNew() {
         }
       />
       <Route
-        path="/competition/:competitionId/results/team"
+        path="/competition/:competitionId/results/races"
         element={
           <LayoutNew>
             <ResultsPageNew />
@@ -33,7 +33,7 @@ function ResultsRoutesNew() {
         }
       />
       <Route
-        path="/competition/:competitionId/results/races"
+        path="/competition/:competitionId/results/team"
         element={
           <LayoutNew>
             <TeamResultsNew />

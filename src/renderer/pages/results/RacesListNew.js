@@ -98,12 +98,12 @@ export default function RacesListNew() {
                     <h3 className="text-lg font-semibold text-neutral-900 mb-1">
                       {race.race_name}
                     </h3>
-                    {race.is_seeding && (
+                    {race.is_seeding === 1 && (
                       <span className="inline-block px-2 py-1 text-xs font-medium bg-info/10 text-info rounded">
                         Seeding Race
                       </span>
                     )}
-                    {race.is_team && (
+                    {race.is_team === 1 && (
                       <span className="inline-block px-2 py-1 text-xs font-medium bg-success/10 text-success rounded ml-2">
                         Team Race
                       </span>
