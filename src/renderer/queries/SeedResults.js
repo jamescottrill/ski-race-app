@@ -10,7 +10,7 @@ const seedResults = `
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
                                rr.racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
+                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE race_time END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
@@ -24,7 +24,7 @@ const seedResults = `
                           AND race_id = ?),
                run2 AS (SELECT race_id,
                                rr.racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE ROUND(race_time, 2) END AS race_time,
+                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE race_time END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
@@ -39,7 +39,7 @@ const seedResults = `
                                run1.race_id,
                                run1.race_time                                                            AS run_1_time,
                                run2.race_time                                                            AS run_2_time,
-                               ROUND(run1.race_time + run2.race_time, 2)                                 AS total_time,
+                               run1.race_time + run2.race_time                                           AS total_time,
                                run1.is_dns                                                               AS run_1_dns,
                                run2.is_dns                                                               AS run_2_dns,
                                run1.is_dsq                                                               AS run_1_dsq,
@@ -72,8 +72,8 @@ const seedResults = `
 --                                WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         ),
           seeds AS (SELECT *,
-                             ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_1,
-                             ROUND((run_2_time - min2time) / min2time * factor, 2) AS seed_2
+                             (run_1_time - min1time) / min1time * factor AS seed_1,
+                             (run_2_time - min2time) / min2time * factor AS seed_2
                       FROM data),
           final AS(
             SELECT
@@ -102,7 +102,7 @@ const seedingPoints = `
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
+                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE race_time END AS race_time
                                , is_ns
                         FROM race_results rr
                         WHERE TRUE
@@ -110,7 +110,7 @@ const seedingPoints = `
                           AND race_id = ?),
                run2 AS (SELECT race_id,
                                racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
+                               CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE race_time END AS race_time
                         FROM race_results rr
                         WHERE TRUE
                           AND run_number = 2
@@ -132,8 +132,8 @@ const seedingPoints = `
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
-                             ROUND((run_1_time - min1time) / min1time * factor, 2) AS seed_1,
-                             ROUND((run_2_time - min2time) / min2time * factor, 2) AS seed_2
+                             (run_1_time - min1time) / min1time * factor AS seed_1,
+                             (run_2_time - min2time) / min2time * factor AS seed_2
                       FROM data)
             SELECT
               s.racer_id,
