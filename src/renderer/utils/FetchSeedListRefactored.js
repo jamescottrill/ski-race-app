@@ -37,23 +37,23 @@ class SeedListManager {
 
     // Get competitor data
     const peopleDf = await this.getCompetitorDataFrame();
-    
+
     // Get race results and seed points
     const seedData = await this.fetchRaceSeedData(raceIds);
-    
+
     if (seedData.length === 0) {
       return [];
     }
 
     // Create pivot table of results
     const pivotData = this.createPivotData(seedData);
-    
+
     // Calculate seed points for each competitor
     const calculatedData = await this.calculateAllSeedPoints(pivotData, raceIds);
-    
+
     // Merge with competitor info and sort
     const finalResults = this.mergeAndSortResults(peopleDf, calculatedData);
-    
+
     return dfd.toJSON(finalResults);
   }
 
@@ -62,16 +62,16 @@ class SeedListManager {
    */
   async getInitialSeedList() {
     const query = `
-      SELECT cc.arrival_corps_seed AS seed_points, 
-             cc.racer_id, 
-             p.first_name, 
-             p.last_name, 
-             p.title, 
-             p.dob, 
-             p.gender 
-      FROM competition_competitor cc 
-      LEFT JOIN people p ON p.id = cc.racer_id 
-      WHERE competition_id = ? 
+      SELECT cc.arrival_corps_seed AS seed_points,
+             cc.racer_id,
+             p.first_name,
+             p.last_name,
+             p.title,
+             p.birth_year,
+             p.gender
+      FROM competition_competitor cc
+      LEFT JOIN people p ON p.id = cc.racer_id
+      WHERE competition_id = ?
       ORDER BY seed_points
     `;
     return window.api.select(query, [this.competitionId]);
@@ -91,14 +91,14 @@ class SeedListManager {
   async fetchRaceSeedData(raceIds) {
     const raceTypes = await RaceDataFetcher.getRaceTypes(this.competitionId, raceIds);
     const seedPointResults = await RaceDataFetcher.getSeedPoints(raceTypes);
-    
+
     const seedData = [];
     seedPointResults.forEach(raceResults => {
       raceResults.forEach(({ race_id, racer_id, seed_point }) => {
         seedData.push({ race_id, racer_id, seed_point });
       });
     });
-    
+
     return seedData;
   }
 
@@ -134,21 +134,21 @@ class SeedListManager {
    */
   async calculateAllSeedPoints(pivotData, raceIds) {
     const numRaces = raceIds.length;
-    
+
     // Get previous seed lists for penalty calculations
     const previousSeedLists = await this.getPreviousSeedLists(raceIds);
-    
+
     const calculatedData = await Promise.all(
-      pivotData.map(row => 
+      pivotData.map(row =>
         this.calculateRacerSeedPoints(
-          row, 
-          raceIds, 
-          numRaces, 
+          row,
+          raceIds,
+          numRaces,
           previousSeedLists
         )
       )
     );
-    
+
     return calculatedData;
   }
 
@@ -158,18 +158,18 @@ class SeedListManager {
   async calculateRacerSeedPoints(row, raceIds, numRaces, previousSeedLists) {
     const racePoints = SeedPointCalculator.extractRacePoints(row, raceIds);
     const nonNullRaces = racePoints.filter(x => x !== null && !Number.isNaN(x));
-    
+
     // Handle missing races with penalties
     if (this.needsPenaltyCalculation(numRaces, nonNullRaces.length)) {
       await this.applyPenalties(row, raceIds, numRaces, nonNullRaces, previousSeedLists);
     }
-    
+
     // Calculate final seed points
     const finalPoints = SeedPointCalculator.calculateFinalSeedPoints(
-      SeedPointCalculator.extractRacePoints(row, raceIds), 
+      SeedPointCalculator.extractRacePoints(row, raceIds),
       numRaces
     );
-    
+
     row.seed_points = round(finalPoints);
     return row;
   }
@@ -187,33 +187,33 @@ class SeedListManager {
    */
   async applyPenalties(row, raceIds, numRaces, nonNullRaces, previousSeedLists) {
     const mostRecentIncompleteRace = this.findMostRecentIncompleteRace(row, raceIds);
-    
+
     if (!mostRecentIncompleteRace) {
       return;
     }
-    
+
     const { prevSeedList } = previousSeedLists;
     const competitorRanking = prevSeedList.findIndex(x => x.racer_id === row.racer_id);
-    
+
     // Get race results and calculate penalty
     const results = await RaceDataFetcher.getRaceResult(
-      this.competitionId, 
+      this.competitionId,
       mostRecentIncompleteRace
     );
-    
+
     const finishedResults = RaceDataFetcher.filterFinishedResults(results);
     const competitorResult = results.find(x => x.racer_id === row.racer_id);
-    
+
     const baseSeedPoints = PenaltyCalculator.getSeedPointsForRanking(
-      finishedResults, 
+      finishedResults,
       competitorRanking
     );
-    
+
     const penaltyPoints = PenaltyCalculator.calculatePenalty(
       baseSeedPoints,
       competitorResult?.is_ns
     );
-    
+
     PenaltyCalculator.applyPenaltyToRow(row, mostRecentIncompleteRace, penaltyPoints);
     nonNullRaces.push(round(penaltyPoints));
   }
@@ -237,16 +237,16 @@ class SeedListManager {
     if (raceIds.length <= 1) {
       return { prevSeedList: [], prevSeedList2: [] };
     }
-    
+
     const prevRaces = raceIds.slice(0, raceIds.length - 1);
     const prevSeedList = await this.fetchSeedList(prevRaces);
-    
+
     let prevSeedList2 = [];
     if (raceIds.length > 2) {
       const prevRaces2 = raceIds.slice(0, raceIds.length - 2);
       prevSeedList2 = await this.fetchSeedList(prevRaces2);
     }
-    
+
     return { prevSeedList, prevSeedList2 };
   }
 
@@ -255,17 +255,17 @@ class SeedListManager {
    */
   mergeAndSortResults(peopleDf, calculatedData) {
     const totalSeedDf = new dfd.DataFrame(calculatedData);
-    
+
     const finalResults = dfd.merge({
       left: peopleDf,
       right: totalSeedDf,
       on: ['racer_id'],
       how: 'left',
     });
-    
+
     finalResults.sortValues('last_name', { inplace: true, ascending: true });
     finalResults.sortValues('seed_points', { inplace: true, ascending: true });
-    
+
     return SeedPointCalculator.addPositionRanks(finalResults);
   }
 }

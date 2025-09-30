@@ -57,7 +57,7 @@ export default function EditCompetitorsPageNew() {
           p.id,
           p.first_name,
           p.last_name,
-          p.dob as date_of_birth,
+          p.birth_year,
           p.gender,
           cc.regiment,
           cc.arrival_corps_seed,
@@ -171,7 +171,7 @@ export default function EditCompetitorsPageNew() {
               {row.original.title && <span className="ml-2 text-neutral-500">({row.original.title})</span>}
             </div>
             <div className="text-xs text-neutral-500">
-              {row.original.gender} • DOB: {row.original.date_of_birth || 'Unknown'}
+              {row.original.gender} • DOB: {row.original.birth_year || 'Unknown'}
             </div>
           </div>
         );

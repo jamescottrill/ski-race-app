@@ -17,7 +17,7 @@ export class RaceDataFetcher {
     const query = `SELECT number_runs FROM races WHERE race_id = ? AND competition_id = ?`;
     const results = await window.api.select(query, [raceId, competitionId]);
     const numRuns = results[0].number_runs;
-    
+
     let query2;
     let values;
     if (numRuns === 1) {
@@ -27,7 +27,7 @@ export class RaceDataFetcher {
       query2 = raceQuery;
       values = [raceId, raceId];
     }
-    
+
     return window.api.select(query2, values);
   }
 
@@ -50,11 +50,11 @@ export class RaceDataFetcher {
    */
   static async getRaceTypes(competitionId, raceIds) {
     const raceTypePromises = raceIds.map(race => {
-      const query = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns 
+      const query = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns
                      FROM races WHERE race_id = ? AND competition_id = ?`;
       return window.api.select(query, [race, competitionId]);
     });
-    
+
     return Promise.all(raceTypePromises);
   }
 
@@ -67,7 +67,7 @@ export class RaceDataFetcher {
     const resultsPromise = raceTypes.map(raceType => {
       let query;
       let values;
-      
+
       if (raceType[0].isSeeding) {
         query = seedingPoints;
         values = [raceType[0].raceId, raceType[0].raceId];
@@ -78,10 +78,10 @@ export class RaceDataFetcher {
         query = seedPointsTwoRun;
         values = [raceType[0].raceId, raceType[0].raceId];
       }
-      
+
       return window.api.select(query, values);
     });
-    
+
     return Promise.all(resultsPromise);
   }
 
@@ -95,14 +95,14 @@ export class RaceDataFetcher {
       SELECT cc.*,
         p.first_name,
         p.last_name,
-        p.dob,
+        p.birth_year,
         p.gender,
         cc.regiment AS team_name
       FROM competition_competitor cc
       LEFT JOIN people p ON cc.racer_id = p.id
       WHERE cc.competition_id = ?
     `;
-    
+
     return window.api.select(query, [competitionId]);
   }
 
@@ -112,7 +112,7 @@ export class RaceDataFetcher {
    * @returns {Array} Filtered results
    */
   static filterFinishedResults(results) {
-    return results.filter(x => 
+    return results.filter(x =>
       x.seed_points !== null &&
       !x.is_ns &&
       !x.is_dnf &&

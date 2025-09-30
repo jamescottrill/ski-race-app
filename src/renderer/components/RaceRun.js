@@ -129,7 +129,7 @@ export default function RaceRun({
         , p.first_name
         , p.last_name
         , cc.title
-        , p.dob
+        , p.birth_year
         , p.gender
         , cc.is_junior
         , cc.is_novice

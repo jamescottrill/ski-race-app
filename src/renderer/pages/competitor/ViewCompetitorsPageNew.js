@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Users, 
-  Edit, 
+import {
+  Users,
+  Edit,
   ArrowLeft,
   UserCheck,
   Award,
   Shield,
   ChevronRight
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -32,7 +32,7 @@ export default function ViewCompetitorsPageNew() {
   const fetchCompetitors = async () => {
     setLoading(true);
     const query = `
-      SELECT p.id, p.first_name, p.last_name, p.gender, p.dob, p.service_number, p.country,
+      SELECT p.id, p.first_name, p.last_name, p.gender, p.birth_year, p.service_number, p.country,
              cc.regiment, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id
@@ -114,7 +114,7 @@ export default function ViewCompetitorsPageNew() {
         const statuses = [];
         if (row.original.is_reserve) statuses.push('Reserve');
         if (row.original.is_novice) statuses.push('Novice');
-        
+
         return (
           <div className="flex gap-1">
             {statuses.length > 0 ? (

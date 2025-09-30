@@ -15,12 +15,12 @@ export class CompetitorRepository extends BaseRepository {
    */
   async getCompetitionCompetitors(competitionId) {
     const query = `
-      SELECT 
+      SELECT
         cc.*,
         p.first_name,
         p.last_name,
         p.title,
-        p.dob,
+        p.birth_year,
         p.country,
         p.service_number,
         p.gender
@@ -29,7 +29,7 @@ export class CompetitorRepository extends BaseRepository {
       WHERE cc.competition_id = ?
       ORDER BY p.last_name, p.first_name
     `;
-    
+
     return this.select(query, [competitionId]);
   }
 
@@ -40,11 +40,11 @@ export class CompetitorRepository extends BaseRepository {
    */
   async getCompetitorsWithTeams(competitionId) {
     const query = `
-      SELECT 
+      SELECT
         cc.*,
         p.first_name,
         p.last_name,
-        p.dob,
+        p.birth_year,
         p.gender,
         ct.team_name,
         ct.is_corps,
@@ -52,16 +52,16 @@ export class CompetitorRepository extends BaseRepository {
         ct.is_reserve as team_reserve
       FROM competition_competitor cc
       LEFT JOIN people p ON cc.racer_id = p.id
-      LEFT JOIN competition_team_members ctm ON 
-        cc.racer_id = ctm.racer_id AND 
+      LEFT JOIN competition_team_members ctm ON
+        cc.racer_id = ctm.racer_id AND
         cc.competition_id = ctm.competition_id
-      LEFT JOIN competition_team ct ON 
-        ctm.team_id = ct.team_id AND 
+      LEFT JOIN competition_team ct ON
+        ctm.team_id = ct.team_id AND
         ctm.competition_id = ct.competition_id
       WHERE cc.competition_id = ?
       ORDER BY cc.arrival_corps_seed
     `;
-    
+
     return this.select(query, [competitionId]);
   }
 
@@ -115,13 +115,13 @@ export class CompetitorRepository extends BaseRepository {
     const keys = Object.keys(updateData);
     const setClause = keys.map(key => `${key} = ?`).join(', ');
     const values = [...keys.map(key => updateData[key]), competitionId, racerId];
-    
+
     const query = `
-      UPDATE competition_competitor 
-      SET ${setClause} 
+      UPDATE competition_competitor
+      SET ${setClause}
       WHERE competition_id = ? AND racer_id = ?
     `;
-    
+
     return this.select(query, values);
   }
 
@@ -132,13 +132,13 @@ export class CompetitorRepository extends BaseRepository {
    */
   async getCompetitorSeedPoints(competitionId) {
     const query = `
-      SELECT 
+      SELECT
         cc.racer_id,
         cc.arrival_corps_seed AS seed_points,
         p.first_name,
         p.last_name,
         p.title,
-        p.dob,
+        p.birth_year,
         p.gender,
         cc.regiment
       FROM competition_competitor cc
@@ -146,7 +146,7 @@ export class CompetitorRepository extends BaseRepository {
       WHERE cc.competition_id = ?
       ORDER BY cc.arrival_corps_seed ASC
     `;
-    
+
     return this.select(query, [competitionId]);
   }
 
@@ -161,7 +161,7 @@ export class CompetitorRepository extends BaseRepository {
       competition_id: competitionId,
       racer_id: racerId
     });
-    
+
     return count > 0;
   }
 
@@ -174,18 +174,18 @@ export class CompetitorRepository extends BaseRepository {
   async getCompetitorsByCategory(competitionId, category) {
     const categoryColumn = `is_${category}`;
     const query = `
-      SELECT 
+      SELECT
         cc.*,
         p.first_name,
         p.last_name,
-        p.dob,
+        p.birth_year,
         p.gender
       FROM competition_competitor cc
       LEFT JOIN people p ON cc.racer_id = p.id
       WHERE cc.competition_id = ? AND cc.${categoryColumn} = 1
       ORDER BY cc.arrival_corps_seed
     `;
-    
+
     return this.select(query, [competitionId]);
   }
 
@@ -196,7 +196,7 @@ export class CompetitorRepository extends BaseRepository {
    */
   async bulkInsertCompetitors(competitors) {
     const results = [];
-    
+
     for (const competitor of competitors) {
       try {
         const result = await this.registerCompetitor(competitor);
@@ -205,7 +205,7 @@ export class CompetitorRepository extends BaseRepository {
         results.push({ success: false, data: competitor, error: error.message });
       }
     }
-    
+
     return results;
   }
 }
