@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Papa from 'papaparse';
 import {
   Upload,
   ArrowLeft,
   FileText,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import {
   PageContainer,
@@ -15,6 +17,8 @@ import {
   Button
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { createCompetitor, competitorExists, updateCompetitor } from '../../utils/CompetitorManagement';
+import { handleDatabaseError, showSuccess, showWarning } from '../../utils/ErrorHandler';
 
 export default function UploadCompetitorsPageNew() {
   const { competitionId } = useParams();
@@ -22,10 +26,99 @@ export default function UploadCompetitorsPageNew() {
   const handleBack = useBackButton();
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
+  const [competitors, setCompetitors] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
     setUploadStatus(null);
+    setCompetitors([]);
+
+    // Parse CSV immediately to show preview
+    if (selectedFile) {
+      Papa.parse(selectedFile, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            setCompetitors(results.data);
+            setUploadStatus({
+              type: 'info',
+              message: `${results.data.length} competitor(s) ready to import`,
+            });
+          } else {
+            setUploadStatus({
+              type: 'error',
+              message: 'No valid data found in CSV file',
+            });
+          }
+        },
+        error: (error) => {
+          console.error('Error parsing CSV:', error);
+          setUploadStatus({
+            type: 'error',
+            message: `Failed to parse CSV file: ${error.message}`,
+          });
+        },
+      });
+    }
+  };
+
+  const handleDownloadSample = () => {
+    // Create sample CSV data
+    const sampleData = [
+      {
+        firstName: 'John',
+        lastName: 'Smith',
+        birthYear: '1995',
+        gender: 'M',
+        serviceNumber: '12345678',
+        regiment: '32 Regt RA',
+        country: 'GBR',
+        title: 'Capt',
+        novice: 'Y',
+        reserve: 'N',
+      },
+      {
+        firstName: 'Jane',
+        lastName: 'Doe',
+        birthYear: '1998',
+        gender: 'F',
+        serviceNumber: '87654321',
+        regiment: '7 Para RHA',
+        country: 'GBR',
+        title: 'Lt',
+        novice: 'N',
+        reserve: 'N',
+      },
+      {
+        firstName: 'Robert',
+        lastName: 'Johnson',
+        birthYear: '1992',
+        gender: 'M',
+        serviceNumber: '11223344',
+        regiment: 'Honourable Artillery Company',
+        country: 'GBR',
+        title: 'L/Sgt',
+        novice: 'N',
+        reserve: 'Y',
+      },
+    ];
+
+    // Convert to CSV
+    const csv = Papa.unparse(sampleData);
+
+    // Create blob and download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'competitor_import_sample.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleUpload = async () => {
@@ -34,12 +127,91 @@ export default function UploadCompetitorsPageNew() {
       return;
     }
 
-    setUploadStatus({ type: 'info', message: 'Processing file...' });
+    if (competitors.length === 0) {
+      setUploadStatus({ type: 'error', message: 'No competitors found in file' });
+      return;
+    }
 
-    // In a real implementation, parse CSV and insert competitors
-    setTimeout(() => {
-      setUploadStatus({ type: 'success', message: 'Successfully imported competitors!' });
-    }, 2000);
+    setIsProcessing(true);
+    setUploadStatus({ type: 'info', message: 'Importing competitors...' });
+
+    let successCount = 0;
+    let errorCount = 0;
+    let updateCount = 0;
+
+    try {
+      for (const competitor of competitors) {
+        // Map CSV columns to formData structure
+        const formData = {
+          firstName: competitor.firstName || competitor['First Name'] || '',
+          lastName: competitor.lastName || competitor['Last Name'] || '',
+          title: competitor.title || competitor.Title || '',
+          birthYear: competitor.birthYear || competitor['Birth Year'] || competitor.yearOfBirth || '',
+          country: competitor.country || competitor.Country || 'GBR',
+          serviceNumber: competitor.serviceNumber || competitor['Service Number'] || '',
+          gender: (competitor.gender || competitor.Gender || 'M').toUpperCase(),
+          regiment: competitor.regiment || competitor.Regiment || competitor.unit || competitor.Unit || '',
+          arrivalSeed: competitor.arrivalSeed || competitor['Arrival Seed'] || 2000,
+          isNovice: competitor.novice === 'Y' || competitor.Novice === 'Y',
+          isReserve: competitor.reserve === 'Y' || competitor.Reserve === 'Y',
+          isFemale: (competitor.gender || competitor.Gender || 'M').toUpperCase() === 'F',
+        };
+
+        // Validate required fields
+        if (!formData.firstName || !formData.lastName) {
+          console.warn('Skipping competitor with missing name:', competitor);
+          errorCount++;
+          continue;
+        }
+
+        try {
+          // Check if competitor exists
+          const exists = await competitorExists(
+            formData.serviceNumber,
+            formData.firstName,
+            formData.lastName
+          );
+
+          if (exists) {
+            // Update existing competitor
+            await updateCompetitor(formData, null, exists, competitionId);
+            updateCount++;
+          } else {
+            // Create new competitor
+            await createCompetitor(formData, competitionId);
+            successCount++;
+          }
+        } catch (error) {
+          console.error('Failed to import competitor:', formData.firstName, formData.lastName, error);
+          errorCount++;
+        }
+      }
+
+      // Show results
+      if (errorCount === 0) {
+        setUploadStatus({
+          type: 'success',
+          message: `Successfully imported ${successCount} new and updated ${updateCount} existing competitor(s)!`
+        });
+        showSuccess(`Imported ${successCount + updateCount} competitor(s)`);
+
+        // Navigate back after a short delay
+        setTimeout(() => {
+          navigate(-1);
+        }, 2000);
+      } else {
+        setUploadStatus({
+          type: 'error',
+          message: `Imported ${successCount + updateCount} competitor(s) with ${errorCount} error(s)`
+        });
+        showWarning(`${errorCount} competitor(s) failed to import`);
+      }
+    } catch (error) {
+      handleDatabaseError('import competitors', error);
+      setUploadStatus({ type: 'error', message: 'Failed to import competitors: ' + error.message });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -70,10 +242,12 @@ export default function UploadCompetitorsPageNew() {
                 className="hidden"
                 id="file-upload"
               />
-              <label htmlFor="file-upload">
-                <Button as="span" variant="primary" leftIcon={<FileText className="w-4 h-4" />}>
-                  Choose File
-                </Button>
+              <label
+                htmlFor="file-upload"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                Choose File
               </label>
               {file && (
                 <p className="mt-4 text-sm">
@@ -94,12 +268,36 @@ export default function UploadCompetitorsPageNew() {
               </div>
             )}
 
+            {competitors.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold mb-2">Preview ({competitors.length} competitor{competitors.length !== 1 ? 's' : ''})</h4>
+                <div className="max-h-48 overflow-y-auto border rounded p-2 bg-neutral-50">
+                  <ul className="text-sm space-y-1">
+                    {competitors.slice(0, 10).map((comp, idx) => (
+                      <li key={idx} className="text-neutral-700">
+                        {comp.firstName || comp['First Name']} {comp.lastName || comp['Last Name']}
+                        {(comp.birthYear || comp['Birth Year']) && ` (${comp.birthYear || comp['Birth Year']})`}
+                      </li>
+                    ))}
+                    {competitors.length > 10 && (
+                      <li className="text-neutral-500 italic">... and {competitors.length - 10} more</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={handleBack}>
+              <Button variant="outline" onClick={handleBack} disabled={isProcessing}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleUpload} leftIcon={<Upload className="w-4 h-4" />}>
-                Upload
+              <Button
+                variant="primary"
+                onClick={handleUpload}
+                leftIcon={<Upload className="w-4 h-4" />}
+                disabled={!file || competitors.length === 0 || isProcessing}
+              >
+                {isProcessing ? 'Importing...' : 'Import Competitors'}
               </Button>
             </div>
           </CardContent>
@@ -107,19 +305,35 @@ export default function UploadCompetitorsPageNew() {
 
         <Card className="mt-6">
           <CardContent>
-            <h3 className="font-semibold mb-3">CSV Format</h3>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-semibold">CSV Format</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadSample}
+                leftIcon={<Download className="w-4 h-4" />}
+              >
+                Download Sample
+              </Button>
+            </div>
             <p className="text-sm text-neutral-600 mb-3">
               Your CSV file should include the following columns:
             </p>
             <ul className="text-sm space-y-1 text-neutral-600">
-              <li>• First Name</li>
-              <li>• Last Name</li>
-              <li>• Year of Birth (YYYY)</li>
-              <li>• Gender (M/F)</li>
-              <li>• Service Number</li>
-              <li>• Regiment/Unit</li>
-              <li>• Country Code (GBR, USA, etc.)</li>
+              <li>• <strong>firstName</strong> or <strong>First Name</strong> (required)</li>
+              <li>• <strong>lastName</strong> or <strong>Last Name</strong> (required)</li>
+              <li>• <strong>birthYear</strong> or <strong>Birth Year</strong> (YYYY format)</li>
+              <li>• <strong>gender</strong> or <strong>Gender</strong> (M/F)</li>
+              <li>• <strong>serviceNumber</strong> or <strong>Service Number</strong></li>
+              <li>• <strong>regiment</strong> or <strong>Regiment</strong> (unit name)</li>
+              <li>• <strong>country</strong> or <strong>Country</strong> (GBR, USA, etc.)</li>
+              <li>• <strong>title</strong> or <strong>Title</strong> (rank)</li>
+              <li>• <strong>novice</strong> or <strong>Novice</strong> (Y/N)</li>
+              <li>• <strong>reserve</strong> or <strong>Reserve</strong> (Y/N)</li>
             </ul>
+            <p className="text-xs text-neutral-500 mt-3">
+              Note: Column names are case-insensitive and can use either camelCase or Title Case with spaces.
+            </p>
           </CardContent>
         </Card>
       </div>
