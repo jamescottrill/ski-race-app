@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  Trophy,
-  Users,
-  Medal,
-  ArrowLeft,
-  Award,
-  Star,
-  Download
-} from 'lucide-react';
+import { Trophy, Users, Medal, ArrowLeft, Star, Download } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -16,8 +8,6 @@ import {
   CardContent,
   Button,
   DataTable,
-  Badge,
-  cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
@@ -39,7 +29,7 @@ function TeamResultsNew() {
       WHERE rr.competition_id = ?
         AND NOT r.is_training
         AND rr.is_complete
-        AND r.is_team
+        AND r.is_individual
       ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
     setRaces(res);
@@ -50,26 +40,116 @@ function TeamResultsNew() {
     const fetchList = async () => {
       setLoading(true);
       try {
+        console.log('TeamResultsNew: Fetching team results for competition:', competitionId);
         const initialRaces = await completedRaces();
+        console.log('TeamResultsNew: Found races:', initialRaces);
+
         if (initialRaces.length === 0) {
           setTeamResults([]);
           setLoading(false);
           return;
         }
 
-        let data;
+        // Fetch individual results with team info
+        let individualData;
         if (initialRaces.length > 3) {
-          data = await fetchSeedList(
+          individualData = await fetchSeedList(
             competitionId,
             initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
           );
         } else {
-          data = await fetchSeedList(
+          individualData = await fetchSeedList(
             competitionId,
             initialRaces.map((e) => e.id),
           );
         }
-        setTeamResults(data);
+
+        // Filter to only include competitors who completed all races
+        individualData = individualData.filter((competitor) => {
+          for (const race of initialRaces) {
+            if (competitor[race.id] === null || competitor[race.id] === undefined) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        console.log('TeamResultsNew: Individual data:', individualData);
+
+        // Group by team
+        const teamMap = new Map();
+
+        individualData.forEach((competitor) => {
+          const teamName = competitor.team_name || competitor.regiment;
+          if (!teamName) return;
+
+          if (!teamMap.has(teamName)) {
+            teamMap.set(teamName, {
+              team_name: teamName,
+              members: []
+            });
+          }
+
+          teamMap.get(teamName).members.push(competitor);
+        });
+
+        // Calculate team standings
+        const teamStandings = [];
+
+        teamMap.forEach((team, teamName) => {
+          const teamResult = {
+            team_name: teamName,
+            member_count: team.members.length
+          };
+
+          // For each race, sum the top 3 members' points
+          initialRaces.forEach((race) => {
+            const memberPoints = team.members
+              .map(m => parseFloat(m[race.id]) || 0)
+              .sort((a, b) => a - b) // Lower points are better
+              .slice(0, 3); // Top 3
+
+            // Only include if team has at least 3 members who completed the race
+            if (memberPoints.length >= 3) {
+              teamResult[race.id] = memberPoints.reduce((sum, p) => sum + p, 0);
+            } else {
+              teamResult[race.id] = null;
+            }
+          });
+
+          // Calculate total points (sum of all race points)
+          let total = 0;
+          let validRaces = 0;
+          initialRaces.forEach((race) => {
+            if (teamResult[race.id] !== null) {
+              total += teamResult[race.id];
+              validRaces++;
+            }
+          });
+
+          // Only include teams that completed all races with 3+ members
+          if (validRaces === initialRaces.length) {
+            teamResult.total_points = total;
+            teamStandings.push(teamResult);
+          }
+        });
+
+        // Sort by total points
+        teamStandings.sort((a, b) => a.total_points - b.total_points);
+
+        // Add positions
+        let position = 1;
+        let previousTotal = null;
+        teamStandings.forEach((team, index) => {
+          if (previousTotal !== null && team.total_points !== previousTotal) {
+            position = index + 1;
+          }
+          team.position = position;
+          previousTotal = team.total_points;
+        });
+
+        console.log('TeamResultsNew: Team standings:', teamStandings);
+        setTeamResults(teamStandings);
       } catch (error) {
         console.error('Failed to fetch team results:', error);
         setTeamResults([]);
@@ -127,27 +207,20 @@ function TeamResultsNew() {
         },
       },
       {
-        header: 'Rank',
-        accessorKey: 'title',
-        cell: ({ row }) => row.original.title || '-'
-      },
-      {
-        header: 'Name',
-        accessorKey: 'name',
-        cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.last_name?.toUpperCase()} {row.original.first_name}
-          </div>
-        )
-      },
-      {
         header: 'Team',
         accessorKey: 'team_name',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary-400" />
-            <span>{row.original.team_name || '-'}</span>
+            <span className="font-medium">{row.original.team_name || '-'}</span>
           </div>
+        )
+      },
+      {
+        header: 'Members',
+        accessorKey: 'member_count',
+        cell: ({ row }) => (
+          <div className="text-center">{row.original.member_count || 0}</div>
         )
       }
     ];
@@ -155,21 +228,24 @@ function TeamResultsNew() {
     const raceColumns = raceList.map((race) => ({
       header: race.text,
       accessorKey: race.id.toString(),
-      cell: ({ row }) => (
-        <div className="text-center font-mono">
-          {row.original[race.id] || '-'}
-        </div>
-      )
+      cell: ({ row }) => {
+        const value = row.original[race.id];
+        return (
+          <div className="text-center font-mono">
+            {value !== null && value !== undefined ? value.toFixed(2) : '-'}
+          </div>
+        );
+      }
     }));
 
     const totalColumn = {
-      header: 'Overall Points',
-      accessorKey: 'seed_points',
+      header: 'Total Points',
+      accessorKey: 'total_points',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-center">
           <Star className="w-4 h-4 text-warning" />
           <span className="font-bold text-lg">
-            {row.original.seed_points?.toFixed(2) || '0.00'}
+            {row.original.total_points?.toFixed(2) || '0.00'}
           </span>
         </div>
       )
@@ -182,7 +258,8 @@ function TeamResultsNew() {
   const stats = {
     totalTeams: teamResults.length,
     completedRaces: races.length,
-    highestPoints: teamResults.length > 0 ? teamResults[0]?.seed_points?.toFixed(2) || 0 : 0,
+    leadingScore:
+      teamResults.length > 0 ? teamResults[0]?.total_points?.toFixed(2) || 0 : 0,
   };
 
   return (
@@ -218,7 +295,7 @@ function TeamResultsNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-primary-700">{stats.totalTeams}</p>
-              <p className="text-sm text-neutral-600">Total Competitors</p>
+              <p className="text-sm text-neutral-600">Total Teams</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
           </div>
@@ -235,7 +312,7 @@ function TeamResultsNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-warning">{stats.highestPoints}</p>
+              <p className="text-2xl font-bold text-warning">{stats.leadingScore}</p>
               <p className="text-sm text-neutral-600">Leading Score</p>
             </div>
             <Star className="w-8 h-8 text-warning/30" />
@@ -254,7 +331,7 @@ function TeamResultsNew() {
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <Trophy className="w-12 h-12 text-neutral-300" />
               <p className="text-neutral-500">
-                No team race results available yet. Complete at least one team race to see standings.
+                No team standings available. Teams need at least 3 members who have completed all individual races.
               </p>
             </div>
           ) : (
@@ -262,6 +339,7 @@ function TeamResultsNew() {
               columns={createColumns(races)}
               data={teamResults}
               pageSize={50}
+              enableSorting={false}
             />
           )}
         </CardContent>
