@@ -213,7 +213,6 @@ const calculateRacerSeedPoints = async (
           for (const raceId of raceIds) {
             if (previousSeedList[competitorRanking][raceId] !== null) {
               row[raceId] = round(previousSeedList[competitorRanking][raceId]);
-              console.log(previousSeedList[competitorRanking]);
               if(previousSeedList[competitorRanking][`${raceId}-penalty`]){
                 row[`${raceId}-penalty`] = true;
               }
@@ -330,9 +329,6 @@ const calculateRacerSeedPoints = async (
             nonNullRaces.push(sp);
           }
         }
-        // if (row[`${raceId}-penalty`]) {
-        //
-        // }
       });
 
       if (nonNullRaces.length < numMinusTwo) {
@@ -516,27 +512,10 @@ const fetchSeedList = async (competitionId, raceIds) => {
       );
       resultP.push(res);
     });
-    // for (let i = 0; i < array.length; i++) {
-    //   const x = array[i];
-    //   const res = await calculateRacerSeedPoints(
-    //     x,
-    //     raceIds,
-    //     competitionId,
-    //     pivotDf,
-    //     previousSeedList,
-    //   );
-    //   if(x.racer_id === "995adccb-cd10-44b7-8c6a-cec7775d98b2"){
-    //   console.log(res);
-    //   }
-    //   result.push(res);
-    // }
     return Promise.all(resultP);
   }
 
   const totalSeed = await processArray(pivotData, pivotDf);
-  if (raceIds.length === 6) {
-    console.log(totalSeed);
-  }
   const totalSeedDf = new dfd.DataFrame(totalSeed);
   const finalResults = dfd.merge({
     left: peopleDf,
