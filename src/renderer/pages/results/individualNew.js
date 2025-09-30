@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Download, Trophy } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -110,8 +110,7 @@ export default function IndividualResultsNew() {
         header: 'Name',
         accessorKey: 'name',
         cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.last_name?.toUpperCase()} {row.original.first_name}
+          <div className="font-medium">{row.original.last_name?.toUpperCase()} {row.original.first_name}
           </div>
         )
       },
@@ -129,19 +128,29 @@ export default function IndividualResultsNew() {
         accessorKey: race.id.toString(),
         cell: ({ row }) => (
           <div className="text-center font-mono">
-            {row.original[race.id] || '-'}
+            {row.original[race.id] || ''}
           </div>
         )
       }));
 
     const totalColumn = {
-      header: 'Overall Points',
-      accessorKey: 'seed_points',
-      cell: ({ row }) => (
-        <div className="text-center font-bold">
-          {row.original.seed_points?.toFixed(2) || '0.00'}
-        </div>
-      )
+      header: 'Total Points',
+      accessorKey: 'total_points',
+      cell: ({ row }) => {
+        // Calculate sum of all race points
+        const total = raceList
+          .filter((e) => selectedRaces.includes(e.id))
+          .reduce((sum, race) => {
+            const points = row.original[race.id];
+            return sum + (points ? parseFloat(points) : 0);
+          }, 0);
+
+        return (
+          <div className="text-center font-bold">
+            {total}
+          </div>
+        );
+      }
     };
 
     return [...baseColumns, ...raceColumns, totalColumn];
@@ -239,8 +248,8 @@ export default function IndividualResultsNew() {
         <Card className="mb-6">
           <CardContent>
             <h2 className="text-lg font-semibold mb-4">Overall Results</h2>
-            <DataTable 
-              columns={createColumns(races)} 
+            <DataTable
+              columns={createColumns(races)}
               data={seedList}
               pageSize={50}
             />
@@ -253,8 +262,8 @@ export default function IndividualResultsNew() {
         <Card className="mb-6">
           <CardContent>
             <h2 className="text-lg font-semibold mb-4">Female Results</h2>
-            <DataTable 
-              columns={createColumns(races)} 
+            <DataTable
+              columns={createColumns(races)}
               data={female}
               pageSize={20}
             />
@@ -267,8 +276,8 @@ export default function IndividualResultsNew() {
         <Card className="mb-6">
           <CardContent>
             <h2 className="text-lg font-semibold mb-4">Junior Results</h2>
-            <DataTable 
-              columns={createColumns(races)} 
+            <DataTable
+              columns={createColumns(races)}
               data={junior}
               pageSize={20}
             />
@@ -281,8 +290,8 @@ export default function IndividualResultsNew() {
         <Card className="mb-6">
           <CardContent>
             <h2 className="text-lg font-semibold mb-4">Veteran Results</h2>
-            <DataTable 
-              columns={createColumns(races)} 
+            <DataTable
+              columns={createColumns(races)}
               data={veteran}
               pageSize={20}
             />
@@ -295,8 +304,8 @@ export default function IndividualResultsNew() {
         <Card className="mb-6">
           <CardContent>
             <h2 className="text-lg font-semibold mb-4">Novice Results</h2>
-            <DataTable 
-              columns={createColumns(races)} 
+            <DataTable
+              columns={createColumns(races)}
               data={novice}
               pageSize={20}
             />
