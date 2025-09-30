@@ -19,13 +19,13 @@ function RaceResultTabPanel(props) {
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
     >
-      {runs === 2 && isSeed && (
+      {isSeed && (
         <RaceResultSeed raceId={raceId} competitionId={competitionId} />
       )}
       {runs === 2 && !isSeed && (
         <RaceResultTwoRun raceId={raceId} competitionId={competitionId} />
       )}
-      {runs === 1 && (
+      {runs === 1 && !isSeed (
         <RaceResultOneRun raceId={raceId} competitionId={competitionId} />
       )}
     </div>

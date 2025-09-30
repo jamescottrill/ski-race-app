@@ -247,7 +247,8 @@ export default function RaceTeamResultTwoRunNew({
             <DataTable
               columns={teamResultsColumns}
               data={data}
-              showPagination={false}
+              showPagination={true}
+              pageSize={50}
               className="w-full"
             />
           </CardContent>

@@ -236,15 +236,8 @@ const RaceResultTwoRun = ({ raceId, competitionId }) => {
   };
 
   useEffect(() => {
-    // const init = async () => {
-    //   await initialData();
-    //   await initRaceDetails();
-    // };
     initialData().catch(console.error);
     initRaceDetails().catch(console.error);
-    // init();
-    // init().catch(console.error);
-    console.log(data);
   }, [raceId, competitionId]);
 
   const generatePDF = () => {

@@ -315,7 +315,8 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={columns}
               data={data}
-              showPagination={false}
+              showPagination={true}
+              pageSize={50}
               className="w-full"
             />
           </CardContent>

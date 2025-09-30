@@ -159,14 +159,8 @@ export default function RaceResultSeed({ raceId, competitionId }) {
   };
 
   useEffect(() => {
-    // const init = async () => {
-    //   await initialData();
-    //   await initRaceDetails();
-    // };
     initialData().catch(console.error);
     initRaceDetails().catch(console.error);
-    // init();
-    // init().catch(console.error);
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
@@ -205,7 +199,7 @@ export default function RaceResultSeed({ raceId, competitionId }) {
             <TableBody>
               {data.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell align="center">{row.position}</TableCell>
+                  <TableCell align="center">{row.position}/{data.length}</TableCell>
                   <TableCell align="center">{row.bibNumber}</TableCell>
                   <TableCell align="center">{row.title}</TableCell>
                   <TableCell align="center">
