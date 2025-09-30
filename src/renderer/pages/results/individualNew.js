@@ -69,6 +69,7 @@ export default function IndividualResultsNew() {
             initialRaces.map((e) => e.id),
           );
         }
+        console.log(data);
         data = data.filter((e) => {
           for (const race of initialRaces) {
             if (e[race.id] === null) {
@@ -77,6 +78,30 @@ export default function IndividualResultsNew() {
           }
           return true;
         });
+
+        // Calculate total points for each competitor
+        data = data.map((competitor) => {
+          const totalPoints = initialRaces.reduce((sum, race) => {
+            const points = competitor[race.id];
+            return sum + (points ? parseFloat(points) : 0);
+          }, 0);
+          return { ...competitor, total_points: totalPoints };
+        });
+
+        // Sort by total points ascending (lower is better)
+        data.sort((a, b) => a.total_points - b.total_points);
+
+        // Add position based on total points
+        let position = 1;
+        let previousTotal = null;
+        data = data.map((competitor, index) => {
+          if (previousTotal !== null && competitor.total_points !== previousTotal) {
+            position = index + 1;
+          }
+          previousTotal = competitor.total_points;
+          return { ...competitor, position };
+        });
+
         setNovice(data.filter((e) => e.is_novice));
         setJunior(data.filter((e) => e.is_junior));
         setVeteran(data.filter((e) => e.is_veteran));
@@ -96,9 +121,8 @@ export default function IndividualResultsNew() {
       {
         header: 'Position',
         accessorKey: 'position',
-        cell: ({ row, table }) => {
-          const position = table.getSortedRowModel().rows.indexOf(row) + 1;
-          return <div className="font-bold">{position}</div>;
+        cell: ({ row }) => {
+          return <div className="font-bold">{row.original.position}</div>;
         }
       },
       {
@@ -117,7 +141,7 @@ export default function IndividualResultsNew() {
       {
         header: 'Team',
         accessorKey: 'team_name',
-        cell: ({ row }) => row.original.team_name || '-'
+        cell: ({ row }) => row.original.team_name || '-',
       }
     ];
 
@@ -128,7 +152,7 @@ export default function IndividualResultsNew() {
         accessorKey: race.id.toString(),
         cell: ({ row }) => (
           <div className="text-center font-mono">
-            {row.original[race.id] || ''}
+            {row.original[race.id].toFixed(2) || ''}
           </div>
         )
       }));
@@ -137,17 +161,9 @@ export default function IndividualResultsNew() {
       header: 'Total Points',
       accessorKey: 'total_points',
       cell: ({ row }) => {
-        // Calculate sum of all race points
-        const total = raceList
-          .filter((e) => selectedRaces.includes(e.id))
-          .reduce((sum, race) => {
-            const points = row.original[race.id];
-            return sum + (points ? parseFloat(points) : 0);
-          }, 0);
-
         return (
           <div className="text-center font-bold">
-            {total}
+            {row.original.total_points.toFixed(2)}
           </div>
         );
       }
@@ -252,6 +268,7 @@ export default function IndividualResultsNew() {
               columns={createColumns(races)}
               data={seedList}
               pageSize={50}
+              enableSorting={false}
             />
           </CardContent>
         </Card>
@@ -266,6 +283,7 @@ export default function IndividualResultsNew() {
               columns={createColumns(races)}
               data={female}
               pageSize={20}
+              enableSorting={false}
             />
           </CardContent>
         </Card>
@@ -280,6 +298,7 @@ export default function IndividualResultsNew() {
               columns={createColumns(races)}
               data={junior}
               pageSize={20}
+              enableSorting={false}
             />
           </CardContent>
         </Card>
@@ -294,6 +313,7 @@ export default function IndividualResultsNew() {
               columns={createColumns(races)}
               data={veteran}
               pageSize={20}
+              enableSorting={false}
             />
           </CardContent>
         </Card>
@@ -308,6 +328,7 @@ export default function IndividualResultsNew() {
               columns={createColumns(races)}
               data={novice}
               pageSize={20}
+              enableSorting={false}
             />
           </CardContent>
         </Card>
