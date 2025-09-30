@@ -43,7 +43,7 @@ export default function GenerateStartListNew() {
     randomise_top: 15,
     randomise_top_women: 5,
     number_runs: 1,
-    race_name: "",
+    race_name: '',
   });
 
   function refreshPage(){
