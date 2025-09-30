@@ -324,6 +324,57 @@ class Database {
       });
     });
   }
+
+  beginTransaction() {
+    return new Promise((resolve, reject) => {
+      this.db.run('BEGIN TRANSACTION', (err) => {
+        if (err) {
+          console.error('Error beginning transaction:', err.message);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  commit() {
+    return new Promise((resolve, reject) => {
+      this.db.run('COMMIT', (err) => {
+        if (err) {
+          console.error('Error committing transaction:', err.message);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  rollback() {
+    return new Promise((resolve, reject) => {
+      this.db.run('ROLLBACK', (err) => {
+        if (err) {
+          console.error('Error rolling back transaction:', err.message);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async transaction(callback) {
+    try {
+      await this.beginTransaction();
+      const result = await callback();
+      await this.commit();
+      return result;
+    } catch (error) {
+      await this.rollback();
+      throw error;
+    }
+  }
 }
 
 module.exports = { Database, AppPreferences };

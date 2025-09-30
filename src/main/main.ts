@@ -101,6 +101,36 @@ async function createWindow() {
     }
   });
 
+  ipcMain.handle('db-transaction', async (event, operations) => {
+    try {
+      const result = await db.transaction(async () => {
+        const results = [];
+        for (const op of operations) {
+          let opResult;
+          switch (op.type) {
+            case 'select':
+              opResult = await db.all(op.query, op.params);
+              break;
+            case 'insert':
+              opResult = await db.run(op.query, op.params);
+              break;
+            case 'delete':
+              opResult = await db.delete(op.query, op.params);
+              break;
+            default:
+              throw new Error(`Unknown operation type: ${op.type}`);
+          }
+          results.push(opResult);
+        }
+        return results;
+      });
+      return { success: true, results: result };
+    } catch (error: any) {
+      console.error('Transaction failed:', error);
+      throw error;
+    }
+  });
+
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
     : path.join(__dirname, '../../assets');
