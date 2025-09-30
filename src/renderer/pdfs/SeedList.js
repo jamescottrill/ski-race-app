@@ -4,10 +4,13 @@ import { getFormattedDate } from '../utils/DateUtils';
 import { tableStyles } from '../utils/PdfStyles';
 
 
-const generatePDF = (seedList, races) => {
-  let title = 'Initial Seed List';
-  if (races.length > 0) {
-    title = `Seed List after ${races.length} Race${races.length > 1 ? 's' : ''}`;
+const generatePDF = (seedList, races, title=null) => {
+  let pageTitle = title;
+  if (!title) {
+    pageTitle = 'Initial Seed List';
+    if (races.length > 0) {
+      pageTitle = `Seed List after ${races.length} Race${races.length > 1 ? 's' : ''}`;
+    }
   }
 
   const tableColumns = (r) => {
@@ -55,7 +58,7 @@ const generatePDF = (seedList, races) => {
 
   const docDefinition = {
     content: [
-      { text: title, style: 'header' },
+      { text: pageTitle, style: 'header' },
       {
         style: 'table',
         layout: 'lightHorizontalLines',
@@ -74,7 +77,9 @@ const generatePDF = (seedList, races) => {
   // Use Electron's dialog to choose save location
   pdfDoc.getBuffer((buffer) => {
     const formattedDate = getFormattedDate();
-    const defaultFileName = `${formattedDate}_SEED_LIST_AFTER_${races.length}_RACES.pdf`;
+    const defaultFileName = title
+      ? `${formattedDate}_${title.toUpperCase().replace(' ', '_')}.pdf`
+      : `${formattedDate}_SEED_LIST_AFTER_${races.length}_RACES.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((filePath) => {

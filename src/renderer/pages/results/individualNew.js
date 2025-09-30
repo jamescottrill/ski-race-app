@@ -26,7 +26,7 @@ export default function IndividualResultsNew() {
   const handleBack = useBackButton();
 
   const seedListPdf = () => {
-    generatePDF(seedList, races);
+    generatePDF(seedList, races, 'Individual Championship Results');
   };
 
   const completedRaces = async () => {
