@@ -2,12 +2,14 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from './CompetitorManagement';
 import { getFormattedDate } from './DateUtils';
 import { tableStyles } from './PdfStyles';
+import { handlePdfError, showSuccess } from './ErrorHandler';
 
 // const { vfsFonts } = require('pdfmake/build/vfs_fonts');
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
 const startListPdf = (raceDetails, startList, womensStartList) => {
+  try {
   const runDetailsSection = [
     {
       columns: [
@@ -230,22 +232,27 @@ const startListPdf = (raceDetails, startList, womensStartList) => {
 
   // Use Electron's dialog to choose save location
   pdfDoc.getBuffer((buffer) => {
-    const formattedDate = getFormattedDate();
-    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
-    const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}.pdf`;
-    window.electronAPI
-      .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          alert('PDF saved successfully to:', filePath);
-        } else {
-          alert('PDF save cancelled.');
-        }
-      })
-      .catch((err) => {
-        console.error('Error saving PDF:', err);
-      });
+    try {
+      const formattedDate = getFormattedDate();
+      const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}.pdf`;
+      window.electronAPI
+        .savePDF(buffer, defaultFileName)
+        .then((result) => {
+          if (result.success) {
+            showSuccess('Start list PDF saved successfully');
+          }
+        })
+        .catch((err) => {
+          handlePdfError('start list', err);
+        });
+    } catch (error) {
+      handlePdfError('start list', error);
+    }
   });
+  } catch (error) {
+    handlePdfError('start list', error);
+  }
 };
 
 export { startListPdf };

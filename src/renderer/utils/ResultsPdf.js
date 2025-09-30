@@ -3,10 +3,12 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from './CompetitorManagement';
 import { tableStyles } from './PdfStyles';
 import { getFormattedDate } from './DateUtils';
+import { handlePdfError, showSuccess } from './ErrorHandler';
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
 const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
+  try {
   const runDetailsSection = [
     {
       columns: [
@@ -318,22 +320,27 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
 
   // Use Electron's dialog to choose save location
   pdfDoc.getBuffer((buffer) => {
-    const formattedDate = getFormattedDate();
-    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumeric characters with underscores
-    const defaultFileName = `${formattedDate}_RESULTS_${raceName.toUpperCase()}.pdf`;
-    window.electronAPI
-      .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          console.log('PDF saved successfully to:', filePath);
-        } else {
-          console.log('PDF save cancelled.');
-        }
-      })
-      .catch((err) => {
-        console.error('Error saving PDF:', err);
-      });
+    try {
+      const formattedDate = getFormattedDate();
+      const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const defaultFileName = `${formattedDate}_RESULTS_${raceName.toUpperCase()}.pdf`;
+      window.electronAPI
+        .savePDF(buffer, defaultFileName)
+        .then((result) => {
+          if (result.success) {
+            showSuccess('Results PDF saved successfully');
+          }
+        })
+        .catch((err) => {
+          handlePdfError('results', err);
+        });
+    } catch (error) {
+      handlePdfError('results', error);
+    }
   });
+  } catch (error) {
+    handlePdfError('results', error);
+  }
 };
 
 export { resultsPdf };

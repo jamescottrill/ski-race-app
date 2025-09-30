@@ -33,26 +33,46 @@ const getPreviousSeedList = async (competitionId, raceIds, numRaces) => {
 };
 
 const getRaceResult = async (competitionId, raceId) => {
-  const query = `SELECT number_runs FROM races WHERE race_id = ? AND competition_id = ?`;
-  const results = await window.api.select(query, [raceId, competitionId]);
-  const numRuns = results[0].number_runs;
-  let query2;
-  let values;
-  if (numRuns === 1) {
-    query2 = raceQueryOneRun;
-    values = [raceId];
-  } else {
-    query2 = raceQuery;
-    values = [raceId, raceId];
+  try {
+    const query = `SELECT number_runs FROM races WHERE race_id = ? AND competition_id = ?`;
+    const results = await window.api.select(query, [raceId, competitionId]);
+
+    if (!results || results.length === 0) {
+      throw new Error(`Race not found: ${raceId}`);
+    }
+
+    const numRuns = results[0].number_runs;
+    let query2;
+    let values;
+    if (numRuns === 1) {
+      query2 = raceQueryOneRun;
+      values = [raceId];
+    } else {
+      query2 = raceQuery;
+      values = [raceId, raceId];
+    }
+    const results2 = await window.api.select(query2, values);
+    return results2;
+  } catch (error) {
+    console.error('Failed to get race result:', error);
+    throw new Error(`Failed to get race result for race ${raceId}: ${error.message}`);
   }
-  const results2 = await window.api.select(query2, values);
-  return results2;
 };
 
 const getSeedingRace = async (competitionId) => {
-  const query = `SELECT race_id FROM races WHERE competition_id = ? AND is_seeding = 1`;
-  const results = await window.api.select(query, [competitionId]);
-  return results[0].race_id;
+  try {
+    const query = `SELECT race_id FROM races WHERE competition_id = ? AND is_seeding = 1`;
+    const results = await window.api.select(query, [competitionId]);
+
+    if (!results || results.length === 0) {
+      throw new Error(`No seeding race found for competition ${competitionId}`);
+    }
+
+    return results[0].race_id;
+  } catch (error) {
+    console.error('Failed to get seeding race:', error);
+    throw new Error(`Failed to get seeding race: ${error.message}`);
+  }
 };
 
 const calculateRacerSeedPoints = async (
@@ -171,12 +191,12 @@ const calculateRacerSeedPoints = async (
         let penaltyAdd = 10;
         let penaltyMultiply = 1.2;
         try {
-          if (results[competitorResult].is_ns) {
+          if (results[competitorResult] && results[competitorResult].is_ns) {
             penaltyAdd = 0;
             penaltyMultiply = 1;
           }
         } catch (e) {
-          console.warn('Failed to check NS status for competitor:', e);
+          console.error('Failed to check NS status for competitor:', row.racer_id, e);
         }
         if (sPoints < 50) {
           sPoints += penaltyAdd;
@@ -265,12 +285,12 @@ const calculateRacerSeedPoints = async (
           let penaltyAdd = 10;
           let penaltyMultiply = 1.2;
           try {
-            if (results[competitorResult].is_ns) {
+            if (results[competitorResult] && results[competitorResult].is_ns) {
               penaltyAdd = 0;
               penaltyMultiply = 1;
             }
           } catch (e) {
-            console.error(e);
+            console.error('Failed to check NS status for competitor:', row.racer_id, e);
           }
           if (sPoints < 50) {
             sPoints += penaltyAdd;
@@ -347,12 +367,12 @@ const calculateRacerSeedPoints = async (
           let penaltyAdd = 10;
           let penaltyMultiply = 1.2;
           try {
-            if (results[competitorResult].is_ns) {
+            if (results[competitorResult] && results[competitorResult].is_ns) {
               penaltyAdd = 0;
               penaltyMultiply = 1;
             }
           } catch (e) {
-            console.error(e);
+            console.error('Failed to check NS status for competitor:', row.racer_id, e);
           }
           if (sPoints < 50) {
             sPoints += penaltyAdd;
@@ -377,38 +397,44 @@ const calculateRacerSeedPoints = async (
 };
 
 const getPeople = async (competitionId) => {
-  const people = await window.api.select(
-    `SELECT cc.*
-     , p.first_name
-     , p.last_name
-     , p.birth_year
-     , p.gender
-     , cc.regiment AS team_name
-    FROM competition_competitor cc
-      LEFT JOIN people p ON cc.racer_id = p.id
---     LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
---     LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
-    WHERE cc.competition_id = ?
---     AND NOT COALESCE(ct.is_hc, FALSE)
---     AND NOT COALESCE(ct.is_female, FALSE)
-    `,
-    [competitionId],
-  );
-  return new dfd.DataFrame(people);
+  try {
+    const people = await window.api.select(
+      `SELECT cc.*
+       , p.first_name
+       , p.last_name
+       , p.birth_year
+       , p.gender
+       , cc.regiment AS team_name
+      FROM competition_competitor cc
+        LEFT JOIN people p ON cc.racer_id = p.id
+  --     LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
+  --     LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
+      WHERE cc.competition_id = ?
+  --     AND NOT COALESCE(ct.is_hc, FALSE)
+  --     AND NOT COALESCE(ct.is_female, FALSE)
+      `,
+      [competitionId],
+    );
+    return new dfd.DataFrame(people);
+  } catch (error) {
+    console.error('Failed to get people for competition:', competitionId, error);
+    throw new Error(`Failed to get people: ${error.message}`);
+  }
 };
 
 const fetchSeedList = async (competitionId, raceIds) => {
-  const peopleDf = await getPeople(competitionId);
-  const raceTypePromises = [];
-  raceIds.forEach((race) => {
-    const raceType = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns FROM races WHERE race_id = ? AND competition_id = ?`;
-    const results = window.api.select(raceType, [race, competitionId]);
-    raceTypePromises.push(results);
-  });
-  if (raceIds.length === 0) {
-    const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
-    return window.api.select(query, [competitionId]);
-  }
+  try {
+    const peopleDf = await getPeople(competitionId);
+    const raceTypePromises = [];
+    raceIds.forEach((race) => {
+      const raceType = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns FROM races WHERE race_id = ? AND competition_id = ?`;
+      const results = window.api.select(raceType, [race, competitionId]);
+      raceTypePromises.push(results);
+    });
+    if (raceIds.length === 0) {
+      const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
+      return window.api.select(query, [competitionId]);
+    }
   const resultsPromise = [];
   const raceTypes = await Promise.all(raceTypePromises);
   raceTypes.forEach((raceType) => {
@@ -535,6 +561,10 @@ const fetchSeedList = async (competitionId, raceIds) => {
 
   const withPostition = finalResults.addColumn('position', ranks);
   return dfd.toJSON(withPostition);
+  } catch (error) {
+    console.error('Failed to fetch seed list:', error);
+    throw new Error(`Failed to fetch seed list: ${error.message}`);
+  }
 };
 
 export { fetchSeedList, raceMultipliers };

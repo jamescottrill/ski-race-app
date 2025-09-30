@@ -19,8 +19,8 @@ const competitorExists = async (serviceNumber, firstName, LastName) => {
     return result[0].count > 0;
   } catch (error) {
     console.error('Failed to check if competitor exists:', error);
+    throw new Error('Database error checking competitor existence');
   }
-  return false;
 };
 
 const updateCompetitor = async (
@@ -37,7 +37,11 @@ const updateCompetitor = async (
   const params1 = [formData.title, formData.country, competitorId];
 
   try {
-    await window.api.insert(query1, params1);
+    const result1 = await window.api.insert(query1, params1);
+    if (!result1.success) {
+      throw new Error('Failed to update person: ' + result1.error);
+    }
+
     let query2;
     let params2;
     if (!existingCompetitor) {
@@ -95,16 +99,28 @@ const updateCompetitor = async (
         formData.title,
       ];
     }
-    await window.api.insert(query2, params2);
+
+    const result2 = await window.api.insert(query2, params2);
+    if (!result2.success) {
+      throw new Error('Failed to update competitor: ' + result2.error);
+    }
+
     if (formData.teamId) {
       const params3 = [competitionId, formData.teamId, competitorId];
       const query3 = `INSERT INTO main.competition_team_members (competition_id, team_id, racer_id)
                       VALUES (?, ?, ?)`;
-      await window.api.insert(query3, params3);
+      const result3 = await window.api.insert(query3, params3);
+
+      if (!result3.success) {
+        console.warn('Failed to add to team:', result3.error);
+        // Don't fail the entire operation, just warn
+      }
     }
-    return true;
+
+    return { success: true };
   } catch (error) {
     console.error('Failed to update competitor:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -131,7 +147,10 @@ const createCompetitor = async (formData, competitionId) => {
   ];
 
   try {
-    await window.api.insert(query1, params1);
+    const result1 = await window.api.insert(query1, params1);
+    if (!result1.success) {
+      throw new Error('Failed to create person: ' + result1.error);
+    }
 
     const query2 = `
         INSERT INTO competition_competitor
@@ -151,12 +170,16 @@ const createCompetitor = async (formData, competitionId) => {
       formData.title,
     ];
 
-    await window.api.insert(query2, params2);
-    return true;
+    const result2 = await window.api.insert(query2, params2);
+    if (!result2.success) {
+      throw new Error('Failed to add to competition: ' + result2.error);
+    }
+
+    return { success: true, id };
   } catch (error) {
     console.error('Failed to create competitor:', error);
+    return { success: false, error: error.message };
   }
-  return false;
 };
 
 const calculateCategory = (competitor) => {
