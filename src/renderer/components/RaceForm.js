@@ -16,6 +16,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { v4 as uuid4 } from 'uuid';
 import PersonModal from './PersonModal'; // Import the PersonModal component
+import { useBackButton } from '../utils/navigation';
 
 function RaceForm({ editMode, raceId }) {
   const { competitionId } = useParams();
@@ -41,10 +42,13 @@ function RaceForm({ editMode, raceId }) {
     snow: '',
     weather: '',
     homologation: '',
+    altStart: '',
+    altFinish: '',
   });
   const [people, setPeople] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPersonField, setSelectedPersonField] = useState(null);
+  const handleBack = useBackButton();
 
   const fetchPeople = async () => {
     const query = `SELECT id, first_name, last_name FROM people`;
@@ -55,13 +59,6 @@ function RaceForm({ editMode, raceId }) {
       console.error('Failed to fetch people:', error);
     }
   };
-
-  useEffect(() => {
-    fetchPeople();
-    if (editMode && raceId) {
-      fetchRaceDetails();
-    }
-  }, [editMode, raceId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -109,7 +106,8 @@ function RaceForm({ editMode, raceId }) {
       SELECT race_name, race_type, is_individual, is_team, is_training,
              is_seeding, women_separate, number_runs, venue, course_name,
              race_date, chief_of_race, tech_delegate, referee, asst_referee,
-             temp_start, temp_finish, weather, snow, homologation
+             temp_start, temp_finish, weather, snow, homologation,
+             start_altitude, finish_altitude
       FROM races
       WHERE race_id = ? and competition_id = ?
       `;
@@ -120,7 +118,7 @@ function RaceForm({ editMode, raceId }) {
         setFormData({
           raceName: result[0].race_name,
           raceType: result[0].race_type,
-          isIndividual: result[0].is_individual || true,
+          isIndividual: result[0].is_individual || false,
           isTeam: result[0].is_team || false,
           isTraining: result[0].is_training || false,
           isSeeding: result[0].is_seeding || false,
@@ -131,11 +129,13 @@ function RaceForm({ editMode, raceId }) {
           raceDate: result[0].race_date || '',
           chiefOfRace: result[0].chief_of_race || '',
           techDelegate: result[0].tech_delegate || '',
-          referee: result[0].referree || '',
+          referee: result[0].referee || '',
           asstReferee: result[0].asst_referee || '',
           weather: result[0].weather || '',
           snow: result[0].snow || '',
           homologation: result[0].homologation || '',
+          altStart: result[0].start_altitude || '',
+          altFinish: result[0].finish_altitude || '',
           tempStart: result[0].temp_start || '',
           tempFinish: result[0].temp_finish || '',
         });
@@ -160,26 +160,28 @@ function RaceForm({ editMode, raceId }) {
   const updateRace = async () => {
     const query1 = `
       UPDATE races
-      SET race_name      = ?,
-          race_type      = ?,
-          is_individual  = ?,
-          is_team        = ?,
-          is_training    = ?,
-          is_seeding     = ?,
-          women_separate = ?,
-          number_runs    = ?,
-          venue          = ?,
-          course_name    = ?,
-          race_date      = ?,
-          chief_of_race  = ?,
-          tech_delegate  = ?,
-          referee        = ?,
-          asst_referee   = ?,
-          temp_start     = ?,
-          temp_finish    = ?,
-          snow           = ?,
-          weather        = ?,
-          homologation   = ?
+      SET race_name       = ?,
+          race_type       = ?,
+          is_individual   = ?,
+          is_team         = ?,
+          is_training     = ?,
+          is_seeding      = ?,
+          women_separate  = ?,
+          number_runs     = ?,
+          venue           = ?,
+          course_name     = ?,
+          race_date       = ?,
+          chief_of_race   = ?,
+          tech_delegate   = ?,
+          referee         = ?,
+          asst_referee    = ?,
+          temp_start      = ?,
+          temp_finish     = ?,
+          snow            = ?,
+          weather         = ?,
+          homologation    = ?,
+          start_altitude  = ?,
+          finish_altitude = ?
       WHERE race_id = ?
         AND competition_id = ?
     `;
@@ -204,6 +206,8 @@ function RaceForm({ editMode, raceId }) {
       formData.snow,
       formData.weather,
       formData.homologation,
+      formData.altStart,
+      formData.altFinish,
       raceId,
       competitionId,
     ];
@@ -241,8 +245,8 @@ function RaceForm({ editMode, raceId }) {
       (competition_id, race_id, race_name, race_type, is_individual, is_team,
        is_training, is_seeding, women_separate, number_runs, venue, course_name,
        race_date, chief_of_race, tech_delegate, referee, asst_referee, temp_start,
-       temp_finish, snow, weather, homologation)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       temp_finish, snow, weather, homologation, start_altitude, finish_altitude)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       competitionId,
@@ -267,6 +271,8 @@ function RaceForm({ editMode, raceId }) {
       formData.snow,
       formData.weather,
       formData.homologation,
+      formData.altStart,
+      formData.altFinish,
     ];
     try {
       await window.api.insert(query, params);
@@ -289,6 +295,16 @@ function RaceForm({ editMode, raceId }) {
       newRace();
     }
   };
+
+  useEffect(() => {
+    fetchPeople()
+      .then((e) => {
+        if (editMode && raceId) {
+          fetchRaceDetails();
+        }
+      })
+      .catch((e) => console.error('Failed to fetch race:', e));
+  }, [editMode, raceId]);
 
   return (
     <>
@@ -478,9 +494,34 @@ function RaceForm({ editMode, raceId }) {
           </Grid>
           <Grid item xs={6}>
             <TextField
+              label="Start Altitude"
+              variant="outlined"
+              fullWidth
+              id="altStart"
+              name="altStart"
+              value={formData.altStart}
+              onChange={handleChange}
+              type="number"
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Finish Altitude"
+              variant="outlined"
+              fullWidth
+              id="altFinish"
+              name="altFinish"
+              value={formData.altFinish}
+              onChange={handleChange}
+              type="number"
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
               label="Homologation"
               variant="outlined"
               fullWidth
+              id="homologation"
               name="homologation"
               value={formData.homologation}
               onChange={handleChange}
@@ -493,6 +534,11 @@ function RaceForm({ editMode, raceId }) {
               id="chiefOfRace"
               name="chiefOfRace"
               onChange={handleAutocompleteChange}
+              value={
+                formData.chiefOfRace
+                  ? people.find((e) => e.id === formData.chiefOfRace)
+                  : null
+              }
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -502,7 +548,7 @@ function RaceForm({ editMode, raceId }) {
                   }}
                 />
               )}
-              isOptionEqualToValue={(option, value) => option.id === value}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
             />
           </Grid>
           <Grid item xs={1}>
@@ -518,6 +564,11 @@ function RaceForm({ editMode, raceId }) {
               id="techDelegate"
               name="techDelegate"
               onChange={handleAutocompleteChange}
+              value={
+                formData.techDelegate
+                  ? people.find((e) => e.id === formData.techDelegate)
+                  : null
+              }
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -527,7 +578,7 @@ function RaceForm({ editMode, raceId }) {
                   }}
                 />
               )}
-              isOptionEqualToValue={(option, value) => option.id === value}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
             />
           </Grid>
           <Grid item xs={1}>
@@ -543,6 +594,11 @@ function RaceForm({ editMode, raceId }) {
               id="referee"
               name="referee"
               onChange={handleAutocompleteChange}
+              value={
+                formData.referee
+                  ? people.find((e) => e.id === formData.referee)
+                  : null
+              }
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -552,7 +608,7 @@ function RaceForm({ editMode, raceId }) {
                   }}
                 />
               )}
-              isOptionEqualToValue={(option, value) => option.id === value}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
             />
           </Grid>
           <Grid item xs={1}>
@@ -568,16 +624,21 @@ function RaceForm({ editMode, raceId }) {
               id="asstReferee"
               name="asstReferee"
               onChange={handleAutocompleteChange}
+              value={
+                formData.asstReferee
+                  ? people.find((e) => e.id === formData.asstReferee)
+                  : null
+              }
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="AssistantReferee"
+                  label="Assistant Referee"
                   inputProps={{
                     ...params.inputProps,
                   }}
                 />
               )}
-              isOptionEqualToValue={(option, value) => option.id === value}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
             />
           </Grid>
           <Grid item xs={1}>
@@ -594,6 +655,14 @@ function RaceForm({ editMode, raceId }) {
               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
             >
               {editMode ? 'Update Race Details' : 'Save Race'}
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              className="text-white my-2 py-2 px-4 rounded shadow-lg w-full"
+              onClick={handleBack}
+            >
+              Back
             </Button>
           </Grid>
         </Grid>

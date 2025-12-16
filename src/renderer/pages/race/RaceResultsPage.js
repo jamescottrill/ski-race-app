@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Paper, Tab, Tabs, Button } from '@mui/material';
 import RaceRun from '../../components/RaceRun';
+import {RaceResultTwoRun} from '../../components/RaceResultTwoRun';
+import { RaceResultOneRun } from '../../components/RaceResult';
+import RaceResultSeed from '../../components/RaceResultSeed';
+import { getRaceDetails } from '../../utils/RaceDetails';
+import RaceTeamResultTwoRun from '../../components/RaceTeamResultTwoRun';
+import RaceTeamResultOneRun from '../../components/RaceTeamResult';
 
-function CustomTabPanel(props) {
-  const { value, index, raceId, competitionId, ...other } = props;
+function RaceResultTabPanel(props) {
+  const { value, index, raceId, competitionId, runs, isSeed } = props;
 
   return (
     <div
@@ -12,9 +18,35 @@ function CustomTabPanel(props) {
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
-      {...other}
     >
-      <RaceRun runId="1" raceId={raceId} competitionId={competitionId} />
+      {isSeed && (
+        <RaceResultSeed raceId={raceId} competitionId={competitionId} />
+      )}
+      {runs === 2 && !isSeed && (
+        <RaceResultTwoRun raceId={raceId} competitionId={competitionId} />
+      )}
+      {runs === 1 && !isSeed (
+        <RaceResultOneRun raceId={raceId} competitionId={competitionId} />
+      )}
+    </div>
+  );
+}
+
+function TeamResultTabPanel(props) {
+  const { value, index, raceId, competitionId, runs, isTeam } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+    >
+  {isTeam && runs === 2 && (
+    <RaceTeamResultTwoRun raceId={raceId} competitionId={competitionId} />
+  )}
+  {isTeam && runs === 1 && (
+    <RaceTeamResultOneRun raceId={raceId} competitionId={competitionId} />
+  )}
     </div>
   );
 }
@@ -22,8 +54,9 @@ function CustomTabPanel(props) {
 export default function RaceResultsPage() {
   const { competitionId, raceId } = useParams();
   const navigate = useNavigate();
-  const [value, setValue] = React.useState(1);
+  const [value, setValue] = React.useState('result');
   const [raceRuns, setRaceRuns] = React.useState([]);
+  const [raceDetails, setRaceDetails] = React.useState([]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -31,18 +64,25 @@ export default function RaceResultsPage() {
 
   const getNumberRuns = async () => {
     const numRunQuery = `
-    SELECT r.competition_id, r.race_id, run_id, run_number
+    SELECT r.competition_id, r.race_id, run_id, run_number, COALESCE(rr.is_complete, false) AS is_complete
     FROM race_run rr
     INNER JOIN races r
       ON r.race_id = rr.race_id
       AND r.competition_id = rr.competition_id
       AND rr.run_number <= r.number_runs
     WHERE rr.race_id = ? AND rr.competition_id = ?
+    ORDER BY rr.run_number
     `;
     const params = [raceId, competitionId];
     try {
-      const raceResults = await window.api.select(numRunQuery, params);
-      setRaceRuns(raceResults);
+      const numRuns = await window.api.select(numRunQuery, params);
+      setRaceRuns(numRuns);
+      const notCompleted = numRuns.filter((e) => {
+        return !e.is_complete;
+      });
+      if (notCompleted.length === 2) setValue(1);
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 2) setValue(2);
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 1) setValue(1);
     } catch (error) {
       console.error('Failed to fetch races:', error);
     }
@@ -50,7 +90,12 @@ export default function RaceResultsPage() {
 
   useEffect(() => {
     getNumberRuns();
-  }, []);
+    const getDetails = async () => {
+      const details = await getRaceDetails(raceId, competitionId)
+        setRaceDetails(details);
+    };
+    getDetails();
+  }, [raceId, competitionId]);
 
   return (
     <Container className="edit-race-page flex flex-col items-center justify-center w-full min-w-full min-h-screen ">
@@ -65,22 +110,29 @@ export default function RaceResultsPage() {
         >
           Results
         </Typography>
-        <Tabs
-          onChange={handleChange}
-          value={value}
-        >
-          {raceRuns.map((run) => (
-            <Tab label={`Run ${run.run_number}`} value={run.run_number} />
-          ))}
+        <Tabs onChange={handleChange} value={value}>
+ <Tab label="Results" value="result" />
+          {raceDetails.is_team &&(
+            <Tab label="Team Results" value="teamResult" />
+          )}
         </Tabs>
-        {raceRuns.map((run) => (
-          <CustomTabPanel
+        <RaceResultTabPanel
+          value={value}
+          index="result"
+          raceId={raceId}
+          competitionId={competitionId}
+          isSeed={raceDetails.is_seeding}
+          runs={raceRuns.length}
+        />
+        {raceDetails.is_team > 0 && (<TeamResultTabPanel
             value={value}
-            index={run.run_number}
+            index="teamResult"
             raceId={raceId}
-            competitionId={run.competitionId}
+            competitionId={competitionId}
+            runs={raceRuns.length}
+            isTeam={raceDetails.is_team}
           />
-        ))}
+        )}
       </Paper>
       <Button
         variant="contained"

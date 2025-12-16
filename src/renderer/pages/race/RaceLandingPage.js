@@ -25,6 +25,7 @@ export default function RaceLandingPage() {
       SELECT race_id AS id, race_name, race_type, is_team, race_date, venue, number_runs
       FROM races
       WHERE competition_id = ?
+      ORDER BY race_date
     `;
     const params = [competitionId];
 
@@ -36,17 +37,17 @@ export default function RaceLandingPage() {
     }
   };
 
-  const handleEditRace = (raceId) => {
-    navigate(`/competition/${competitionId}/race/${raceId}/edit`);
-  };
+  // const handleEditRace = (raceId) => {
+  //   navigate(`/competition/${competitionId}/race/${raceId}/edit`);
+  // };
 
   const handleViewRace = (raceId) => {
     navigate(`/competition/${competitionId}/race/${raceId}`);
   };
-  //
-  // const handleViewResults = (raceId) => {
-  //   navigate(`/competition/${competitionId}/race/${raceId}/results`);
-  // };
+
+  const handleViewResults = (raceId) => {
+    navigate(`/competition/${competitionId}/race/${raceId}/results`);
+  };
 
   const handleNewRace = () => {
     navigate(`/competition/${competitionId}/race/new`);
@@ -84,8 +85,7 @@ export default function RaceLandingPage() {
                 <TableCell>Date</TableCell>
                 <TableCell>Venue</TableCell>
                 <TableCell>Number of Runs</TableCell>
-                <TableCell>Actions</TableCell>{' '}
-                {/* Actions column for buttons */}
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -109,10 +109,10 @@ export default function RaceLandingPage() {
                     <Button
                       variant="outlined"
                       color="secondary"
-                      onClick={() => handleEditRace(race.id)}
+                      onClick={() => handleViewResults(race.id)}
                       className="mr-2"
                     >
-                      Edit
+                      Results
                     </Button>
 
                   </TableCell>

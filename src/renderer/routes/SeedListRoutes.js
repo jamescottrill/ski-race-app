@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
-import SeedListPage from '../pages/seedList/GenerateSeedList';
-import RaceLandingPage from '../pages/race/RaceLandingPage';
+import GenerateSeedListNew from '../pages/seedList/GenerateSeedListNew';
+import RaceLandingPageNew from '../pages/race/RaceLandingPageNew';
 import Layout from '../components/Layout';
 
 function RaceRoutes() {
@@ -11,7 +11,7 @@ function RaceRoutes() {
         path="/competition/:competitionId/seed-list"
         element={
           <Layout>
-            <RaceLandingPage />
+            <RaceLandingPageNew />
           </Layout>
         }
       />
@@ -19,7 +19,7 @@ function RaceRoutes() {
         path="/competition/:competitionId/seed-list/generate"
         element={
           <Layout>
-            <SeedListPage />
+            <GenerateSeedListNew />
           </Layout>
         }
       />
@@ -27,7 +27,7 @@ function RaceRoutes() {
         path="/competition/:competitionId/race/:raceId/edit"
         element={
           <Layout>
-            <RaceLandingPage />
+            <RaceLandingPageNew />
           </Layout>
         }
       />

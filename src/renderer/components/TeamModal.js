@@ -31,6 +31,14 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
     });
   };
 
+  const handleNameChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const id = uuid4();
@@ -104,7 +112,7 @@ export default function TeamModal({ open, onClose, onSave, onError }) {
               label="Team Name"
               name="newTeamName"
               value={formData.newTeamName}
-              onChange={handleChange}
+              onChange={handleNameChange}
               fullWidth
               required
             />

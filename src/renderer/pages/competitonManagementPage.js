@@ -38,7 +38,7 @@ function CompetitionManagementPage() {
   };
 
   const handleViewRaceResults = () => {
-    navigate(`/competition/${competitionId}/result`);
+    navigate(`/competition/${competitionId}/results`);
   };
 
   const handleGenerateSeedList = () => {
@@ -58,14 +58,14 @@ function CompetitionManagementPage() {
         >
           {competitionName}
         </Typography>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Button
             variant="contained"
             color="primary"
             onClick={handleManageCompetitors}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            Manage Competitors
+            Competitors
           </Button>
 
           <Button
@@ -74,7 +74,7 @@ function CompetitionManagementPage() {
             onClick={handleManageRaces}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            Manage Races
+            Races
           </Button>
 
           <Button
@@ -83,7 +83,7 @@ function CompetitionManagementPage() {
             onClick={handleViewRaceResults}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            View Race Results
+            Results
           </Button>
 
           <Button
@@ -92,14 +92,14 @@ function CompetitionManagementPage() {
             onClick={handleGenerateSeedList}
             className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
           >
-            Generate Seed List
+            Seed List
           </Button>
         </div>
         <Button
           variant="contained"
-          color="primary"
+          color="secondary"
           onClick={handleChangeCompetition}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
+          className="text-white py-4 px-4 rounded shadow-lg mb-4 w-full"
         >
           Change Competition
         </Button>

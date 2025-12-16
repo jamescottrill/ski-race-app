@@ -5,9 +5,6 @@ import {
   Typography,
   Paper,
   FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
   Autocomplete,
 } from '@mui/material';
@@ -32,7 +29,6 @@ function RegisterCompetitorPage() {
 
     try {
       const result = await window.api.select(query, params);
-      console.log(result);
       setCompetitors(result);
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
@@ -41,11 +37,9 @@ function RegisterCompetitorPage() {
 
   useEffect(() => {
     fetchCompetitors();
-    console.log(competitors);
   }, []);
 
   const handleAutocompleteChange = (event, newValue) => {
-    console.log(newValue);
     setSelectedCompetitorId(newValue ? newValue.id : '');
   };
 
@@ -82,16 +76,18 @@ function RegisterCompetitorPage() {
                 }}
               />
             )}
-            isOptionEqualToValue={(option, value) => option.id === value}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
           />
         </FormControl>
-        {(selectedCompetitorId && (
+        {selectedCompetitorId && (
           <CompetitorForm
-            editMode
             competitorId={selectedCompetitorId}
-            existingCompetitor
+            competitionId={competitionId}
+            existingCompetitor={false}
+            editMode={false}
           />
-        )) || <CompetitorForm editMode={false} />}
+        )}
+        {!selectedCompetitorId && ( <CompetitorForm editMode={false} competitionId={competitionId} existingCompetitor={false} />)}
         <Button
           variant="contained"
           color="secondary"

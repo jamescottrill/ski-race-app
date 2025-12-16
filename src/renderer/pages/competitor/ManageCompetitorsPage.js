@@ -11,6 +11,10 @@ function ManageCompetitorsPage() {
     navigate(`/competition/${competitionId}/competitor/new`);
   };
 
+  const handleBulkUpload = () => {
+    navigate(`/competition/${competitionId}/competitor/bulk`);
+  };
+
   const handleEditCompetitor = () => {
     navigate(`/competition/${competitionId}/competitor/edit`);
   };
@@ -19,17 +23,13 @@ function ManageCompetitorsPage() {
     navigate(`/competition/${competitionId}/competitor/list`);
   };
 
-  const handleManageTeams = () => {
-    navigate(`/competition/${competitionId}/team/edit`);
-  };
-
   const handleViewTeams = () => {
     navigate(`/competition/${competitionId}/team/list`);
   };
   const handleBack = useBackButton();
 
   return (
-    <Container className="competitor-management-page flex flex-col items-center justify-center min-h-screen  w-full max-w-full">
+    <Container className="competitor-management-page flex flex-col items-center justify-center min-h-screen w-full max-w-full">
       <Paper elevation={3} className="p-8 rounded-lg shadow-lg w-full max-w-lg">
         <Typography
           variant="h4"
@@ -55,6 +55,17 @@ function ManageCompetitorsPage() {
             <Button
               variant="contained"
               color="primary"
+              onClick={handleBulkUpload}
+              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
+            >
+              Bulk Upload
+            </Button>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Button
+              variant="contained"
+              color="primary"
               onClick={handleEditCompetitor}
               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
             >
@@ -70,17 +81,6 @@ function ManageCompetitorsPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
             >
               View Competitors
-            </Button>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleManageTeams}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-lg w-full"
-            >
-              Manage Teams
             </Button>
           </Grid>
 

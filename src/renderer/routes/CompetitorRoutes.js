@@ -1,10 +1,12 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
-import ManageCompetitorsPage from '../pages/competitor/ManageCompetitorsPage';
-import EditCompetitorsPage from '../pages/competitor/EditCompetitorsPage';
-import EditCompetitorPage from '../pages/competitor/EditCompetitorPage';
-import RegisterCompetitorPage from '../pages/competitor/RegisterCompetitorPage';
-import ViewCompetitorsPage from '../pages/competitor/ViewCompetitorsPage';
+import ManageCompetitorsPageNew from '../pages/competitor/ManageCompetitorsPageNew';
+import EditCompetitorsPageNew from '../pages/competitor/EditCompetitorsPageNew';
+import EditCompetitorPageNew from '../pages/competitor/EditCompetitorPageNew';
+import RegisterCompetitorPageNew from '../pages/competitor/RegisterCompetitorPageNew';
+import ViewCompetitorsPageNew from '../pages/competitor/ViewCompetitorsPageNew';
+import UploadCompetitorsPageNew from '../pages/competitor/UploadCompetitorsPageNew';
+import TeamListPageNew from '../pages/team/TeamListPageNew';
 import Layout from '../components/Layout';
 
 function CompetitorRoutes() {
@@ -14,24 +16,32 @@ function CompetitorRoutes() {
         path="competition/:competitionId/competitor/manage"
         element={
         <Layout>
-          <ManageCompetitorsPage />
+          <ManageCompetitorsPageNew />
         </Layout>}
       />
       <Route
         path="competition/:competitionId/competitor/edit"
-        element={<Layout><EditCompetitorsPage /></Layout>}
+        element={<Layout><EditCompetitorsPageNew /></Layout>}
       />
       <Route
         path="competition/:competitionId/competitor/:competitorId/edit"
-        element={<Layout><EditCompetitorPage /></Layout>}
+        element={<Layout><EditCompetitorPageNew /></Layout>}
       />
       <Route
         path="competition/:competitionId/competitor/new"
-        element={<Layout><RegisterCompetitorPage /></Layout>}
+        element={<Layout><RegisterCompetitorPageNew /></Layout>}
       />
       <Route
         path="competition/:competitionId/competitor/list"
-        element={<Layout><ViewCompetitorsPage /></Layout>}
+        element={<Layout><ViewCompetitorsPageNew /></Layout>}
+      />
+      <Route
+        path="competition/:competitionId/competitor/bulk"
+        element={<Layout><UploadCompetitorsPageNew /></Layout>}
+      />
+      <Route
+        path="competition/:competitionId/team/list"
+        element={<Layout><TeamListPageNew /></Layout>}
       />
     </>
   );

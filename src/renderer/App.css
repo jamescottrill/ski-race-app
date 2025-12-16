@@ -1,67 +1,150 @@
 /*
- * @NOTE: Prepend a `~` to css file paths that are in your node_modules
- *        See https://github.com/webpack-contrib/sass-loader#imports
+ * British Army Ski Race Application
+ * Design System Styles
  */
-/*body {*/
-/*  position: relative;*/
-/*  color: white;*/
-/*  !*height: 100vh;*!*/
-/*  !*background: linear-gradient(*!*/
-/*  !*  200.96deg,*!*/
-/*  !*  #fedc2a -29.09%,*!*/
-/*  !*  #dd5789 51.77%,*!*/
-/*  !*  #7a2c9e 129.35%*!*/
-/*  !*);*!*/
 
-/*  font-family: sans-serif;*/
-/*  !*overflow-y: hidden;*!*/
-/*  !*display: flex;*!*/
-/*  !*justify-content: center;*!*/
-/*  !*align-items: center;*!*/
-/*}*/
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
-.bg-image {
-  background-image: url("assets/img/background.jpg");
-  background-size: cover;
-}
-/*button {*/
-/*  background-color: white;*/
-/*  padding: 10px 20px;*/
-/*  border-radius: 10px;*/
-/*  border: none;*/
-/*  appearance: none;*/
-/*  font-size: 1.3rem;*/
-/*  box-shadow: 0px 8px 28px -6px rgba(24, 39, 75, 0.12),*/
-/*    0px 18px 88px -4px rgba(24, 39, 75, 0.14);*/
-/*  transition: all ease-in 0.1s;*/
-/*  cursor: pointer;*/
-/*  opacity: 0.9;*/
-/*}*/
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-button:hover {
-  transform: scale(1.01);
-  /*opacity: 1;*/
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-neutral-900 font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-neutral-900;
+  }
 }
 
-/*li {*/
-/*  list-style: none;*/
-/*}*/
+/* Custom scrollbar styles */
+@layer utilities {
+  /* Scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.neutral.400') transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-neutral-400 rounded-full;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-500;
+  }
+}
 
-/*a {*/
-/*  text-decoration: none;*/
-/*  height: fit-content;*/
-/*  width: fit-content;*/
-/*  margin: 10px;*/
-/*}*/
+/* Alpine background effect */
+.bg-alpine {
+  background-image: 
+    linear-gradient(
+      135deg, 
+      theme('colors.alpine.ice') 0%, 
+      theme('colors.neutral.50') 50%,
+      theme('colors.alpine.white') 100%
+    );
+}
 
-/*a:hover {*/
-/*  opacity: 1;*/
-/*  text-decoration: none;*/
-/*}*/
+/* Competition medal colors */
+.text-gold {
+  color: theme('colors.gold');
+}
 
-/*.Hello {*/
-/*  display: flex;*/
-/*  justify-content: center;*/
-/*  align-items: center;*/
-/*  margin: 20px 0;*/
-/*}*/
+.text-silver {
+  color: theme('colors.silver');
+}
+
+.text-bronze {
+  color: theme('colors.bronze');
+}
+
+.bg-gold {
+  background-color: theme('colors.gold');
+}
+
+.bg-silver {
+  background-color: theme('colors.silver');
+}
+
+.bg-bronze {
+  background-color: theme('colors.bronze');
+}
+
+/* Status indicators */
+.status-finished {
+  @apply text-success;
+}
+
+.status-dns {
+  @apply text-warning;
+}
+
+.status-dnf {
+  @apply text-danger;
+}
+
+.status-dsq {
+  @apply text-danger font-semibold;
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    @apply bg-white;
+  }
+}

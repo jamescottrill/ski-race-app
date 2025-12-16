@@ -26,6 +26,7 @@ function EditCompetitorPage() {
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id
       WHERE cc.competition_id = ?
+      ORDER BY first_name
     `;
     const params = [competitionId];
 
@@ -87,7 +88,7 @@ function EditCompetitorPage() {
           </Select>
         </FormControl>
         {selectedCompetitorId && (
-          <CompetitorForm editMode competitorId={selectedCompetitorId} />
+          <CompetitorForm editMode competitorId={selectedCompetitorId} competitionId={competitionId} />
         )}
         <Button
           variant="contained"

@@ -38,7 +38,7 @@ export default function PersonModal({ open, onClose, onSave }) {
     const id = uuid4();
 
     const query = `
-      INSERT INTO people (id, first_name, last_name, title, dob, country, service_number, gender)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
