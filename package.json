@@ -209,7 +209,7 @@
       "package.json"
     ],
     "mac": {
-      "icon": "assets/icon.ico",
+      "icon": "assets/icons.icns",
       "sign": ".erb/scripts/notarize.js",
       "notarize": false,
       "target": {
@@ -240,6 +240,7 @@
       ]
     },
     "win": {
+      "icon": "assets/icon.ico",
       "target": [
         "nsis"
       ]
