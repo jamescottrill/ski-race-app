@@ -144,11 +144,13 @@ class Database {
         CREATE TABLE IF NOT EXISTS competition_team_members (
           competition_id TEXT,
           team_id TEXT,
+          race_id TEXT,
           racer_id TEXT,
-          PRIMARY KEY (competition_id, team_id, racer_id),
+          PRIMARY KEY (competition_id, team_id, race_id, racer_id),
           FOREIGN KEY (competition_id) REFERENCES competitions(id),
           FOREIGN KEY (racer_id) REFERENCES people(id),
-          FOREIGN KEY (team_id) REFERENCES competition_team(team_id)
+          FOREIGN KEY (team_id) REFERENCES competition_team(team_id),
+          FOREIGN KEY (race_id) REFERENCES races(race_id)
           )
       `,
       `

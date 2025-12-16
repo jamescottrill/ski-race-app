@@ -103,13 +103,6 @@ export default function TeamListPageNew() {
       )
     },
     {
-      header: 'Notes',
-      accessorKey: 'notes',
-      cell: ({ row }) => (
-        <span className="text-sm text-neutral-600">{row.original.notes || '-'}</span>
-      )
-    },
-    {
       header: 'Actions',
       id: 'actions',
       cell: ({ row }) => (

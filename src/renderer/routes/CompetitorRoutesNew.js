@@ -7,6 +7,9 @@ import RegisterCompetitorPageNew from '../pages/competitor/RegisterCompetitorPag
 import ViewCompetitorsPageNew from '../pages/competitor/ViewCompetitorsPageNew';
 import UploadCompetitorsPageNew from '../pages/competitor/UploadCompetitorsPageNew';
 import TeamListPageNew from '../pages/team/TeamListPageNew';
+import CreateTeamPageNew from '../pages/team/CreateTeamPageNew';
+import EditTeamPageNew from '../pages/team/EditTeamPageNew';
+import TeamMembersPageNew from '../pages/team/TeamMembersPageNew';
 import LayoutNew from '../components/LayoutNew';
 
 function CompetitorRoutesNew() {
@@ -42,6 +45,18 @@ function CompetitorRoutesNew() {
       <Route
         path="competition/:competitionId/team/list"
         element={<LayoutNew><TeamListPageNew /></LayoutNew>}
+      />
+      <Route
+        path="competition/:competitionId/team/new"
+        element={<LayoutNew><CreateTeamPageNew /></LayoutNew>}
+      />
+      <Route
+        path="competition/:competitionId/team/:teamId/edit"
+        element={<LayoutNew><EditTeamPageNew /></LayoutNew>}
+      />
+      <Route
+        path="competition/:competitionId/team/:teamId/members"
+        element={<LayoutNew><TeamMembersPageNew /></LayoutNew>}
       />
     </>
   );
