@@ -69,7 +69,6 @@ export default function IndividualResultsNew() {
             initialRaces.map((e) => e.id),
           );
         }
-        console.log(data);
         data = data.filter((e) => {
           for (const race of initialRaces) {
             if (e[race.id] === null) {

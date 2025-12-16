@@ -31,7 +31,7 @@ export default function TeamResults() {
   const handleBack = useBackButton();
 
   const seedListPdf = () => {
-    generatePDF(results, races);
+    generatePDF(results, races, 'Team Championship Results');
   };
 
   const completedRaces = async () => {

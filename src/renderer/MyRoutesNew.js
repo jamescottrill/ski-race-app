@@ -21,7 +21,6 @@ export default function MyRoutesNew() {
           </LayoutNew>
         }
       />
-      {/* Temporarily keeping old routes but wrapped in new layout */}
       {CompetitorRoutesNew()}
       {RaceRoutesNew()}
       {SeedListRoutesNew()}

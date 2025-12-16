@@ -11,12 +11,28 @@ const calculateAgeCategory = (birthYear) => {
   };
 };
 
-const competitorExists = async (serviceNumber, firstName, LastName) => {
-  const query = `SELECT COUNT(*) AS count FROM people WHERE service_number = ? AND first_name = ? AND last_name = ? `;
-  const params = [serviceNumber, firstName, LastName];
+const competitorExists = async (serviceNumber, competitionId) => {
+  const query = `SELECT cc.racer_id AS id FROM competition_competitor cc
+          INNER JOIN people p ON p.id = cc.racer_id
+          WHERE p.service_number = ? AND cc.competition_id = ?`;
+  const params = [serviceNumber, competitionId];
   try {
     const result = await window.api.select(query, params);
-    return result[0].count > 0;
+    if (result.length > 0) return [true, result[0].id];
+    return [false, null];
+  } catch (error) {
+    console.error('Failed to check if competitor exists:', error);
+    throw new Error('Database error checking competitor existence');
+  }
+};
+
+const personExists = async (serviceNumber) => {
+  const query = `SELECT id FROM people WHERE service_number = ? `;
+  const params = [serviceNumber];
+  try {
+    const result = await window.api.select(query, params);
+    if (result.length > 0) return [true, result[0].id];
+    return [false, null];
   } catch (error) {
     console.error('Failed to check if competitor exists:', error);
     throw new Error('Database error checking competitor existence');
@@ -56,8 +72,9 @@ const updateCompetitor = async (
       query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
-          is_senior, is_veteran, is_reserve, is_female, title, arrival_corps_seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          is_senior, is_veteran, is_reserve, is_female, title, arrival_corps_seed,
+         regiment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
       params2 = [
         competitionId,
@@ -70,7 +87,9 @@ const updateCompetitor = async (
         formData.isFemale,
         formData.title,
         formData.arrivalSeed || 2000,
+        formData.regiment,
       ];
+      console.log(params2);
     } else {
       query2 = `
           UPDATE competition_competitor
@@ -82,7 +101,8 @@ const updateCompetitor = async (
               is_veteran   = ?,
               is_reserve   = ?,
               is_female    = ?,
-              title        = ?
+              title        = ?,
+              regiment     = ?
           WHERE competition_id = ?
             AND racer_id = ?
         `;
@@ -94,12 +114,12 @@ const updateCompetitor = async (
         formData.isVeteran || false,
         formData.isReserve || false,
         formData.isFemale || false,
+        formData.title,
+        formData.regiment,
         competitionId,
         competitorId,
-        formData.title,
       ];
     }
-
     const result2 = await window.api.insert(query2, params2);
     if (!result2.success) {
       throw new Error('Failed to update competitor: ' + result2.error);
@@ -155,8 +175,8 @@ const createCompetitor = async (formData, competitionId) => {
     const query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
     const params2 = [
       competitionId,
@@ -168,6 +188,8 @@ const createCompetitor = async (formData, competitionId) => {
       formData.isReserve,
       formData.isFemale,
       formData.title,
+      formData.regiment,
+      formData.arrivalSeed || 2000,
     ];
 
     const result2 = await window.api.insert(query2, params2);
@@ -216,4 +238,5 @@ export {
   createCompetitor,
   competitorExists,
   calculateCategory,
+  personExists
 };

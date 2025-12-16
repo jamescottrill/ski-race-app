@@ -4,15 +4,15 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 
 // Forms
 export { TextField } from './components/forms/TextField';
-export { 
-  Select, 
-  SelectGroup, 
-  SelectValue, 
-  SelectTrigger, 
-  SelectContent, 
-  SelectLabel, 
-  SelectItem, 
-  SelectSeparator 
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator
 } from './components/forms/Select';
 export { SimpleSelect } from './components/forms/SimpleSelect';
 export { SearchableSelect } from './components/forms/SearchableSelect';

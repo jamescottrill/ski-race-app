@@ -29,10 +29,10 @@ export default function App() {
     <>
       <Router>
         <Routes>
-          {useNewUI ? MyRoutesNew() : MyRoutes()}
+          {MyRoutesNew()}
         </Routes>
       </Router>
-      {useNewUI && <Toaster position="bottom-right" />}
+      <Toaster position="bottom-right" />
     </>
   );
 }

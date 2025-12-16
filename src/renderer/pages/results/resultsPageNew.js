@@ -79,14 +79,21 @@ function ResultsPageNew() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate(`/competition/${competitionId}/results/individual`)}
+              onClick={() =>
+                navigate(`/competition/${competitionId}/results/individual`)
+              }
               leftIcon={<User className="w-4 h-4" />}
             >
               Overall Standings
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(`/competition/${competitionId}/results/team`)}
+              onClick={() => {
+                console.log('Called');
+                console.log(`/competition/${competitionId}/results/team`);
+                navigate(`/competition/${competitionId}/results/team`);
+              }
+              }
               leftIcon={<Users className="w-4 h-4" />}
             >
               Team Standings

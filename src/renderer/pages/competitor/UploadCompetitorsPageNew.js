@@ -7,18 +7,27 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
-  Download
+  Download,
 } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
   Card,
   CardContent,
-  Button
+  Button,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { createCompetitor, competitorExists, updateCompetitor } from '../../utils/CompetitorManagement';
-import { handleDatabaseError, showSuccess, showWarning } from '../../utils/ErrorHandler';
+import {
+  createCompetitor,
+  competitorExists,
+  updateCompetitor,
+  personExists,
+} from '../../utils/CompetitorManagement';
+import {
+  handleDatabaseError,
+  showSuccess,
+  showWarning,
+} from '../../utils/ErrorHandler';
 
 export default function UploadCompetitorsPageNew() {
   const { competitionId } = useParams();
@@ -66,7 +75,6 @@ export default function UploadCompetitorsPageNew() {
   };
 
   const handleDownloadSample = () => {
-    // Create sample CSV data
     const sampleData = [
       {
         firstName: 'John',
@@ -79,6 +87,7 @@ export default function UploadCompetitorsPageNew() {
         title: 'Capt',
         novice: 'Y',
         reserve: 'N',
+        arrivalSeed: '179',
       },
       {
         firstName: 'Jane',
@@ -91,6 +100,7 @@ export default function UploadCompetitorsPageNew() {
         title: 'Lt',
         novice: 'N',
         reserve: 'N',
+        arrivalSeed: '320',
       },
       {
         firstName: 'Robert',
@@ -100,16 +110,14 @@ export default function UploadCompetitorsPageNew() {
         serviceNumber: '11223344',
         regiment: 'Honourable Artillery Company',
         country: 'GBR',
-        title: 'L/Sgt',
+        title: 'LSgt',
         novice: 'N',
         reserve: 'Y',
+        arrivalSeed: '2',
       },
     ];
 
-    // Convert to CSV
     const csv = Papa.unparse(sampleData);
-
-    // Create blob and download
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -146,35 +154,46 @@ export default function UploadCompetitorsPageNew() {
           firstName: competitor.firstName || competitor['First Name'] || '',
           lastName: competitor.lastName || competitor['Last Name'] || '',
           title: competitor.title || competitor.Title || '',
-          birthYear: competitor.birthYear || competitor['Birth Year'] || competitor.yearOfBirth || '',
+          birthYear:
+            competitor.birthYear ||
+            competitor['Birth Year'] ||
+            competitor.yearOfBirth ||
+            '',
           country: competitor.country || competitor.Country || 'GBR',
           serviceNumber: competitor.serviceNumber || competitor['Service Number'] || '',
           gender: (competitor.gender || competitor.Gender || 'M').toUpperCase(),
-          regiment: competitor.regiment || competitor.Regiment || competitor.unit || competitor.Unit || '',
+          regiment:
+            competitor.regiment ||
+            competitor.Regiment ||
+            competitor.unit ||
+            competitor.Unit ||
+            '',
           arrivalSeed: competitor.arrivalSeed || competitor['Arrival Seed'] || 2000,
           isNovice: competitor.novice === 'Y' || competitor.Novice === 'Y',
           isReserve: competitor.reserve === 'Y' || competitor.Reserve === 'Y',
-          isFemale: (competitor.gender || competitor.Gender || 'M').toUpperCase() === 'F',
+          isFemale:
+            (competitor.gender || competitor.Gender || 'M').toUpperCase() ===
+            'F',
         };
 
-        // Validate required fields
         if (!formData.firstName || !formData.lastName) {
           console.warn('Skipping competitor with missing name:', competitor);
+          errorCount++;
+          continue;
+        }
+        if (!formData.serviceNumber) {
+          console.warn('Skipping competitor with missing Service Number:', competitor);
           errorCount++;
           continue;
         }
 
         try {
           // Check if competitor exists
-          const exists = await competitorExists(
-            formData.serviceNumber,
-            formData.firstName,
-            formData.lastName
-          );
-
-          if (exists) {
+          const [cExists] = await competitorExists(formData.serviceNumber, competitionId);
+          const [pExists, personId] = await personExists(formData.serviceNumber);
+          if (pExists) {
             // Update existing competitor
-            await updateCompetitor(formData, null, exists, competitionId);
+            await updateCompetitor(formData, personId, cExists, competitionId);
             updateCount++;
           } else {
             // Create new competitor
@@ -220,7 +239,11 @@ export default function UploadCompetitorsPageNew() {
         title="Upload Competitors"
         subtitle="Import competitors from CSV file"
         actions={
-          <Button variant="outline" onClick={handleBack} leftIcon={<ArrowLeft className="w-4 h-4" />}>
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+          >
             Back
           </Button>
         }
@@ -244,7 +267,7 @@ export default function UploadCompetitorsPageNew() {
               />
               <label
                 htmlFor="file-upload"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg bg-primary-700 hover:bg-primary-500 cursor-pointer transition-colors"
               >
                 <FileText className="w-4 h-4" />
                 Choose File

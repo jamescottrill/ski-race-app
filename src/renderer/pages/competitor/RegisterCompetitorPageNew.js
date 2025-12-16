@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  UserPlus, 
+import {
+  UserPlus,
   ArrowLeft,
   Search,
   Save,
@@ -10,14 +10,15 @@ import {
   Hash,
   Users
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
   Button,
   TextField,
   SimpleSelect,
+  SearchableSelect,
   Checkbox,
   cn
 } from '../../design-system';
@@ -40,7 +41,7 @@ function RegisterCompetitorPageNew() {
     serviceNumber: '',
     gender: 'M',
     team: '',
-    arrivalSeed: 2000,
+    // arrivalSeed: 2000,
     armySeed: '',
     isNovice: false,
     isJunior: false,
@@ -105,7 +106,7 @@ function RegisterCompetitorPageNew() {
 
   const calculateAgeCategory = (birthYear) => {
     const currentYear = new Date().getFullYear();
-    const age = currentYear - parseInt(birthYear);
+    const age = currentYear - parseInt(birthYear, 10);
 
     return {
       isJunior: age < 20,
@@ -140,9 +141,9 @@ function RegisterCompetitorPageNew() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let racerId;
-    
+
     if (selectedCompetitorId) {
       racerId = selectedCompetitorId;
     } else {
@@ -161,7 +162,7 @@ function RegisterCompetitorPageNew() {
         formData.serviceNumber,
         formData.gender,
       ];
-      
+
       try {
         await window.api.insert(personQuery, personParams);
       } catch (error) {
@@ -170,30 +171,37 @@ function RegisterCompetitorPageNew() {
       }
     }
 
+    // Calculate age category from birth year
+    const { isJunior, isSenior, isVeteran } = formData.birthYear
+      ? calculateAgeCategory(formData.birthYear)
+      : { isJunior: false, isSenior: true, isVeteran: false };
+
     // Register competitor
     const competitorQuery = `
       INSERT INTO competition_competitor (
-        competition_id, racer_id, arrival_seed, army_seed, is_novice, 
-        is_junior, is_senior, is_veteran, is_reserve, regiment, title
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        competition_id, racer_id, arrival_corps_seed, arrival_army_seed,
+        is_novice, is_junior, is_senior, is_veteran, is_reserve, is_female,
+        regiment, title
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const competitorParams = [
       competitionId,
       racerId,
-      formData.arrivalSeed,
+      formData.arrivalSeed || null,
       formData.armySeed || null,
       formData.isNovice ? 1 : 0,
-      formData.isJunior ? 1 : 0,
-      formData.isSenior ? 1 : 0,
-      formData.isVeteran ? 1 : 0,
+      isJunior ? 1 : 0,
+      isSenior ? 1 : 0,
+      isVeteran ? 1 : 0,
       formData.isReserve ? 1 : 0,
+      formData.gender === 'F' ? 1 : 0,
       formData.regiment,
       formData.title,
     ];
 
     try {
       await window.api.insert(competitorQuery, competitorParams);
-      
+
       // Add to team if selected
       if (formData.team) {
         const teamQuery = `
@@ -202,7 +210,7 @@ function RegisterCompetitorPageNew() {
         `;
         await window.api.insert(teamQuery, [competitionId, formData.team, racerId]);
       }
-      
+
       navigate(-1);
     } catch (error) {
       console.error('Failed to register competitor:', error);
@@ -232,20 +240,23 @@ function RegisterCompetitorPageNew() {
               <form onSubmit={handleSubmit}>
                 {/* Existing Competitor Selection */}
                 <div className="mb-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
-                  <SimpleSelect
-                    label="Select Existing Competitor (Optional)"
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Select Existing Competitor (Optional)
+                  </label>
+                  <SearchableSelect
                     value={selectedCompetitorId}
-                    onChange={(e) => setSelectedCompetitorId(e.target.value)}
-                    placeholder="Search for existing competitor..."
-                  >
-                    <option value="">Create New Competitor</option>
-                    {existingCompetitors.map((competitor) => (
-                      <option key={competitor.id} value={competitor.id}>
-                        {competitor.first_name} {competitor.last_name} 
-                        {competitor.service_number && ` - ${competitor.service_number}`}
-                      </option>
-                    ))}
-                  </SimpleSelect>
+                    onChange={(value) => setSelectedCompetitorId(value)}
+                    placeholder="Create New Competitor"
+                    searchPlaceholder="Search for competitor..."
+                    emptyText="No competitors found."
+                    options={[
+                      { value: '', label: 'Create New Competitor' },
+                      ...existingCompetitors.map((competitor) => ({
+                        value: competitor.id,
+                        label: `${competitor.first_name} ${competitor.last_name}${competitor.service_number ? ` - ${competitor.service_number}` : ''}`,
+                      })),
+                    ]}
+                  />
                 </div>
 
                 {/* Personal Details */}
@@ -296,14 +307,12 @@ function RegisterCompetitorPageNew() {
                         min="1900"
                         max={new Date().getFullYear()}
                         required
-                        disabled={!!selectedCompetitorId}
                       />
                       <TextField
                         label="Service Number"
                         name="serviceNumber"
                         value={formData.serviceNumber}
                         onChange={handleInputChange}
-                        disabled={!!selectedCompetitorId}
                       />
                     </div>
                   </div>

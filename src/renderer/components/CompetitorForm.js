@@ -186,7 +186,7 @@ function CompetitorForm({
 
     // If the birth year changes, recalculate age categories
     if (name === 'birthYear') {
-      const { isJunior, isSenior, isVeteran} = calculateAgeCategory(value);
+      const { isJunior, isSenior, isVeteran } = calculateAgeCategory(value);
       updatedFormData.isJunior = isJunior;
       updatedFormData.isSenior = isSenior;
       updatedFormData.isVeteran = isVeteran;
