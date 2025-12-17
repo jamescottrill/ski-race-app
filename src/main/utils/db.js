@@ -379,4 +379,97 @@ class Database {
   }
 }
 
-module.exports = { Database, AppPreferences };
+function exportDatabase() {
+  const currentDbPath = preferences.databasePath;
+  if (!currentDbPath) {
+    dialog.showErrorBox('Export Error', 'No database is currently open.');
+    return null;
+  }
+
+  const result = dialog.showSaveDialogSync({
+    title: 'Export Database',
+    defaultPath: `ski-race-backup-${new Date().toISOString().split('T')[0]}.db`,
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+  });
+
+  if (result) {
+    try {
+      fs.copyFileSync(currentDbPath, result);
+      dialog.showMessageBoxSync({
+        type: 'info',
+        title: 'Export Successful',
+        message: `Database exported to:\n${result}`,
+      });
+      return result;
+    } catch (error) {
+      dialog.showErrorBox('Export Error', `Failed to export database: ${error.message}`);
+      return null;
+    }
+  }
+  return null;
+}
+
+function importDatabase() {
+  const result = dialog.showOpenDialogSync({
+    title: 'Import Database',
+    properties: ['openFile'],
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+  });
+
+  if (result && result.length > 0) {
+    const importPath = result[0];
+
+    // Verify it's a valid SQLite database
+    try {
+      const testDb = new sqlite3.Database(importPath, sqlite3.OPEN_READONLY, (err) => {
+        if (err) {
+          throw err;
+        }
+      });
+      testDb.close();
+    } catch (error) {
+      dialog.showErrorBox('Import Error', 'The selected file is not a valid SQLite database.');
+      return null;
+    }
+
+    // Update preferences to use the imported database
+    preferences.databasePath = importPath;
+    AppPreferences.savePreferences(preferences);
+
+    dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Import Successful',
+      message: `Database imported. The application will now restart to use the new database.`,
+    });
+
+    // Return the path - the app should be restarted by the caller
+    return importPath;
+  }
+  return null;
+}
+
+function switchDatabase() {
+  const result = selectDatabaseFile();
+  if (result) {
+    dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Database Changed',
+      message: `Database switched. The application will now restart to use the new database.`,
+    });
+    return result;
+  }
+  return null;
+}
+
+function getCurrentDatabasePath() {
+  return preferences.databasePath || null;
+}
+
+module.exports = {
+  Database,
+  AppPreferences,
+  exportDatabase,
+  importDatabase,
+  switchDatabase,
+  getCurrentDatabasePath,
+};

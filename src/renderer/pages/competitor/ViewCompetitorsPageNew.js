@@ -108,29 +108,6 @@ export default function ViewCompetitorsPageNew() {
       },
     },
     {
-      header: 'Status',
-      accessorKey: 'status',
-      cell: ({ row }) => {
-        const statuses = [];
-        if (row.original.is_reserve) statuses.push('Reserve');
-        if (row.original.is_novice) statuses.push('Novice');
-
-        return (
-          <div className="flex gap-1">
-            {statuses.length > 0 ? (
-              statuses.map(status => (
-                <span key={status} className="px-2 py-1 bg-neutral-100 rounded-md text-xs">
-                  {status}
-                </span>
-              ))
-            ) : (
-              <span className="text-neutral-400 text-sm">Active</span>
-            )}
-          </div>
-        );
-      },
-    },
-    {
       header: 'Actions',
       accessorKey: 'actions',
       enableSorting: false,

@@ -281,6 +281,24 @@ function RegisterCompetitorPageNew() {
                         disabled={!!selectedCompetitorId}
                       />
                       <TextField
+                        label="Birth Year"
+                        name="birthYear"
+                        type="number"
+                        value={formData.birthYear}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 1995"
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        required
+                      />
+                      <TextField
+                        label="Service Number"
+                        name="serviceNumber"
+                        value={formData.serviceNumber}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <TextField
                         label="Rank/Title"
                         name="title"
                         value={formData.title}
@@ -297,23 +315,6 @@ function RegisterCompetitorPageNew() {
                         <option value="M">Male</option>
                         <option value="F">Female</option>
                       </SimpleSelect>
-                      <TextField
-                        label="Birth Year"
-                        name="birthYear"
-                        type="number"
-                        value={formData.birthYear}
-                        onChange={handleInputChange}
-                        placeholder="e.g., 1995"
-                        min="1900"
-                        max={new Date().getFullYear()}
-                        required
-                      />
-                      <TextField
-                        label="Service Number"
-                        name="serviceNumber"
-                        value={formData.serviceNumber}
-                        onChange={handleInputChange}
-                      />
                     </div>
                   </div>
 

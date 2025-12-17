@@ -4,7 +4,16 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  dialog,
 } from 'electron';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {
+  exportDatabase,
+  importDatabase,
+  switchDatabase,
+  getCurrentDatabasePath,
+} = require('./utils/db');
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -80,6 +89,51 @@ export default class MenuBuilder {
           accelerator: 'Command+Q',
           click: () => {
             app.quit();
+          },
+        },
+      ],
+    };
+    const subMenuFile: DarwinMenuItemConstructorOptions = {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Open Database...',
+          accelerator: 'Command+O',
+          click: () => {
+            const result = switchDatabase();
+            if (result) {
+              app.relaunch();
+              app.exit(0);
+            }
+          },
+        },
+        {
+          label: 'Import Database...',
+          click: () => {
+            const result = importDatabase();
+            if (result) {
+              app.relaunch();
+              app.exit(0);
+            }
+          },
+        },
+        {
+          label: 'Export Database...',
+          accelerator: 'Command+Shift+E',
+          click: () => {
+            exportDatabase();
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Show Database Location',
+          click: () => {
+            const dbPath = getCurrentDatabasePath();
+            if (dbPath) {
+              shell.showItemInFolder(dbPath);
+            } else {
+              dialog.showErrorBox('No Database', 'No database is currently open.');
+            }
           },
         },
       ],
@@ -175,7 +229,7 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [subMenuAbout, subMenuFile, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
   }
 
   buildDefaultTemplate() {
@@ -184,9 +238,46 @@ export default class MenuBuilder {
         label: '&File',
         submenu: [
           {
-            label: '&Open',
+            label: '&Open Database...',
             accelerator: 'Ctrl+O',
+            click: () => {
+              const result = switchDatabase();
+              if (result) {
+                app.relaunch();
+                app.exit(0);
+              }
+            },
           },
+          {
+            label: '&Import Database...',
+            click: () => {
+              const result = importDatabase();
+              if (result) {
+                app.relaunch();
+                app.exit(0);
+              }
+            },
+          },
+          {
+            label: '&Export Database...',
+            accelerator: 'Ctrl+Shift+E',
+            click: () => {
+              exportDatabase();
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'Show Database &Location',
+            click: () => {
+              const dbPath = getCurrentDatabasePath();
+              if (dbPath) {
+                shell.showItemInFolder(dbPath);
+              } else {
+                dialog.showErrorBox('No Database', 'No database is currently open.');
+              }
+            },
+          },
+          { type: 'separator' },
           {
             label: '&Close',
             accelerator: 'Ctrl+W',
