@@ -119,13 +119,14 @@ function EditCompetitorPageNew() {
 
     if (name === 'birthYear') {
       const currentYear = new Date().getFullYear();
-      const age = currentYear - parseInt(value);
+      const birthYear = parseInt(value);
+      const age = currentYear - birthYear;
 
       setFormData(prev => ({
         ...prev,
-        isJunior: age < 20,
-        isSenior: age >= 20 && age < 35,
-        isVeteran: age >= 35,
+        isJunior: birthYear >= 2004,
+        isSenior: birthYear <= 2003 && birthYear > 1991,
+        isVeteran: birthYear <= 1991,
       }));
     }
   };
@@ -147,15 +148,15 @@ function EditCompetitorPageNew() {
         formData.country,
         formData.serviceNumber,
         formData.gender,
-        competitorId
+        competitorId,
       ];
 
-      await window.api.update(personQuery, personParams);
+      await window.api.insert(personQuery, personParams);
 
       // Update competitor details
       const competitorQuery = `
         UPDATE competition_competitor
-        SET arrival_seed = ?, army_seed = ?, is_novice = ?, is_junior = ?,
+        SET arrival_corps_seed = ?, arrival_army_seed = ?, is_novice = ?, is_junior = ?,
             is_senior = ?, is_veteran = ?, is_reserve = ?, regiment = ?, title = ?
         WHERE racer_id = ? AND competition_id = ?
       `;
@@ -170,10 +171,10 @@ function EditCompetitorPageNew() {
         formData.regiment,
         formData.title,
         competitorId,
-        competitionId
+        competitionId,
       ];
 
-      await window.api.update(competitorQuery, competitorParams);
+      await window.api.insert(competitorQuery, competitorParams);
 
       // Update team membership
       // First remove existing team membership
@@ -189,7 +190,11 @@ function EditCompetitorPageNew() {
           INSERT INTO competition_team_members (competition_id, team_id, racer_id)
           VALUES (?, ?, ?)
         `;
-        await window.api.insert(teamQuery, [competitionId, formData.team, competitorId]);
+        await window.api.insert(teamQuery, [
+          competitionId,
+          formData.team,
+          competitorId,
+        ]);
       }
 
       navigate(-1);

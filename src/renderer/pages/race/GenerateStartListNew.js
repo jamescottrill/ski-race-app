@@ -7,7 +7,8 @@ import {
   Shuffle,
   Users,
   Trophy,
-  X
+  Save,
+  Edit2
 } from 'lucide-react';
 import {
   PageContainer,
@@ -47,6 +48,8 @@ export default function GenerateStartListNew() {
     number_runs: 1,
     race_name: '',
   });
+  const [editMode, setEditMode] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   function refreshPage(){
     navigate(`/competition/${competitionId}/race/${raceId}/start-list`);
@@ -220,6 +223,46 @@ export default function GenerateStartListNew() {
     }));
   };
 
+  const handleBibChange = (list, setList, racerId, newBib) => {
+    const bibNumber = parseInt(newBib, 10);
+    if (isNaN(bibNumber) || bibNumber < 1) return;
+
+    const newList = [...list];
+    const competitorIndex = newList.findIndex(c => c.racer_id === racerId);
+    if (competitorIndex === -1) return;
+
+    newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber };
+    newList.sort((a, b) => a.bib_number - b.bib_number);
+
+    setList(newList);
+    setHasChanges(true);
+  };
+
+  const saveStartListChanges = async () => {
+    try {
+      setLoading(true);
+
+      const allCompetitors = raceDetails.women_separate
+        ? [...(womenStartList || []), ...(startList || [])]
+        : (startList || []);
+
+      for (const competitor of allCompetitors) {
+        await window.api.insert(
+          `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
+          [competitor.bib_number, competitionId, raceId, competitor.racer_id]
+        );
+      }
+
+      setHasChanges(false);
+      setEditMode(false);
+      showSuccess('Start list order saved!');
+    } catch (error) {
+      handleDatabaseError('save start list', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDownloadPDF = async () => {
     try {
       if (raceDetails.number_runs === 2) {
@@ -248,14 +291,24 @@ export default function GenerateStartListNew() {
     init();
   }, [raceId]);
 
-  const columns = [
+  const getColumns = (list, setList, isEditMode) => [
     {
       header: 'Bib',
       accessorKey: 'bib_number',
       cell: ({ row }) => (
-        <Badge variant="primary" className="font-mono">
-          {row.original.bib_number}
-        </Badge>
+        isEditMode ? (
+          <Input
+            type="number"
+            min="1"
+            value={row.original.bib_number}
+            onChange={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
+            className="w-16 font-mono text-center"
+          />
+        ) : (
+          <Badge variant="primary" className="font-mono">
+            {row.original.bib_number}
+          </Badge>
+        )
       )
     },
     {
@@ -282,7 +335,6 @@ export default function GenerateStartListNew() {
         if (row.original.is_veteran) categories.push('V');
         if (row.original.is_novice) categories.push('N');
         if (row.original.is_reserve) categories.push('R');
-
 
         return (
           <Badge variant="secondary" className="mr-1">
@@ -345,20 +397,52 @@ export default function GenerateStartListNew() {
           <div className="flex gap-3">
             {startListExists && (
               <>
-                <Button
-                  variant="primary"
-                  onClick={handleDownloadPDF}
-                  leftIcon={<Download className="w-4 h-4" />}
-                >
-                  Download PDF
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={refreshPage}
-                  leftIcon={<Shuffle className="w-4 h-4" />}
-                >
-                  Regenerate
-                </Button>
+                {editMode ? (
+                  <>
+                    <Button
+                      variant="success"
+                      onClick={saveStartListChanges}
+                      disabled={!hasChanges}
+                      leftIcon={<Save className="w-4 h-4" />}
+                    >
+                      Save Order
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditMode(false);
+                        setHasChanges(false);
+                        getStartList();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditMode(true)}
+                      leftIcon={<Edit2 className="w-4 h-4" />}
+                    >
+                      Edit Order
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleDownloadPDF}
+                      leftIcon={<Download className="w-4 h-4" />}
+                    >
+                      Download PDF
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={refreshPage}
+                      leftIcon={<Shuffle className="w-4 h-4" />}
+                    >
+                      Regenerate
+                    </Button>
+                  </>
+                )}
               </>
             )}
             <Button
@@ -447,7 +531,7 @@ export default function GenerateStartListNew() {
                   <Users className="w-5 h-5 text-pink-600" />
                   Women's Start List
                 </h3>
-                <DataTable columns={columns} data={womenStartList} pageSize={50} />
+                <DataTable columns={getColumns(womenStartList, setWomenStartList, editMode)} data={womenStartList} pageSize={50} />
               </CardContent>
             </Card>
           )}
@@ -461,7 +545,7 @@ export default function GenerateStartListNew() {
               {loading ? (
                 <div className="text-center py-8">Loading start list...</div>
               ) : startList && startList.length > 0 ? (
-                <DataTable columns={columns} data={startList} pageSize={50} />
+                <DataTable columns={getColumns(startList, setStartList, editMode)} data={startList} pageSize={50} />
               ) : (
                 <div className="text-center py-8 text-neutral-500">
                   No start list generated yet

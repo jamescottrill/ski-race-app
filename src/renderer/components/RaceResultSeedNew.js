@@ -85,6 +85,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         : '';
       return obj;
     });
+    console.log(mapped);
 
     const r1Dnf = mapped
       .filter((e) => {
@@ -315,7 +316,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
             <DataTable
               columns={columns}
               data={data}
-              showPagination={true}
+              showPagination
               pageSize={25}
               className="w-full"
             />

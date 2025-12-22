@@ -4,6 +4,7 @@ import RaceLandingPageNew from '../pages/race/RaceLandingPageNew';
 import CreateRacePageNew from '../pages/race/CreateRacePageNew';
 import EditRacePageNew from '../pages/race/EditRacePageNew';
 import RecordRaceResultsPageNew from '../pages/race/RecordRaceResultsPageNew';
+import ImportRaceResultsPageNew from '../pages/race/ImportRaceResultsPageNew';
 import RaceResultsPageNew from '../pages/race/RaceResultsPageNew';
 import LayoutNew from '../components/LayoutNew';
 import RaceDetailsPageNew from '../pages/race/RaceDetailsPageNew';
@@ -40,6 +41,10 @@ function RaceRoutesNew() {
       <Route
         path="competition/:competitionId/race/:raceId/results/edit"
         element={<LayoutNew><RecordRaceResultsPageNew /></LayoutNew>}
+      />
+      <Route
+        path="competition/:competitionId/race/:raceId/results/import"
+        element={<LayoutNew><ImportRaceResultsPageNew /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/race/:raceId/start-list"

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Button,
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent
+  TabsContent,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import RaceResultSeedNew from '../../components/RaceResultSeedNew';
@@ -20,7 +20,6 @@ import { getRaceDetails } from '../../utils/RaceDetails';
 
 export default function RaceResultsPageNew() {
   const { competitionId, raceId } = useParams();
-  const navigate = useNavigate();
   const handleBack = useBackButton();
   const [activeTab, setActiveTab] = useState('result');
   const [raceRuns, setRaceRuns] = useState([]);
@@ -44,8 +43,10 @@ export default function RaceResultsPageNew() {
       setRaceRuns(numRuns);
       const notCompleted = numRuns.filter((e) => !e.is_complete);
       if (notCompleted.length === 2) setActiveTab('result');
-      if (notCompleted.length === 1 && notCompleted[0].run_number === 2) setActiveTab('result');
-      if (notCompleted.length === 1 && notCompleted[0].run_number === 1) setActiveTab('result');
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 2)
+        setActiveTab('result');
+      if (notCompleted.length === 1 && notCompleted[0].run_number === 1)
+        setActiveTab('result');
     } catch (error) {
       console.error('Failed to fetch races:', error);
     }
@@ -71,23 +72,39 @@ export default function RaceResultsPageNew() {
 
   const renderResultContent = () => {
     if (raceRuns.length === 2 && raceDetails.is_seeding) {
-      return <RaceResultSeedNew raceId={raceId} competitionId={competitionId} />;
+      return (
+        <RaceResultSeedNew raceId={raceId} competitionId={competitionId} />
+      );
     }
     if (raceRuns.length === 2 && !raceDetails.is_seeding) {
-      return <RaceResultTwoRunNew raceId={raceId} competitionId={competitionId} />;
+      return (
+        <RaceResultTwoRunNew raceId={raceId} competitionId={competitionId} />
+      );
     }
     if (raceRuns.length === 1) {
-      return <RaceResultOneRunNew raceId={raceId} competitionId={competitionId} />;
+      return (
+        <RaceResultOneRunNew raceId={raceId} competitionId={competitionId} />
+      );
     }
     return null;
   };
 
   const renderTeamContent = () => {
     if (raceDetails.is_team && raceRuns.length === 2) {
-      return <RaceTeamResultTwoRunNew raceId={raceId} competitionId={competitionId} />;
+      return (
+        <RaceTeamResultTwoRunNew
+          raceId={raceId}
+          competitionId={competitionId}
+        />
+      );
     }
     if (raceDetails.is_team && raceRuns.length === 1) {
-      return <RaceTeamResultOneRunNew raceId={raceId} competitionId={competitionId} />;
+      return (
+        <RaceTeamResultOneRunNew
+          raceId={raceId}
+          competitionId={competitionId}
+        />
+      );
     }
     return null;
   };
@@ -114,12 +131,8 @@ export default function RaceResultsPageNew() {
             <TabsTrigger value="result">Results</TabsTrigger>
             <TabsTrigger value="teamResult">Team Results</TabsTrigger>
           </TabsList>
-          <TabsContent value="result">
-            {renderResultContent()}
-          </TabsContent>
-          <TabsContent value="teamResult">
-            {renderTeamContent()}
-          </TabsContent>
+          <TabsContent value="result">{renderResultContent()}</TabsContent>
+          <TabsContent value="teamResult">{renderTeamContent()}</TabsContent>
         </Tabs>
       ) : (
         renderResultContent()

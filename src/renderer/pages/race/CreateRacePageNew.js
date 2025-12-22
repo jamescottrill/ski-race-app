@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Trophy, 
+import {
+  Trophy,
   ArrowLeft,
   Save,
   Calendar,
@@ -10,8 +10,8 @@ import {
   Timer,
   Mountain
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -28,7 +28,7 @@ export default function CreateRacePageNew() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
-  
+
   const [formData, setFormData] = useState({
     raceName: '',
     raceType: 'Slalom',
@@ -64,18 +64,18 @@ export default function CreateRacePageNew() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const raceId = uuid4();
     const query = `
       INSERT INTO races (
-        race_id, competition_id, race_name, race_type, is_individual, is_team, 
+        race_id, competition_id, race_name, race_type, is_individual, is_team,
         is_training, is_seeding, women_separate, number_runs,
         venue, course_name, race_date, chief_of_race, tech_delegate,
         referee, asst_referee, temp_start, temp_finish, snow,
         weather, homologation, start_altitude, finish_altitude
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    
+
     const params = [
       raceId,
       competitionId,
@@ -105,6 +105,18 @@ export default function CreateRacePageNew() {
 
     try {
       await window.api.insert(query, params);
+
+      // Create race_run entries for each run
+      const numRuns = parseInt(formData.numberRuns, 10) || 1;
+      for (let runNumber = 1; runNumber <= numRuns; runNumber++) {
+        const runId = `${raceId}-run-${runNumber}`;
+        const runQuery = `
+          INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
+          VALUES (?, ?, ?, ?, 0)
+        `;
+        await window.api.insert(runQuery, [competitionId, raceId, runId, runNumber]);
+      }
+
       navigate(`/competition/${competitionId}/race/${raceId}`);
     } catch (error) {
       console.error('Failed to create race:', error);
@@ -154,11 +166,10 @@ export default function CreateRacePageNew() {
                     onChange={handleChange}
                     required
                   >
-                    <option value="Slalom">Slalom</option>
-                    <option value="Giant Slalom">Giant Slalom</option>
-                    <option value="Super G">Super G</option>
-                    <option value="Downhill">Downhill</option>
-                    <option value="Alpine Combined">Alpine Combined</option>
+                    <option value="SL">Slalom</option>
+                    <option value="GS">Giant Slalom</option>
+                    <option value="SG">Super G</option>
+                    <option value="DH">Downhill</option>
                   </SimpleSelect>
                   <SimpleSelect
                     label="Number of Runs"
@@ -178,7 +189,7 @@ export default function CreateRacePageNew() {
                     onChange={handleChange}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   <Checkbox
                     label="Team Race"
@@ -363,7 +374,7 @@ export default function CreateRacePageNew() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-3 bg-info/10 rounded-lg">
                     <div className="flex items-start gap-2">
                       <Timer className="w-4 h-4 text-info mt-0.5" />

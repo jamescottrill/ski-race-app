@@ -8,7 +8,9 @@ import {
   MapPin,
   Users,
   Timer,
-  Trash2
+  Trash2,
+  Upload,
+  ClipboardEdit
 } from 'lucide-react';
 import {
   PageContainer,
@@ -86,8 +88,14 @@ export default function RaceDetailsPageNew() {
             <Button variant="primary" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/start-list`)}>
               Start List
             </Button>
+            <Button variant="warning" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/edit`)} leftIcon={<ClipboardEdit className="w-4 h-4" />}>
+              Record Results
+            </Button>
             <Button variant="success" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results`)}>
-              Results
+              View Results
+            </Button>
+            <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/import`)} leftIcon={<Upload className="w-4 h-4" />}>
+              Import Results
             </Button>
             <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/edit`)} leftIcon={<Edit className="w-4 h-4" />}>
               Edit

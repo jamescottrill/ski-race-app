@@ -64,7 +64,7 @@ const seedResults = `
                                LEFT JOIN run2 ON run1.racer_id = run2.racer_id
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
-                               JOIN competition_competitor cc ON cc.racer_id = p.id
+                               JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
 --                                LEFT JOIN competition_team_members ctm ON ctm.racer_id = run1.racer_id AND ctm.competition_id = run1.competition_id
 --                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
@@ -72,8 +72,8 @@ const seedResults = `
 --                                WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                         ),
           seeds AS (SELECT *,
-                             (run_1_time - min1time) / min1time * factor AS seed_1,
-                             (run_2_time - min2time) / min2time * factor AS seed_2
+                             ROUND((run_1_time - min1time) / min1time * factor,2) AS seed_1,
+                             ROUND((run_2_time - min2time) / min2time * factor,2) AS seed_2
                       FROM data),
           final AS(
             SELECT
@@ -102,6 +102,7 @@ const seedingPoints = `
                            SELECT 1360 AS factor, 'AC' AS race),
                run1 AS (SELECT race_id,
                                racer_id,
+                               competition_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE race_time END AS race_time
                                , is_ns
                         FROM race_results rr
@@ -115,7 +116,8 @@ const seedingPoints = `
                         WHERE TRUE
                           AND run_number = 2
                           AND race_id = ?),
-               data AS (SELECT run1.racer_id,
+               data AS (SELECT run1.competition_id,
+                               run1.racer_id,
                                run1.race_id,
                                run1.race_time                                                            AS run_1_time,
                                run1.is_ns                                                                AS is_ns,
@@ -132,8 +134,8 @@ const seedingPoints = `
                                JOIN factors f ON f.race = r.race_type
                         ),
           seeds AS (SELECT *,
-                             (run_1_time - min1time) / min1time * factor AS seed_1,
-                             (run_2_time - min2time) / min2time * factor AS seed_2
+                             ROUND((run_1_time - min1time) / min1time * factor,2) AS seed_1,
+                             ROUND((run_2_time - min2time) / min2time * factor,2) AS seed_2
                       FROM data)
             SELECT
               s.racer_id,
@@ -146,7 +148,7 @@ const seedingPoints = `
                 WHEN COALESCE(seed_2, 999999) < cc.arrival_corps_seed THEN seed_2
                 ELSE arrival_corps_seed END AS seed_point
             FROM seeds s
-            JOIN competition_competitor cc ON cc.racer_id = s.racer_id
+            JOIN competition_competitor cc ON cc.racer_id = s.racer_id AND cc.competition_id = s.competition_id
           ORDER BY total_time NULLS LAST
         `;
 

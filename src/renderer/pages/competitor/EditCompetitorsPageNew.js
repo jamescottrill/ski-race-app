@@ -98,13 +98,13 @@ export default function EditCompetitorsPageNew() {
   const handleSave = async () => {
     try {
       // Update person table
-      await window.api.update(
+      await window.api.insert(
         'UPDATE people SET first_name = ?, last_name = ? WHERE id = ?',
         [editForm.first_name, editForm.last_name, editingId]
       );
 
       // Update competition_competitor table
-      await window.api.update(
+      await window.api.insert(
         `UPDATE competition_competitor
          SET regiment = ?,
              arrival_corps_seed = ?, arrival_army_seed = ?

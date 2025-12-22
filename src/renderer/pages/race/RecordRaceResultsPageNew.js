@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Clock, 
+import {
+  Clock,
   Save,
   ArrowLeft,
   Trophy,
   AlertCircle,
   CheckCircle,
-  Timer
+  Timer,
+  Upload,
+  Settings,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -22,26 +26,34 @@ import {
   TabsContent,
   DataTable,
   Badge,
-  cn
+  SimpleSelect
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import {
+  convertRaceTime,
+  convertHumanTime,
+  formatTime,
+} from '../../utils/TimeUtils';
 
 function RecordRaceResultsPageNew() {
   const { competitionId, raceId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
-  const [activeTab, setActiveTab] = useState('run1');
+  const [activeTab, setActiveTab] = useState('1');
   const [raceDetails, setRaceDetails] = useState(null);
-  const [competitors, setCompetitors] = useState([]);
-  const [times, setTimes] = useState({});
+  const [raceRuns, setRaceRuns] = useState([]);
+  const [competitors, setCompetitors] = useState({});
+  const [runDetails, setRunDetails] = useState({});
+  const [people, setPeople] = useState([]);
+  const [showCourseDetails, setShowCourseDetails] = useState({});
   const [saveStatus, setSaveStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchRaceDetails = async () => {
     try {
       const query = `
-        SELECT race_name, race_type, number_runs, is_team, is_seeding_race
-        FROM races 
+        SELECT race_name, race_type, number_runs, is_team, is_seeding
+        FROM races
         WHERE race_id = ? AND competition_id = ?
       `;
       const result = await window.api.select(query, [raceId, competitionId]);
@@ -53,151 +65,349 @@ function RecordRaceResultsPageNew() {
     }
   };
 
-  const fetchCompetitors = async () => {
+  const fetchRaceRuns = async () => {
     try {
-      // Get competitors and their existing times
       const query = `
-        SELECT 
+        SELECT run_id, run_number, COALESCE(is_complete, 0) AS is_complete
+        FROM race_run
+        WHERE race_id = ? AND competition_id = ?
+        ORDER BY run_number
+      `;
+      const result = await window.api.select(query, [raceId, competitionId]);
+      setRaceRuns(result);
+
+      const notCompleted = result.filter(r => !r.is_complete);
+      if (notCompleted.length > 0) {
+        setActiveTab(String(notCompleted[0].run_number));
+      } else if (result.length > 0) {
+        setActiveTab(String(result[0].run_number));
+      }
+    } catch (error) {
+      console.error('Failed to fetch race runs:', error);
+    }
+  };
+
+  const fetchPeople = async () => {
+    try {
+      const query = `SELECT id, first_name, last_name FROM people ORDER BY last_name, first_name`;
+      const result = await window.api.select(query);
+      setPeople(result);
+    } catch (error) {
+      console.error('Failed to fetch people:', error);
+    }
+  };
+
+  const fetchRunDetails = async (runNumber) => {
+    try {
+      const query = `
+        SELECT
+          course_setter,
+          number_gates,
+          turning_gates,
+          start_time,
+          forerunner_a,
+          forerunner_b,
+          forerunner_c,
+          forerunner_d
+        FROM race_run
+        WHERE race_id = ? AND competition_id = ? AND run_number = ?
+      `;
+      const result = await window.api.select(query, [raceId, competitionId, runNumber]);
+      if (result.length > 0) {
+        setRunDetails(prev => ({
+          ...prev,
+          [runNumber]: {
+            courseSetter: result[0].course_setter || '',
+            numberGates: result[0].number_gates || '',
+            turningGates: result[0].turning_gates || '',
+            startTime: result[0].start_time || '',
+            forerunner1: result[0].forerunner_a || '',
+            forerunner2: result[0].forerunner_b || '',
+            forerunner3: result[0].forerunner_c || '',
+            forerunner4: result[0].forerunner_d || ''
+          }
+        }));
+      } else {
+        setRunDetails(prev => ({
+          ...prev,
+          [runNumber]: {
+            courseSetter: '',
+            numberGates: '',
+            turningGates: '',
+            startTime: '',
+            forerunner1: '',
+            forerunner2: '',
+            forerunner3: '',
+            forerunner4: ''
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch run details:', error);
+    }
+  };
+
+  const handleRunDetailChange = (runNumber, field, value) => {
+    setRunDetails(prev => ({
+      ...prev,
+      [runNumber]: {
+        ...prev[runNumber],
+        [field]: value
+      }
+    }));
+  };
+
+  const saveRunDetails = async (runNumber) => {
+    try {
+      const details = runDetails[runNumber];
+      const query = `
+        UPDATE race_run
+        SET course_setter = ?,
+            number_gates = ?,
+            turning_gates = ?,
+            start_time = ?,
+            forerunner_a = ?,
+            forerunner_b = ?,
+            forerunner_c = ?,
+            forerunner_d = ?
+        WHERE race_id = ? AND competition_id = ? AND run_number = ?
+      `;
+      await window.api.insert(query, [
+        details.courseSetter || null,
+        details.numberGates || null,
+        details.turningGates || null,
+        details.startTime || null,
+        details.forerunner1 || null,
+        details.forerunner2 || null,
+        details.forerunner3 || null,
+        details.forerunner4 || null,
+        raceId,
+        competitionId,
+        runNumber
+      ]);
+      setSaveStatus({ type: 'success', message: `Run ${runNumber} course details saved` });
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (error) {
+      console.error('Failed to save run details:', error);
+      setSaveStatus({ type: 'error', message: 'Failed to save course details' });
+    }
+  };
+
+  const getPersonName = (personId) => {
+    const person = people.find(p => p.id === personId);
+    return person ? `${person.first_name} ${person.last_name}` : '';
+  };
+
+  const fetchCompetitorsForRun = async (runNumber) => {
+    try {
+      const query = `
+        SELECT
           p.id as competitor_id,
           p.first_name,
           p.last_name,
           rc.bib_number,
           cc.regiment,
-          rr.run_1_time,
-          rr.run_2_time,
-          rr.dnf_run_1,
-          rr.dnf_run_2,
-          rr.dsq_run_1,
-          rr.dsq_run_2
+          rr.race_time,
+          rr.is_dnf,
+          rr.is_dsq,
+          rr.is_dns,
+          rr.is_ns,
+          rr.dsq_gate,
+          rr.dsq_reason
         FROM people p
-        INNER JOIN competition_competitor cc ON p.id = cc.racer_id
+        INNER JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
         INNER JOIN race_competitor rc ON p.id = rc.racer_id AND rc.race_id = ? AND rc.competition_id = ?
-        LEFT JOIN race_results rr ON rr.competitor_id = p.id AND rr.race_id = ?
-        WHERE cc.competition_id = ?
+        LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
         ORDER BY rc.bib_number
       `;
-      const result = await window.api.select(query, [raceId, competitionId, raceId, competitionId]);
-      setCompetitors(result);
-      
-      // Initialize times state
-      const initialTimes = {};
-      result.forEach(comp => {
-        initialTimes[comp.competitor_id] = {
-          run1: comp.run_1_time || '',
-          run2: comp.run_2_time || '',
-          dnf1: comp.dnf_run_1 === 1,
-          dnf2: comp.dnf_run_2 === 1,
-          dsq1: comp.dsq_run_1 === 1,
-          dsq2: comp.dsq_run_2 === 1,
-        };
-      });
-      setTimes(initialTimes);
+      const result = await window.api.select(query, [
+        competitionId, raceId, competitionId, raceId, competitionId, runNumber
+      ]);
+
+      const competitorData = result.map(comp => ({
+        ...comp,
+        raceTime: convertRaceTime(comp.race_time) || '',
+        status: comp.is_dns ? 'DNS' :
+                comp.is_dnf ? 'DNF' :
+                comp.is_dsq ? 'DSQ' :
+                comp.is_ns ? 'NS' :
+                comp.race_time ? 'Finished' : '',
+        dsqGate: comp.dsq_gate || '',
+        dsqReason: comp.dsq_reason || ''
+      }));
+
+      setCompetitors(prev => ({
+        ...prev,
+        [runNumber]: competitorData
+      }));
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRaceDetails();
-    fetchCompetitors();
+    const init = async () => {
+      await fetchRaceDetails();
+      await fetchRaceRuns();
+      await fetchPeople();
+      setLoading(false);
+    };
+    init();
   }, [raceId, competitionId]);
 
-  const handleTimeChange = (competitorId, run, value) => {
-    setTimes(prev => ({
-      ...prev,
-      [competitorId]: {
-        ...prev[competitorId],
-        [run]: value
+  useEffect(() => {
+    if (activeTab) {
+      const runNumber = parseInt(activeTab, 10);
+      if (!competitors[activeTab]) {
+        fetchCompetitorsForRun(runNumber);
       }
+      if (!runDetails[activeTab]) {
+        fetchRunDetails(runNumber);
+      }
+    }
+  }, [activeTab]);
+
+  const handleTimeChange = (runNumber, competitorId, value) => {
+    setCompetitors(prev => ({
+      ...prev,
+      [runNumber]: prev[runNumber].map(c =>
+        c.competitor_id === competitorId ? { ...c, raceTime: value } : c
+      )
     }));
   };
 
-  const handleStatusChange = (competitorId, statusType, value) => {
-    setTimes(prev => ({
-      ...prev,
-      [competitorId]: {
-        ...prev[competitorId],
-        [statusType]: value
-      }
-    }));
-  };
+  const handleTimeBlur = async (runNumber, competitorId, value) => {
+    let formattedValue = value.padStart(6, '0');
+    const timeRegex = /^([0-5]?[0-9])(:|\.)?([0-5][0-9])\.?\d{0,2}$/;
+    if (!timeRegex.test(formattedValue) && formattedValue !== '000000') return;
 
-  const saveTime = async (competitorId) => {
-    try {
-      const competitorTimes = times[competitorId];
-      
-      // Check if result exists
-      const checkQuery = `
-        SELECT COUNT(*) as count 
-        FROM race_results 
-        WHERE race_id = ? AND competitor_id = ?
-      `;
-      const exists = await window.api.select(checkQuery, [raceId, competitorId]);
-      
-      if (exists[0].count > 0) {
-        // Update existing
-        const updateQuery = `
-          UPDATE race_results 
-          SET run_1_time = ?, run_2_time = ?, 
-              dnf_run_1 = ?, dnf_run_2 = ?, 
-              dsq_run_1 = ?, dsq_run_2 = ?
-          WHERE race_id = ? AND competitor_id = ?
-        `;
-        await window.api.update(updateQuery, [
-          competitorTimes.run1 || null,
-          competitorTimes.run2 || null,
-          competitorTimes.dnf1 ? 1 : 0,
-          competitorTimes.dnf2 ? 1 : 0,
-          competitorTimes.dsq1 ? 1 : 0,
-          competitorTimes.dsq2 ? 1 : 0,
-          raceId,
-          competitorId
-        ]);
-      } else {
-        // Insert new
-        const insertQuery = `
-          INSERT INTO race_results (
-            race_id, competitor_id, run_1_time, run_2_time,
-            dnf_run_1, dnf_run_2, dsq_run_1, dsq_run_2
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        await window.api.insert(insertQuery, [
-          raceId,
-          competitorId,
-          competitorTimes.run1 || null,
-          competitorTimes.run2 || null,
-          competitorTimes.dnf1 ? 1 : 0,
-          competitorTimes.dnf2 ? 1 : 0,
-          competitorTimes.dsq1 ? 1 : 0,
-          competitorTimes.dsq2 ? 1 : 0
-        ]);
-      }
-      
-      setSaveStatus({ [competitorId]: 'success' });
-      setTimeout(() => setSaveStatus(null), 2000);
-    } catch (error) {
-      console.error('Failed to save time:', error);
-      setSaveStatus({ [competitorId]: 'error' });
+    formattedValue = formatTime(formattedValue);
+    const timeInSeconds = convertHumanTime(formattedValue);
+
+    setCompetitors(prev => ({
+      ...prev,
+      [runNumber]: prev[runNumber].map(c =>
+        c.competitor_id === competitorId ? {
+          ...c,
+          raceTime: formattedValue,
+          status: formattedValue ? 'Finished' : c.status
+        } : c
+      )
+    }));
+
+    await updateField(competitorId, runNumber, 'race_time', timeInSeconds);
+    if (formattedValue) {
+      await updateField(competitorId, runNumber, 'is_dnf', 0);
+      await updateField(competitorId, runNumber, 'is_dsq', 0);
+      await updateField(competitorId, runNumber, 'is_dns', 0);
+      await updateField(competitorId, runNumber, 'is_ns', 0);
     }
   };
 
-  const saveAllTimes = async () => {
-    setSaveStatus({ all: 'saving' });
+  const handleStatusChange = async (runNumber, competitorId, newStatus) => {
+    setCompetitors(prev => ({
+      ...prev,
+      [runNumber]: prev[runNumber].map(c =>
+        c.competitor_id === competitorId ? {
+          ...c,
+          status: newStatus,
+          dsqGate: newStatus === 'DSQ' ? c.dsqGate : '',
+          dsqReason: newStatus === 'DSQ' ? c.dsqReason : ''
+        } : c
+      )
+    }));
+
+    await updateField(competitorId, runNumber, 'is_dns', newStatus === 'DNS' ? 1 : 0);
+    await updateField(competitorId, runNumber, 'is_dnf', newStatus === 'DNF' ? 1 : 0);
+    await updateField(competitorId, runNumber, 'is_dsq', newStatus === 'DSQ' ? 1 : 0);
+    await updateField(competitorId, runNumber, 'is_ns', newStatus === 'NS' ? 1 : 0);
+  };
+
+  const handleDsqFieldChange = async (runNumber, competitorId, field, value) => {
+    const dbField = field === 'dsqGate' ? 'dsq_gate' : 'dsq_reason';
+
+    setCompetitors(prev => ({
+      ...prev,
+      [runNumber]: prev[runNumber].map(c =>
+        c.competitor_id === competitorId ? { ...c, [field]: value } : c
+      )
+    }));
+
+    await updateField(competitorId, runNumber, dbField, value);
+  };
+
+  const updateField = async (competitorId, runNumber, field, value) => {
     try {
-      for (const competitor of competitors) {
-        await saveTime(competitor.competitor_id);
+      const checkQuery = `
+        SELECT COUNT(*) as count
+        FROM race_results
+        WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
+      `;
+      const exists = await window.api.select(checkQuery, [competitionId, raceId, runNumber, competitorId]);
+
+      if (exists[0].count > 0) {
+        const updateQuery = `
+          UPDATE race_results
+          SET ${field} = ?
+          WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
+        `;
+        await window.api.insert(updateQuery, [value, competitionId, raceId, runNumber, competitorId]);
+      } else {
+        const insertQuery = `
+          INSERT INTO race_results (competition_id, race_id, run_number, racer_id, ${field})
+          VALUES (?, ?, ?, ?, ?)
+        `;
+        await window.api.insert(insertQuery, [competitionId, raceId, runNumber, competitorId, value]);
       }
-      setSaveStatus({ all: 'success' });
+    } catch (error) {
+      console.error('Failed to update field:', error);
+    }
+  };
+
+  const markRunComplete = async (runNumber) => {
+    try {
+      const query = `UPDATE race_run SET is_complete = 1 WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
+      await window.api.insert(query, [competitionId, raceId, runNumber]);
+
+      setRaceRuns(prev => prev.map(r =>
+        r.run_number === runNumber ? { ...r, is_complete: 1 } : r
+      ));
+
+      const nextRun = runNumber + 1;
+      if (nextRun <= (raceDetails?.number_runs || 1)) {
+        await createNextRunResults(runNumber, nextRun);
+      }
+
+      setSaveStatus({ type: 'success', message: `Run ${runNumber} marked complete` });
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (error) {
-      console.error('Failed to save all times:', error);
-      setSaveStatus({ all: 'error' });
+      console.error('Failed to mark run complete:', error);
+      setSaveStatus({ type: 'error', message: 'Failed to mark run complete' });
     }
   };
 
-  const run1Columns = [
+  const createNextRunResults = async (currentRun, nextRun) => {
+    try {
+      const finishedCompetitors = competitors[currentRun]?.filter(c => c.status === 'Finished') || [];
+
+      const deleteQuery = `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
+      await window.api.delete(deleteQuery, [competitionId, raceId, nextRun]);
+
+      for (const comp of finishedCompetitors) {
+        const insertQuery = `
+          INSERT INTO race_results (competition_id, race_id, run_number, racer_id)
+          VALUES (?, ?, ?, ?)
+        `;
+        await window.api.insert(insertQuery, [competitionId, raceId, nextRun, comp.competitor_id]);
+      }
+
+      await fetchCompetitorsForRun(nextRun);
+    } catch (error) {
+      console.error('Failed to create next run results:', error);
+    }
+  };
+
+  const getColumns = (runNumber) => [
     {
       header: 'Bib',
       accessorKey: 'bib_number',
@@ -211,99 +421,64 @@ function RecordRaceResultsPageNew() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">
-            {row.original.first_name} {row.original.last_name}
+            {row.original.last_name?.toUpperCase()}, {row.original.first_name}
           </div>
           <div className="text-xs text-neutral-500">{row.original.regiment}</div>
         </div>
       ),
     },
     {
-      header: 'Run 1 Time',
-      accessorKey: 'run1_time',
+      header: 'Time',
+      accessorKey: 'raceTime',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <TextField
-            placeholder="MM:SS.HH"
-            value={times[row.original.competitor_id]?.run1 || ''}
-            onChange={(e) => handleTimeChange(row.original.competitor_id, 'run1', e.target.value)}
-            className="w-32"
-          />
-          <div className="flex gap-1">
+        <TextField
+          placeholder="MM:SS.SS"
+          value={row.original.raceTime || ''}
+          onChange={(e) => handleTimeChange(runNumber, row.original.competitor_id, e.target.value)}
+          onBlur={(e) => handleTimeBlur(runNumber, row.original.competitor_id, e.target.value)}
+          className="w-32"
+        />
+      ),
+    },
+    {
+      header: 'Status',
+      accessorKey: 'status',
+      cell: ({ row }) => (
+        <div className="flex gap-1">
+          {['Finished', 'DNS', 'DNF', 'DSQ', 'NS'].map(status => (
             <Button
+              key={status}
               size="sm"
-              variant={times[row.original.competitor_id]?.dnf1 ? 'danger' : 'outline'}
-              onClick={() => handleStatusChange(row.original.competitor_id, 'dnf1', !times[row.original.competitor_id]?.dnf1)}
+              variant={row.original.status === status ?
+                (status === 'Finished' ? 'success' : 'danger') : 'outline'}
+              onClick={() => handleStatusChange(runNumber, row.original.competitor_id, status)}
             >
-              DNF
+              {status === 'Finished' ? 'FIN' : status}
             </Button>
-            <Button
-              size="sm"
-              variant={times[row.original.competitor_id]?.dsq1 ? 'danger' : 'outline'}
-              onClick={() => handleStatusChange(row.original.competitor_id, 'dsq1', !times[row.original.competitor_id]?.dsq1)}
-            >
-              DSQ
-            </Button>
-          </div>
+          ))}
         </div>
       ),
     },
     {
-      header: 'Actions',
-      accessorKey: 'actions',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => saveTime(row.original.competitor_id)}
-            leftIcon={<Save className="w-3 h-3" />}
-          >
-            Save
-          </Button>
-          {saveStatus && saveStatus[row.original.competitor_id] === 'success' && (
-            <CheckCircle className="w-4 h-4 text-success" />
-          )}
-          {saveStatus && saveStatus[row.original.competitor_id] === 'error' && (
-            <AlertCircle className="w-4 h-4 text-danger" />
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  const run2Columns = [
-    ...run1Columns.slice(0, 2),
-    {
-      header: 'Run 2 Time',
-      accessorKey: 'run2_time',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+      header: 'DSQ Details',
+      accessorKey: 'dsq',
+      cell: ({ row }) => row.original.status === 'DSQ' ? (
+        <div className="flex gap-2">
           <TextField
-            placeholder="MM:SS.HH"
-            value={times[row.original.competitor_id]?.run2 || ''}
-            onChange={(e) => handleTimeChange(row.original.competitor_id, 'run2', e.target.value)}
+            placeholder="Gate #"
+            value={row.original.dsqGate || ''}
+            onChange={(e) => handleDsqFieldChange(runNumber, row.original.competitor_id, 'dsqGate', e.target.value)}
+            className="w-20"
+          />
+          <TextField
+            placeholder="Reason"
+            value={row.original.dsqReason || ''}
+            onChange={(e) => handleDsqFieldChange(runNumber, row.original.competitor_id, 'dsqReason', e.target.value)}
             className="w-32"
           />
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={times[row.original.competitor_id]?.dnf2 ? 'danger' : 'outline'}
-              onClick={() => handleStatusChange(row.original.competitor_id, 'dnf2', !times[row.original.competitor_id]?.dnf2)}
-            >
-              DNF
-            </Button>
-            <Button
-              size="sm"
-              variant={times[row.original.competitor_id]?.dsq2 ? 'danger' : 'outline'}
-              onClick={() => handleStatusChange(row.original.competitor_id, 'dsq2', !times[row.original.competitor_id]?.dsq2)}
-            >
-              DSQ
-            </Button>
-          </div>
         </div>
-      ),
+      ) : <span className="text-neutral-400">-</span>,
     },
-    run1Columns[3],
   ];
 
   if (loading) {
@@ -333,6 +508,9 @@ function RecordRaceResultsPageNew() {
     );
   }
 
+  const currentRunCompetitors = competitors[activeTab] || [];
+  const currentRun = raceRuns.find(r => String(r.run_number) === activeTab);
+
   return (
     <PageContainer>
       <PageHeader
@@ -341,11 +519,11 @@ function RecordRaceResultsPageNew() {
         actions={
           <div className="flex gap-3">
             <Button
-              variant="success"
-              onClick={saveAllTimes}
-              leftIcon={<Save className="w-4 h-4" />}
+              variant="outline"
+              onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/import`)}
+              leftIcon={<Upload className="w-4 h-4" />}
             >
-              Save All Times
+              Import CSV
             </Button>
             <Button
               variant="primary"
@@ -365,7 +543,6 @@ function RecordRaceResultsPageNew() {
         }
       />
 
-      {/* Race Info */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
           <div className="flex items-center justify-between">
@@ -389,7 +566,7 @@ function RecordRaceResultsPageNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-neutral-600">Competitors</p>
-              <p className="text-lg font-bold">{competitors.length}</p>
+              <p className="text-lg font-bold">{currentRunCompetitors.length}</p>
             </div>
             <Clock className="w-8 h-8 text-success/30" />
           </div>
@@ -397,46 +574,194 @@ function RecordRaceResultsPageNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-neutral-600">Status</p>
-              {saveStatus?.all === 'saving' && <Badge variant="info">Saving...</Badge>}
-              {saveStatus?.all === 'success' && <Badge variant="success">Saved</Badge>}
-              {saveStatus?.all === 'error' && <Badge variant="danger">Error</Badge>}
-              {!saveStatus?.all && <Badge variant="warning">Recording</Badge>}
+              <p className="text-sm text-neutral-600">Run Status</p>
+              {currentRun?.is_complete ? (
+                <Badge variant="success">Complete</Badge>
+              ) : (
+                <Badge variant="warning">In Progress</Badge>
+              )}
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Time Entry */}
+      {saveStatus && (
+        <div className={`mb-4 p-3 rounded-md flex items-center gap-2 ${
+          saveStatus.type === 'error' ? 'bg-danger/10 border border-danger/20 text-danger' :
+          'bg-success/10 border border-success/20 text-success'
+        }`}>
+          {saveStatus.type === 'success' ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
+          <span>{saveStatus.message}</span>
+        </div>
+      )}
+
       <Card>
         <CardContent noPadding>
-          {raceDetails?.number_runs === 2 ? (
+          {raceRuns.length > 0 ? (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start border-b">
-                <TabsTrigger value="run1">Run 1</TabsTrigger>
-                <TabsTrigger value="run2">Run 2</TabsTrigger>
+                {raceRuns.map(run => (
+                  <TabsTrigger key={run.run_number} value={String(run.run_number)}>
+                    Run {run.run_number}
+                    {run.is_complete ? (
+                      <CheckCircle className="w-4 h-4 ml-2 text-success" />
+                    ) : null}
+                  </TabsTrigger>
+                ))}
               </TabsList>
-              <TabsContent value="run1" className="mt-0">
-                <DataTable
-                  columns={run1Columns}
-                  data={competitors}
-                  pageSize={100}
-                />
-              </TabsContent>
-              <TabsContent value="run2" className="mt-0">
-                <DataTable
-                  columns={run2Columns}
-                  data={competitors}
-                  pageSize={100}
-                />
-              </TabsContent>
+              {raceRuns.map(run => (
+                <TabsContent
+                  key={run.run_number}
+                  value={String(run.run_number)}
+                  className="mt-0"
+                >
+                  {/* Course Details Section */}
+                  <div className="border-b">
+                    <button
+                      type="button"
+                      className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-50"
+                      onClick={() => setShowCourseDetails(prev => ({
+                        ...prev,
+                        [run.run_number]: !prev[run.run_number]
+                      }))}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-neutral-500" />
+                        <span className="font-semibold">Course Details</span>
+                        {runDetails[run.run_number]?.courseSetter && (
+                          <span className="text-sm text-neutral-500">
+                            - {getPersonName(runDetails[run.run_number].courseSetter)}
+                          </span>
+                        )}
+                      </div>
+                      {showCourseDetails[run.run_number] ? (
+                        <ChevronUp className="w-5 h-5 text-neutral-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-neutral-400" />
+                      )}
+                    </button>
+
+                    {showCourseDetails[run.run_number] && runDetails[run.run_number] && (
+                      <div className="p-4 bg-neutral-50 border-t">
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              Course Setter
+                            </label>
+                            <SimpleSelect
+                              value={runDetails[run.run_number].courseSetter}
+                              onChange={(e) => handleRunDetailChange(run.run_number, 'courseSetter', e.target.value)}
+                            >
+                              <option value="">Select...</option>
+                              {people.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  {p.first_name} {p.last_name}
+                                </option>
+                              ))}
+                            </SimpleSelect>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              Number of Gates
+                            </label>
+                            <TextField
+                              type="number"
+                              value={runDetails[run.run_number].numberGates}
+                              onChange={(e) => handleRunDetailChange(run.run_number, 'numberGates', e.target.value)}
+                              placeholder="e.g., 55"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              Turning Gates
+                            </label>
+                            <TextField
+                              type="number"
+                              value={runDetails[run.run_number].turningGates}
+                              onChange={(e) => handleRunDetailChange(run.run_number, 'turningGates', e.target.value)}
+                              placeholder="e.g., 53"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              Start Time
+                            </label>
+                            <TextField
+                              value={runDetails[run.run_number].startTime}
+                              onChange={(e) => handleRunDetailChange(run.run_number, 'startTime', e.target.value)}
+                              placeholder="HH:MM"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i}>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Forerunner {i}
+                              </label>
+                              <SimpleSelect
+                                value={runDetails[run.run_number][`forerunner${i}`]}
+                                onChange={(e) => handleRunDetailChange(run.run_number, `forerunner${i}`, e.target.value)}
+                              >
+                                <option value="">Select...</option>
+                                {people.map(p => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.first_name} {p.last_name}
+                                  </option>
+                                ))}
+                              </SimpleSelect>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            variant="primary"
+                            onClick={() => saveRunDetails(run.run_number)}
+                            leftIcon={<Save className="w-4 h-4" />}
+                          >
+                            Save Course Details
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {competitors[run.run_number] ? (
+                    <>
+                      <DataTable
+                        columns={getColumns(run.run_number)}
+                        data={competitors[run.run_number]}
+                        pageSize={100}
+                      />
+                      <div className="p-4 border-t flex justify-end">
+                        <Button
+                          variant="success"
+                          onClick={() => markRunComplete(run.run_number)}
+                          disabled={run.is_complete}
+                          leftIcon={<Save className="w-4 h-4" />}
+                        >
+                          {run.is_complete ? 'Run Complete' : 'Mark Run Complete'}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-8 text-center text-neutral-500">
+                      Loading competitors...
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
             </Tabs>
           ) : (
-            <DataTable
-              columns={run1Columns}
-              data={competitors}
-              pageSize={100}
-            />
+            <div className="p-8 text-center text-neutral-500">
+              No runs found for this race. Please ensure the race has been set up correctly.
+            </div>
           )}
         </CardContent>
       </Card>

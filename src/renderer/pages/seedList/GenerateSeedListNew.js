@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Hash,
   Download,
@@ -16,53 +16,59 @@ import {
   CardContent,
   Button,
   DataTable,
-  Badge,
-  SimpleSelect,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
+import { generatePDF } from '../../pdfs/SeedList';
 
 function GenerateSeedListNew() {
   const { competitionId } = useParams();
   const [seedList, setSeedList] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRace, setSelectedRace] = useState('');
+  const [selectedRaces, setSelectedRaces] = useState([]);
   const [races, setRaces] = useState([]);
   const [generationStatus, setGenerationStatus] = useState(null);
-  const navigate = useNavigate();
   const handleBack = useBackButton();
 
   useEffect(() => {
-    fetchRaces();
+    fetchCompletedRaces();
   }, [competitionId]);
 
-  const fetchRaces = async () => {
+  const fetchCompletedRaces = async () => {
     try {
       const query = `
-        SELECT race_id, race_name, race_type, is_team
-        FROM races
-        WHERE competition_id = ?
-        ORDER BY race_date
+        SELECT
+          DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate, r.is_seeding AS isSeeding
+        FROM race_run rr
+          INNER JOIN races r ON r.race_id = rr.race_id
+        WHERE rr.competition_id = ? AND NOT r.is_training AND rr.is_complete
+        ORDER BY r.race_date ASC
       `;
       const result = await window.api.select(query, [competitionId]);
       setRaces(result);
+
+      if (result.length > 0) {
+        const initialSelected = result.length > 3
+          ? result.filter(e => !e.isSeeding).map(e => e.id)
+          : result.map(e => e.id);
+        setSelectedRaces(initialSelected);
+
+        if (initialSelected.length > 0) {
+          await loadSeedList(initialSelected);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch races:', error);
     }
   };
 
-  const handleGenerateSeedList = async () => {
-    if (!selectedRace) {
-      setGenerationStatus({ type: 'error', message: 'Please select a race first' });
-      return;
-    }
-
+  const loadSeedList = async (raceIds) => {
     setLoading(true);
     setGenerationStatus({ type: 'info', message: 'Generating seed list...' });
 
     try {
-      const seeds = await fetchSeedList(competitionId);
+      const seeds = await fetchSeedList(competitionId, raceIds);
       setSeedList(seeds);
       setGenerationStatus({ type: 'success', message: `Generated seed list with ${seeds.length} competitors` });
     } catch (error) {
@@ -73,23 +79,47 @@ function GenerateSeedListNew() {
     }
   };
 
+  const handleRaceToggle = async (raceId) => {
+    const newSelected = selectedRaces.includes(raceId)
+      ? selectedRaces.filter(id => id !== raceId)
+      : [...selectedRaces, raceId];
+
+    setSelectedRaces(newSelected);
+
+    if (newSelected.length > 0) {
+      await loadSeedList(newSelected);
+    } else {
+      setSeedList([]);
+    }
+  };
+
   const handleExportPDF = () => {
-    // PDF export logic would go here
-    setGenerationStatus({ type: 'info', message: 'PDF export coming soon' });
+    if (seedList.length === 0) {
+      setGenerationStatus({ type: 'error', message: 'No seed list to export' });
+      return;
+    }
+
+    const selectedRaceData = races.filter(r => selectedRaces.includes(r.id));
+    generatePDF(seedList, selectedRaceData);
+    setGenerationStatus({ type: 'success', message: 'PDF export started' });
   };
 
   const columns = [
     {
+      header: 'Pos',
+      accessorKey: 'position',
+      cell: ({ row }) => (
+        <div className="font-bold text-lg text-primary-700">
+          {row.original.position}
+        </div>
+      ),
+    },
+    {
       header: 'Rank',
-      accessorKey: 'rank',
-      cell: ({ row, table }) => {
-        const rank = table.getSortedRowModel().rows.indexOf(row) + 1;
-        return (
-          <div className="font-bold text-lg text-primary-700">
-            #{rank}
-          </div>
-        );
-      },
+      accessorKey: 'title',
+      cell: ({ row }) => (
+        <div className="text-sm">{row.original.title}</div>
+      ),
     },
     {
       header: 'Name',
@@ -97,82 +127,40 @@ function GenerateSeedListNew() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium text-neutral-900">
-            {row.original.first_name} {row.original.last_name}
+            {row.original.last_name?.toUpperCase()} {row.original.first_name}
           </div>
-          {row.original.regiment && (
-            <div className="text-xs text-neutral-500">{row.original.regiment}</div>
+          {row.original.team_name && (
+            <div className="text-xs text-neutral-500">{row.original.team_name}</div>
           )}
         </div>
       ),
     },
+    ...races
+      .filter(r => selectedRaces.includes(r.id))
+      .map(race => ({
+        header: race.text,
+        accessorKey: race.id,
+        cell: ({ row }) => {
+          const points = row.original[race.id];
+          const hasPenalty = row.original[`${race.id}-penalty`];
+          return (
+            <div className="font-mono text-center">
+              {points != null ? (hasPenalty ? `${points}*` : points) : '-'}
+            </div>
+          );
+        },
+      })),
     {
-      header: 'Category',
-      accessorKey: 'category',
-      cell: ({ row }) => {
-        const categories = [];
-        if (row.original.gender === 'F') categories.push('F');
-        if (row.original.is_junior) categories.push('J');
-        if (row.original.is_senior) categories.push('S');
-        if (row.original.is_veteran) categories.push('V');
-        if (row.original.is_novice) categories.push('N');
-        if (row.original.is_reserve) categories.push('R');
-
-        return (
-          <div className="flex gap-1">
-            {categories.map(cat => (
-              <Badge key={cat} variant="info" size="sm">
-                {cat}
-              </Badge>
-            ))}
-          </div>
-        );
-      },
-    },
-    {
-      header: 'Seed Points',
-      accessorKey: 'totalSeed',
+      header: 'Overall Points',
+      accessorKey: 'seed_points',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Hash className="w-4 h-4 text-primary-400" />
           <span className="font-mono font-bold text-lg">
-            {row.original.totalSeed?.toFixed(2) || '0.00'}
+            {row.original.seed_points?.toFixed(2) || '0.00'}
           </span>
         </div>
       ),
-    },
-    {
-      header: 'Breakdown',
-      accessorKey: 'breakdown',
-      cell: ({ row }) => (
-        <div className="text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-neutral-500">Arrival:</span>
-            <span className="font-mono">{row.original.arrival_seed || 0}</span>
-          </div>
-          {row.original.army_seed && (
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-500">Army:</span>
-              <span className="font-mono">{row.original.army_seed}</span>
-            </div>
-          )}
-          {row.original.penalty && (
-            <div className="flex items-center gap-2 text-danger">
-              <span className="text-neutral-500">Penalty:</span>
-              <span className="font-mono">+{row.original.penalty}</span>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      header: 'Status',
-      accessorKey: 'status',
-      cell: ({ row }) => {
-        if (row.original.is_reserve) {
-          return <Badge variant="warning">Reserve</Badge>;
-        }
-        return <Badge variant="success">Active</Badge>;
-      },
     },
   ];
 
@@ -197,31 +185,40 @@ function GenerateSeedListNew() {
       {/* Control Panel */}
       <Card className="mb-6">
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <SimpleSelect
-                label="Select Race"
-                value={selectedRace}
-                onChange={(e) => setSelectedRace(e.target.value)}
-                placeholder="Choose a race to generate seed list..."
-              >
-                <option value="">Select a race</option>
-                {races.map((race) => (
-                  <option key={race.race_id} value={race.race_id}>
-                    {race.race_name} - {race.race_type} {race.is_team && '(Team)'}
-                  </option>
-                ))}
-              </SimpleSelect>
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="font-semibold text-neutral-900 mb-3">
+                {selectedRaces.length === 0
+                  ? 'Select races to include'
+                  : `Seed List after ${selectedRaces.length} Race${selectedRaces.length > 1 ? 's' : ''}`}
+              </h3>
+              {races.length === 0 ? (
+                <p className="text-neutral-500 text-sm">No completed races found</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {races.map((race) => (
+                    <label
+                      key={race.id}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
+                        selectedRaces.includes(race.id)
+                          ? 'bg-primary-50 border-primary-300 text-primary-700'
+                          : 'bg-white border-neutral-200 hover:border-neutral-300'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRaces.includes(race.id)}
+                        onChange={() => handleRaceToggle(race.id)}
+                        className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm font-medium">{race.text}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex items-end gap-2">
-              <Button
-                variant="primary"
-                onClick={handleGenerateSeedList}
-                disabled={loading || !selectedRace}
-                leftIcon={<Calculator className="w-4 h-4" />}
-              >
-                Generate
-              </Button>
+            <div className="flex items-start gap-2 ml-4">
               <Button
                 variant="outline"
                 onClick={handleExportPDF}
@@ -287,7 +284,7 @@ function GenerateSeedListNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-info">
-                {seedList.length > 0 ? Math.min(...seedList.map(s => s.totalSeed || 0)).toFixed(2) : '0.00'}
+                {seedList.length > 0 ? Math.min(...seedList.map(s => s.seed_points || 0)).toFixed(2) : '0.00'}
               </p>
               <p className="text-sm text-neutral-600">Best Seed</p>
             </div>
@@ -307,7 +304,11 @@ function GenerateSeedListNew() {
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <Calculator className="w-12 h-12 text-neutral-300" />
               <p className="text-neutral-500">No seed list generated yet</p>
-              <p className="text-sm text-neutral-400">Select a race and click Generate to create seed list</p>
+              <p className="text-sm text-neutral-400">
+                {races.length === 0
+                  ? 'Complete at least one race to generate a seed list'
+                  : 'Select races above to generate the seed list'}
+              </p>
             </div>
           ) : (
             <DataTable

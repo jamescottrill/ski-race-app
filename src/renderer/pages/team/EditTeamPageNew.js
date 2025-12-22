@@ -73,7 +73,7 @@ export default function EditTeamPageNew() {
     setError(null);
 
     try {
-      await window.api.update(
+      await window.api.insert(
         `UPDATE competition_team
          SET team_name = ?, is_corps = ?, is_reserve = ?
          WHERE competition_id = ? AND team_id = ?`,
