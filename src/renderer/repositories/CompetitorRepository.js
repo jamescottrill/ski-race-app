@@ -22,7 +22,7 @@ export class CompetitorRepository extends BaseRepository {
         p.title,
         p.birth_year,
         p.country,
-        p.service_number,
+        p.id AS service_number,
         p.gender
       FROM competition_competitor cc
       LEFT JOIN people p ON cc.racer_id = p.id

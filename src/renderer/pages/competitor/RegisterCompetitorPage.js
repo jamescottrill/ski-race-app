@@ -20,7 +20,7 @@ function RegisterCompetitorPage() {
 
   const fetchCompetitors = async () => {
     const query = `
-      SELECT p.id, p.first_name, p.last_name, p.service_number
+      SELECT p.id, p.first_name, p.last_name, p.id AS service_number
       FROM people p
       LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
       WHERE cc.competition_id != ? OR cc.competition_id IS NULL

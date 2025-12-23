@@ -12,7 +12,6 @@ import {
   IconButton,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { v4 as uuid4 } from 'uuid';
 import AddIcon from '@mui/icons-material/Add';
 import TeamModal from './TeamModal';
 
@@ -126,7 +125,7 @@ function CompetitorForm({
                p.birth_year,
                p.id,
                p.country,
-               p.service_number,
+               p.id AS service_number,
                p.gender,
                cc.title,
 --                ct.team_id AS team,
@@ -201,11 +200,11 @@ function CompetitorForm({
     if (formData.birthYear) {
       ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
     }
-    const id = uuid4();
+    const id = formData.serviceNumber;
 
     const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const params1 = [
       id,
@@ -214,7 +213,6 @@ function CompetitorForm({
       formData.title,
       formData.birthYear,
       formData.country,
-      formData.serviceNumber,
       formData.gender,
     ];
 
@@ -340,7 +338,7 @@ function CompetitorForm({
   const updateCompetitor = async () => {
     const query1 = `
       UPDATE people
-      SET first_name = ?, last_name = ?, title = ?, birth_year = ?, country = ?, service_number = ?, gender = ?
+      SET first_name = ?, last_name = ?, title = ?, birth_year = ?, country = ?, gender = ?
       WHERE id = ?
     `;
     const params1 = [
@@ -349,7 +347,6 @@ function CompetitorForm({
       formData.title,
       formData.birthYear,
       formData.country,
-      formData.serviceNumber,
       formData.gender,
       competitorId,
     ];

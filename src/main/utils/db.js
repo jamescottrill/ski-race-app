@@ -94,7 +94,6 @@ class Database {
         title TEXT,
         birth_year INT,
         country TEXT,
-        service_number TEXT,
         gender TEXT,
         is_competitor BOOLEAN,
         is_committee BOOLEAN
@@ -250,6 +249,47 @@ class Database {
       //   FOREIGN KEY (racer_id) REFERENCES people(id)
       // )
       // `
+      `
+      CREATE TABLE IF NOT EXISTS aasl (
+        service_number TEXT NOT NULL,
+        first_name TEXT,
+        last_name TEXT,
+        gender TEXT,
+        category TEXT,
+        seed_points NUMBER NOT NULL,
+        season TEXT NOT NULL,
+        import_date TEXT,
+        PRIMARY KEY (service_number, season),
+        FOREIGN KEY (service_number) REFERENCES people(id)
+      )
+      `,
+      `
+      CREATE TABLE IF NOT EXISTS competition_cpp (
+        id TEXT PRIMARY KEY,
+        competition_id TEXT NOT NULL,
+        cpp_value NUMBER NOT NULL,
+        calculation_date TEXT,
+        t1_sum NUMBER,
+        t2_sum NUMBER,
+        t3_sum NUMBER,
+        skiers_used INTEGER,
+        FOREIGN KEY (competition_id) REFERENCES competitions(id)
+      )
+      `,
+      `
+      CREATE TABLE IF NOT EXISTS competition_final_seed_list (
+        competition_id TEXT NOT NULL,
+        racer_id TEXT NOT NULL,
+        raw_seed_points NUMBER,
+        cpp_applied NUMBER,
+        final_seed_points NUMBER NOT NULL,
+        aasl_points NUMBER,
+        finalised_date TEXT,
+        PRIMARY KEY (competition_id, racer_id),
+        FOREIGN KEY (competition_id) REFERENCES competitions(id),
+        FOREIGN KEY (racer_id) REFERENCES people(id)
+      )
+      `,
     ];
 
     // Execute each query to create tables
@@ -268,7 +308,7 @@ class Database {
       });
     });
 
-    Promise.allSettled(promises).then((results) => {
+    Promise.allSettled(promises).then(async (results) => {
       if (errors.length > 0) {
         console.error(`Failed to create ${errors.length} table(s):`, errors);
       }

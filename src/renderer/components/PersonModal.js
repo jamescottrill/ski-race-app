@@ -11,8 +11,6 @@ import {
   MenuItem,
   FormControl,
 } from '@mui/material';
-import { v4 as uuid4 } from 'uuid';
-
 export default function PersonModal({ open, onClose, onSave }) {
   const initialFormValues = {
     firstName: '',
@@ -35,11 +33,11 @@ export default function PersonModal({ open, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const id = uuid4();
+    const id = formData.serviceNumber;
 
     const query = `
-      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       id,
@@ -48,7 +46,6 @@ export default function PersonModal({ open, onClose, onSave }) {
       formData.title,
       formData.dob,
       formData.country,
-      formData.serviceNumber,
       formData.gender,
     ];
 

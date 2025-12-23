@@ -65,7 +65,7 @@ function EditCompetitorPageNew() {
     try {
       // Fetch person details
       const personQuery = `
-        SELECT p.first_name, p.last_name, p.birth_year, p.country, p.service_number, p.gender,
+        SELECT p.first_name, p.last_name, p.birth_year, p.country, p.id AS service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
                cc.is_veteran, cc.is_reserve, cc.regiment, cc.title,
                ctm.team_id
@@ -135,10 +135,10 @@ function EditCompetitorPageNew() {
     e.preventDefault();
 
     try {
-      // Update person details
+      // Update person details (id/service_number cannot be changed)
       const personQuery = `
         UPDATE people
-        SET first_name = ?, last_name = ?, birth_year = ?, country = ?, service_number = ?, gender = ?
+        SET first_name = ?, last_name = ?, birth_year = ?, country = ?, gender = ?
         WHERE id = ?
       `;
       const personParams = [
@@ -146,7 +146,6 @@ function EditCompetitorPageNew() {
         formData.lastName,
         formData.birthYear,
         formData.country,
-        formData.serviceNumber,
         formData.gender,
         competitorId,
       ];

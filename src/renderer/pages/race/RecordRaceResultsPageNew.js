@@ -200,29 +200,81 @@ function RecordRaceResultsPageNew() {
 
   const fetchCompetitorsForRun = async (runNumber) => {
     try {
-      const query = `
-        SELECT
-          p.id as competitor_id,
-          p.first_name,
-          p.last_name,
-          rc.bib_number,
-          cc.regiment,
-          rr.race_time,
-          rr.is_dnf,
-          rr.is_dsq,
-          rr.is_dns,
-          rr.is_ns,
-          rr.dsq_gate,
-          rr.dsq_reason
-        FROM people p
-        INNER JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
-        INNER JOIN race_competitor rc ON p.id = rc.racer_id AND rc.race_id = ? AND rc.competition_id = ?
-        LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
-        ORDER BY rc.bib_number
-      `;
-      const result = await window.api.select(query, [
-        competitionId, raceId, competitionId, raceId, competitionId, runNumber
-      ]);
+      let query;
+      let params;
+
+      if (runNumber === 1) {
+        query = `
+          SELECT
+            p.id as competitor_id,
+            p.first_name,
+            p.last_name,
+            rc.bib_number,
+            cc.regiment,
+            rr.race_time,
+            rr.is_dnf,
+            rr.is_dsq,
+            rr.is_dns,
+            rr.is_ns,
+            rr.dsq_gate,
+            rr.dsq_reason,
+            NULL as prev_race_time
+          FROM people p
+          INNER JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
+          INNER JOIN race_competitor rc ON p.id = rc.racer_id AND rc.race_id = ? AND rc.competition_id = ?
+          LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
+          ORDER BY rc.bib_number
+        `;
+        params = [competitionId, raceId, competitionId, raceId, competitionId, runNumber];
+      } else {
+        query = `
+          SELECT
+            p.id as competitor_id,
+            p.first_name,
+            p.last_name,
+            rc.bib_number,
+            cc.regiment,
+            rr.race_time,
+            rr.is_dnf,
+            rr.is_dsq,
+            rr.is_dns,
+            rr.is_ns,
+            rr.dsq_gate,
+            rr.dsq_reason,
+            rr_prev.race_time as prev_race_time,
+            rr_prev.is_dnf as prev_is_dnf,
+            rr_prev.is_dsq as prev_is_dsq,
+            rr_prev.is_dns as prev_is_dns,
+            rr_prev.is_ns as prev_is_ns
+          FROM people p
+          INNER JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
+          INNER JOIN race_competitor rc ON p.id = rc.racer_id AND rc.race_id = ? AND rc.competition_id = ?
+          LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
+          LEFT JOIN race_results rr_prev ON rr_prev.racer_id = p.id AND rr_prev.race_id = ? AND rr_prev.competition_id = ? AND rr_prev.run_number = ?
+          WHERE EXISTS (SELECT 1 FROM race_results rr2 WHERE rr2.racer_id = p.id AND rr2.race_id = ? AND rr2.competition_id = ? AND rr2.run_number = ?)
+          ORDER BY rr_prev.race_time ASC NULLS LAST, rc.bib_number ASC
+        `;
+        params = [
+          competitionId, raceId, competitionId,
+          raceId, competitionId, runNumber,
+          raceId, competitionId, runNumber - 1,
+          raceId, competitionId, runNumber
+        ];
+      }
+
+      let result = await window.api.select(query, params);
+
+      if (runNumber > 1 && result.length > 0) {
+        const finishedCompetitors = result.filter(c => c.prev_race_time != null);
+        const unfinishedCompetitors = result.filter(c => c.prev_race_time == null);
+
+        const top15 = finishedCompetitors.slice(0, 15).reverse();
+        const restFinished = finishedCompetitors.slice(15);
+
+        unfinishedCompetitors.sort((a, b) => (a.bib_number || 0) - (b.bib_number || 0));
+
+        result = [...top15, ...restFinished, ...unfinishedCompetitors];
+      }
 
       const competitorData = result.map(comp => ({
         ...comp,
@@ -388,12 +440,20 @@ function RecordRaceResultsPageNew() {
 
   const createNextRunResults = async (currentRun, nextRun) => {
     try {
-      const finishedCompetitors = competitors[currentRun]?.filter(c => c.status === 'Finished') || [];
+      const isSeedingRace = raceDetails?.is_seeding === 1 || raceDetails?.is_seeding === true;
+      const allCompetitors = competitors[currentRun] || [];
+
+      let competitorsForNextRun;
+      if (isSeedingRace) {
+        competitorsForNextRun = allCompetitors;
+      } else {
+        competitorsForNextRun = allCompetitors.filter(c => c.status === 'Finished');
+      }
 
       const deleteQuery = `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
       await window.api.delete(deleteQuery, [competitionId, raceId, nextRun]);
 
-      for (const comp of finishedCompetitors) {
+      for (const comp of competitorsForNextRun) {
         const insertQuery = `
           INSERT INTO race_results (competition_id, race_id, run_number, racer_id)
           VALUES (?, ?, ?, ?)

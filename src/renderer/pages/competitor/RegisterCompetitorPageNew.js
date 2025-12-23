@@ -23,7 +23,6 @@ import {
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { v4 as uuid4 } from 'uuid';
 
 function RegisterCompetitorPageNew() {
   const handleBack = useBackButton();
@@ -53,7 +52,7 @@ function RegisterCompetitorPageNew() {
 
   const fetchExistingCompetitors = async () => {
     const query = `
-      SELECT p.id, p.first_name, p.last_name, p.service_number
+      SELECT p.id, p.first_name, p.last_name, p.id AS service_number
       FROM people p
       LEFT JOIN competition_competitor cc ON p.id = cc.racer_id
       WHERE cc.competition_id != ? OR cc.competition_id IS NULL
@@ -80,7 +79,7 @@ function RegisterCompetitorPageNew() {
 
   const fetchCompetitorDetails = async (competitorId) => {
     const query = `
-      SELECT first_name, last_name, birth_year, country, service_number, gender
+      SELECT first_name, last_name, birth_year, country, id AS service_number, gender
       FROM people WHERE id = ?
     `;
     try {
@@ -147,11 +146,11 @@ function RegisterCompetitorPageNew() {
     if (selectedCompetitorId) {
       racerId = selectedCompetitorId;
     } else {
-      // Create new person
-      racerId = uuid4();
+      // Create new person - use serviceNumber as the id
+      racerId = formData.serviceNumber;
       const personQuery = `
-        INSERT INTO people (id, first_name, last_name, birth_year, country, service_number, gender)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO people (id, first_name, last_name, birth_year, country, gender)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
       const personParams = [
         racerId,
@@ -159,7 +158,6 @@ function RegisterCompetitorPageNew() {
         formData.lastName,
         formData.birthYear,
         formData.country,
-        formData.serviceNumber,
         formData.gender,
       ];
 

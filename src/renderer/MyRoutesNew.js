@@ -6,6 +6,7 @@ import CompetitorRoutesNew from './routes/CompetitorRoutesNew';
 import ResultsRoutesNew from './routes/ResultsRoutesNew';
 import RaceRoutesNew from './routes/RaceRoutesNew';
 import SeedListRoutesNew from './routes/SeedListRoutesNew';
+import AASLRoutes from './routes/AASLRoutes';
 import LayoutNew from './components/LayoutNew';
 
 export default function MyRoutesNew() {
@@ -25,6 +26,7 @@ export default function MyRoutesNew() {
       {RaceRoutesNew()}
       {SeedListRoutesNew()}
       {ResultsRoutesNew()}
+      {AASLRoutes()}
     </>
   );
 }

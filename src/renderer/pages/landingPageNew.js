@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mountain, Plus, Trophy } from 'lucide-react';
+import { Mountain, Plus, Trophy, ListOrdered } from 'lucide-react';
 import { 
   Button, 
   Card, 
@@ -87,16 +87,28 @@ function LandingPageNew() {
           {/* Actions */}
           <div className="space-y-4">
             {/* Create New Competition */}
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={handleCreateCompetition}
-              leftIcon={<Plus className="w-5 h-5" />}
-              className="shadow-lg hover:shadow-xl transition-shadow"
-            >
-              Create New Competition
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleCreateCompetition}
+                leftIcon={<Plus className="w-5 h-5" />}
+                className="shadow-lg hover:shadow-xl transition-shadow"
+              >
+                New Competition
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                fullWidth
+                onClick={() => navigate('/aasl')}
+                leftIcon={<ListOrdered className="w-5 h-5" />}
+                className="shadow-lg hover:shadow-xl transition-shadow"
+              >
+                Manage AASL
+              </Button>
+            </div>
 
             {/* Or Divider */}
             <div className="relative">

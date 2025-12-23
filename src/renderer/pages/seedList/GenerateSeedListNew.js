@@ -7,7 +7,9 @@ import {
   Calculator,
   FileText,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  TrendingUp,
+  Save
 } from 'lucide-react';
 import {
   PageContainer,
@@ -16,11 +18,20 @@ import {
   CardContent,
   Button,
   DataTable,
+  Badge,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import { generatePDF } from '../../pdfs/SeedList';
+import {
+  calculateCPP,
+  applyCPPToSeedList,
+  storeCPPResult,
+  storeFinalSeedList,
+  getStoredCPP
+} from '../../utils/CPPCalculation';
+import toast from 'react-hot-toast';
 
 function GenerateSeedListNew() {
   const { competitionId } = useParams();
@@ -29,11 +40,72 @@ function GenerateSeedListNew() {
   const [selectedRaces, setSelectedRaces] = useState([]);
   const [races, setRaces] = useState([]);
   const [generationStatus, setGenerationStatus] = useState(null);
+  const [cppResult, setCppResult] = useState(null);
+  const [cppCalculating, setCppCalculating] = useState(false);
+  const [showCPPSection, setShowCPPSection] = useState(false);
+  const [storedCPP, setStoredCPP] = useState(null);
   const handleBack = useBackButton();
 
   useEffect(() => {
     fetchCompletedRaces();
+    loadStoredCPP();
   }, [competitionId]);
+
+  const loadStoredCPP = async () => {
+    const stored = await getStoredCPP(competitionId);
+    setStoredCPP(stored);
+  };
+
+  const handleCalculateCPP = async () => {
+    if (seedList.length === 0) {
+      toast.error('Generate a seed list first');
+      return;
+    }
+
+    setCppCalculating(true);
+    try {
+      const result = await calculateCPP(competitionId, seedList);
+      setCppResult(result);
+      setShowCPPSection(true);
+
+      if (!result.success) {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error('CPP calculation failed:', error);
+      toast.error('CPP calculation failed');
+    } finally {
+      setCppCalculating(false);
+    }
+  };
+
+  const handleFinaliseSeedList = async () => {
+    if (!cppResult || !cppResult.success) {
+      toast.error('Calculate CPP first');
+      return;
+    }
+
+    try {
+      // Apply CPP to seed list
+      const finalisedList = applyCPPToSeedList(seedList, cppResult.cpp);
+
+      // Store CPP result
+      await storeCPPResult(competitionId, cppResult);
+
+      // Store finalised seed list
+      const storeResult = await storeFinalSeedList(competitionId, finalisedList);
+
+      if (storeResult.success) {
+        toast.success(`Finalised seed list with ${storeResult.successCount} entries`);
+        loadStoredCPP();
+      } else {
+        toast.error(`Stored with ${storeResult.errorCount} errors`);
+      }
+    } catch (error) {
+      console.error('Failed to finalise seed list:', error);
+      toast.error('Failed to finalise seed list');
+    }
+  };
 
   const fetchCompletedRaces = async () => {
     try {
@@ -292,6 +364,98 @@ function GenerateSeedListNew() {
           </div>
         </Card>
       </div>
+
+      {/* CPP Section */}
+      {seedList.length > 0 && (
+        <Card className="mb-6">
+          <CardContent>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-5 h-5 text-primary-600" />
+                <h3 className="font-semibold text-neutral-900">Championship Penalty Points (CPP)</h3>
+                {storedCPP && (
+                  <Badge variant="success">
+                    Previously calculated: {storedCPP.cpp_value?.toFixed(2)}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCalculateCPP}
+                  disabled={cppCalculating || seedList.length === 0}
+                  leftIcon={<Calculator className="w-4 h-4" />}
+                >
+                  {cppCalculating ? 'Calculating...' : 'Calculate CPP'}
+                </Button>
+                {cppResult?.success && (
+                  <Button
+                    variant="primary"
+                    onClick={handleFinaliseSeedList}
+                    leftIcon={<Save className="w-4 h-4" />}
+                  >
+                    Finalise Seed List
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {showCPPSection && cppResult && (
+              <div className={cn(
+                'p-4 rounded-lg',
+                cppResult.success ? 'bg-success/10' : 'bg-danger/10'
+              )}>
+                {cppResult.success ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-5 gap-4">
+                      <div className="text-center">
+                        <p className="text-sm text-neutral-600">T1 (AASL Sum)</p>
+                        <p className="text-xl font-bold">{cppResult.t1?.toFixed(2)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-neutral-600">T2 (AASL Sum)</p>
+                        <p className="text-xl font-bold">{cppResult.t2?.toFixed(2)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-neutral-600">T3 (Seed Sum)</p>
+                        <p className="text-xl font-bold">{cppResult.t3?.toFixed(2)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-neutral-600">Divisor</p>
+                        <p className="text-xl font-bold">{cppResult.divisor}</p>
+                      </div>
+                      <div className="text-center bg-primary-100 rounded-lg p-2">
+                        <p className="text-sm text-primary-700">CPP Value</p>
+                        <p className="text-2xl font-bold text-primary-700">{cppResult.cpp?.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-neutral-600">
+                      <p className="font-medium mb-2">Reference Skiers ({cppResult.skiersUsed}):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {cppResult.qualifyingSkiers?.map((skier, idx) => (
+                          <Badge key={idx} variant="outline">
+                            {skier.name} (AASL: {skier.aasl_points?.toFixed(2)}, Seed: {skier.seed_points?.toFixed(2)})
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-neutral-500 font-mono">
+                      Formula: {cppResult.formula}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-danger-600">
+                    <AlertCircle className="w-5 h-5" />
+                    <p>{cppResult.error}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Seed List Table */}
       <Card>

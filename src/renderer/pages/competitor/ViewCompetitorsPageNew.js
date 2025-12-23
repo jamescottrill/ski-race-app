@@ -32,7 +32,7 @@ export default function ViewCompetitorsPageNew() {
   const fetchCompetitors = async () => {
     setLoading(true);
     const query = `
-      SELECT p.id, p.first_name, p.last_name, p.gender, p.birth_year, p.service_number, p.country,
+      SELECT p.id, p.first_name, p.last_name, p.gender, p.birth_year, p.id AS service_number, p.country,
              cc.regiment, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id

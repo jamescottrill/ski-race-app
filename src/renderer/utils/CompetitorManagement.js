@@ -1,5 +1,3 @@
-import { v4 as uuid4 } from 'uuid';
-
 const calculateAgeCategory = (birthYear) => {
   const currentYear = new Date().getFullYear();
   const age = currentYear - parseInt(birthYear);
@@ -13,8 +11,7 @@ const calculateAgeCategory = (birthYear) => {
 
 const competitorExists = async (serviceNumber, competitionId) => {
   const query = `SELECT cc.racer_id AS id FROM competition_competitor cc
-          INNER JOIN people p ON p.id = cc.racer_id
-          WHERE p.service_number = ? AND cc.competition_id = ?`;
+          WHERE cc.racer_id = ? AND cc.competition_id = ?`;
   const params = [serviceNumber, competitionId];
   try {
     const result = await window.api.select(query, params);
@@ -27,7 +24,7 @@ const competitorExists = async (serviceNumber, competitionId) => {
 };
 
 const personExists = async (serviceNumber) => {
-  const query = `SELECT id FROM people WHERE service_number = ? `;
+  const query = `SELECT id FROM people WHERE id = ?`;
   const params = [serviceNumber];
   try {
     const result = await window.api.select(query, params);
@@ -150,10 +147,10 @@ const createCompetitor = async (formData, competitionId) => {
   if (formData.birthYear) {
     ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
   }
-  const id = uuid4();
+  const id = formData.serviceNumber;
   const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, birth_year, country, service_number, gender)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
   const params1 = [
     id,
@@ -162,7 +159,6 @@ const createCompetitor = async (formData, competitionId) => {
     formData.title,
     formData.birthYear,
     formData.country,
-    formData.serviceNumber,
     formData.gender,
   ];
 

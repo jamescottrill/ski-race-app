@@ -77,7 +77,7 @@ export default function TeamMembersPageNew() {
           ctm.racer_id,
           p.first_name,
           p.last_name,
-          p.service_number,
+          p.id AS service_number
          FROM competition_team_members ctm
          JOIN people p ON ctm.racer_id = p.id
          LEFT JOIN competition_competitor cc ON cc.competition_id = ctm.competition_id AND cc.racer_id = ctm.racer_id
@@ -99,7 +99,7 @@ export default function TeamMembersPageNew() {
           cc.racer_id,
           p.first_name,
           p.last_name,
-          p.service_number,
+          p.id AS service_number
          FROM competition_competitor cc
          JOIN people p ON cc.racer_id = p.id
          WHERE cc.competition_id = ?
