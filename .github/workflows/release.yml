@@ -38,18 +38,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Windows 10 SDK
+      - name: Install dependencies (Windows)
         if: matrix.platform == 'win'
         run: |
-          $vsInstaller = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-          & $vsInstaller modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --add Microsoft.VisualStudio.Component.Windows10SDK.20348 --quiet --norestart --wait
-          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) { exit $LASTEXITCODE }
-        shell: pwsh
-
-      - name: Install dependencies
-        run: npm ci
+          npm ci --ignore-scripts
+          cd release/app && npm ci --ignore-scripts
+          cd ../..
+          npm run build:dll
         env:
           npm_config_msvs_version: '2022'
+
+      - name: Rebuild native modules (Windows)
+        if: matrix.platform == 'win'
+        run: npx @electron/rebuild --force --module-dir release/app
+        env:
+          npm_config_msvs_version: '2022'
+
+      - name: Install dependencies (macOS)
+        if: matrix.platform == 'mac'
+        run: npm ci
 
       - name: Build and package (macOS)
         if: matrix.platform == 'mac'
