@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, UserPlus, UserMinus, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, UserMinus, Search } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -9,7 +9,7 @@ import {
   Button,
   Badge,
   DataTable,
-  Select
+  Input,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -24,6 +24,7 @@ export default function TeamMembersPageNew() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [availableCompetitors, setAvailableCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchInitialData();
@@ -144,6 +145,19 @@ export default function TeamMembersPageNew() {
       console.error('Failed to remove team member:', error);
     }
   };
+
+  const filteredAvailableCompetitors = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return availableCompetitors;
+    }
+    const term = searchTerm.toLowerCase();
+    return availableCompetitors.filter(
+      (c) =>
+        c.last_name?.toLowerCase().includes(term) ||
+        c.first_name?.toLowerCase().includes(term) ||
+        c.service_number?.toString().toLowerCase().includes(term)
+    );
+  }, [availableCompetitors, searchTerm]);
 
   const memberColumns = [
     {
@@ -300,17 +314,35 @@ export default function TeamMembersPageNew() {
                   <UserPlus className="w-5 h-5 text-success" />
                   <h3 className="font-semibold">Available Competitors</h3>
                 </div>
-                <Badge variant="default">{availableCompetitors.length} available</Badge>
+                <Badge variant="default">
+                  {filteredAvailableCompetitors.length} available
+                </Badge>
+              </div>
+              <div className="mt-3">
+                <Input
+                  placeholder="Search by name or service number..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  leftIcon={<Search className="w-4 h-4" />}
+                />
               </div>
             </div>
             <CardContent noPadding>
-              {availableCompetitors.length === 0 ? (
+              {filteredAvailableCompetitors.length === 0 ? (
                 <div className="p-8 text-center">
                   <UserPlus className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-500">All competitors are assigned to teams</p>
+                  <p className="text-neutral-500">
+                    {searchTerm
+                      ? 'No competitors match your search'
+                      : 'All competitors are assigned to teams'}
+                  </p>
                 </div>
               ) : (
-                <DataTable columns={availableColumns} data={availableCompetitors} pageSize={10} />
+                <DataTable
+                  columns={availableColumns}
+                  data={filteredAvailableCompetitors}
+                  pageSize={10}
+                />
               )}
             </CardContent>
           </Card>

@@ -10,7 +10,6 @@ import {
   DataTable,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { fetchSeedList } from '../../utils/FetchSeedList';
 import { generatePDF } from '../../pdfs/SeedList';
 
 function TeamResultsNew() {
@@ -20,124 +19,125 @@ function TeamResultsNew() {
   const [loading, setLoading] = useState(true);
   const handleBack = useBackButton();
 
-  const completedRaces = async () => {
-    const query = `
-      SELECT
-        DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate, r.is_seeding AS isSeeding
-      FROM race_run rr
-        INNER JOIN races r ON r.race_id = rr.race_id
-      WHERE rr.competition_id = ?
-        AND NOT r.is_training
-        AND rr.is_complete
-        AND r.is_individual
-      ORDER BY r.race_date ASC`;
-    const res = await window.api.select(query, [competitionId]);
-    setRaces(res);
-    return res;
-  };
-
   useEffect(() => {
-    const fetchList = async () => {
+    const fetchTeamResults = async () => {
       setLoading(true);
       try {
-        console.log('TeamResultsNew: Fetching team results for competition:', competitionId);
-        const initialRaces = await completedRaces();
-        console.log('TeamResultsNew: Found races:', initialRaces);
+        // Get completed team races
+        const racesQuery = `
+          SELECT DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate
+          FROM race_run rr
+            INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
+          WHERE rr.competition_id = ?
+            AND NOT r.is_training
+            AND rr.is_complete
+            AND r.is_team
+          ORDER BY r.race_date ASC
+        `;
+        const raceList = await window.api.select(racesQuery, [competitionId]);
+        setRaces(raceList);
 
-        if (initialRaces.length === 0) {
+        if (raceList.length === 0) {
           setTeamResults([]);
           setLoading(false);
           return;
         }
 
-        // Fetch individual results with team info
-        let individualData;
-        if (initialRaces.length > 3) {
-          individualData = await fetchSeedList(
-            competitionId,
-            initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
-          );
-        } else {
-          individualData = await fetchSeedList(
-            competitionId,
-            initialRaces.map((e) => e.id),
-          );
-        }
+        // Get teams from competition_team
+        const teamsQuery = `
+          SELECT team_id, team_name, is_corps, is_reserve, is_female, is_hc
+          FROM competition_team
+          WHERE competition_id = ?
+        `;
+        const teams = await window.api.select(teamsQuery, [competitionId]);
 
-        // Filter to only include competitors who completed all races
-        individualData = individualData.filter((competitor) => {
-          for (const race of initialRaces) {
-            if (competitor[race.id] === null || competitor[race.id] === undefined) {
-              return false;
-            }
-          }
-          return true;
-        });
-
-        console.log('TeamResultsNew: Individual data:', individualData);
-
-        // Group by team
-        const teamMap = new Map();
-
-        individualData.forEach((competitor) => {
-          const teamName = competitor.team_name || competitor.regiment;
-          if (!teamName) return;
-
-          if (!teamMap.has(teamName)) {
-            teamMap.set(teamName, {
-              team_name: teamName,
-              members: []
-            });
-          }
-
-          teamMap.get(teamName).members.push(competitor);
-        });
-
-        // Calculate team standings
+        // For each team, get members and their results for each race
         const teamStandings = [];
 
-        teamMap.forEach((team, teamName) => {
+        for (const team of teams) {
           const teamResult = {
-            team_name: teamName,
-            member_count: team.members.length
+            team_id: team.team_id,
+            team_name: team.team_name,
+            is_corps: team.is_corps,
+            is_reserve: team.is_reserve,
+            is_female: team.is_female,
+            is_hc: team.is_hc,
+            member_count: 0,
           };
 
-          // For each race, sum the top 3 members' points
-          initialRaces.forEach((race) => {
-            const memberPoints = team.members
-              .map(m => parseFloat(m[race.id]) || 0)
-              .sort((a, b) => a - b) // Lower points are better
-              .slice(0, 3); // Top 3
+          let totalPoints = 0;
+          let validRaceCount = 0;
 
-            // Only include if team has at least 3 members who completed the race
-            if (memberPoints.length >= 3) {
-              teamResult[race.id] = memberPoints.reduce((sum, p) => sum + p, 0);
+          for (const race of raceList) {
+            // Get team members for this race and their race points
+            const membersQuery = `
+              SELECT
+                ctm.racer_id,
+                p.first_name,
+                p.last_name,
+                (
+                  SELECT SUM(
+                    CASE
+                      WHEN rr.is_dns = 1 OR rr.is_dnf = 1 OR rr.is_dsq = 1 OR rr.is_ns = 1 THEN 999
+                      ELSE COALESCE(rr.race_time, 999)
+                    END
+                  )
+                  FROM race_results rr
+                  WHERE rr.racer_id = ctm.racer_id
+                    AND rr.race_id = ctm.race_id
+                    AND rr.competition_id = ctm.competition_id
+                ) as total_time
+              FROM competition_team_members ctm
+              INNER JOIN people p ON p.id = ctm.racer_id
+              WHERE ctm.competition_id = ?
+                AND ctm.team_id = ?
+                AND ctm.race_id = ?
+              ORDER BY total_time ASC
+            `;
+            const members = await window.api.select(membersQuery, [
+              competitionId,
+              team.team_id,
+              race.id,
+            ]);
+
+            // Update member count (use max across all races)
+            if (members.length > teamResult.member_count) {
+              teamResult.member_count = members.length;
+            }
+
+            // Determine how many members count based on team type
+            // Corps women: 2, Corps men: 4, Regular: 3
+            let countingMembers = 3;
+            if (team.is_corps) {
+              countingMembers = team.is_female ? 2 : 4;
+            }
+
+            // Sum the top N members' times
+            const topTimes = members
+              .slice(0, countingMembers)
+              .map((m) => parseFloat(m.total_time) || 999);
+
+            if (topTimes.length >= countingMembers && !topTimes.some((t) => t >= 999)) {
+              const raceTotal = topTimes.reduce((sum, t) => sum + t, 0);
+              teamResult[race.id] = raceTotal;
+              totalPoints += raceTotal;
+              validRaceCount += 1;
             } else {
               teamResult[race.id] = null;
             }
-          });
+          }
 
-          // Calculate total points (sum of all race points)
-          let total = 0;
-          let validRaces = 0;
-          initialRaces.forEach((race) => {
-            if (teamResult[race.id] !== null) {
-              total += teamResult[race.id];
-              validRaces++;
-            }
-          });
-
-          // Only include teams that completed all races with 3+ members
-          if (validRaces === initialRaces.length) {
-            teamResult.total_points = total;
+          // Only include teams that have valid results for all races
+          if (validRaceCount === raceList.length) {
+            teamResult.total_points = totalPoints;
             teamStandings.push(teamResult);
           }
-        });
+        }
 
-        // Sort by total points
+        // Sort by total points (lower is better - it's time-based)
         teamStandings.sort((a, b) => a.total_points - b.total_points);
 
-        // Add positions
+        // Add positions with tie handling
         let position = 1;
         let previousTotal = null;
         teamStandings.forEach((team, index) => {
@@ -148,7 +148,6 @@ function TeamResultsNew() {
           previousTotal = team.total_points;
         });
 
-        console.log('TeamResultsNew: Team standings:', teamStandings);
         setTeamResults(teamStandings);
       } catch (error) {
         console.error('Failed to fetch team results:', error);
@@ -157,7 +156,8 @@ function TeamResultsNew() {
         setLoading(false);
       }
     };
-    fetchList();
+
+    fetchTeamResults();
   }, [competitionId]);
 
   const seedListPdf = () => {
