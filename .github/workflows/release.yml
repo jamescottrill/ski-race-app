@@ -38,12 +38,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup Windows build environment
+      - name: Install Windows 10 SDK
         if: matrix.platform == 'win'
         run: |
-          npm install -g node-gyp@latest
-          npm config set msvs_version 2022
-          npm prefix -g | % { npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js" }
+          $vsInstaller = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+          & $vsInstaller modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --add Microsoft.VisualStudio.Component.Windows10SDK.20348 --quiet --norestart --wait
+          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) { exit $LASTEXITCODE }
         shell: pwsh
 
       - name: Install dependencies
