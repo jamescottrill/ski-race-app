@@ -148,6 +148,20 @@ const createCompetitor = async (formData, competitionId) => {
     ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
   }
   const id = formData.serviceNumber;
+
+  // Check if service number already exists
+  const existingPerson = await window.api.select(
+    'SELECT id, first_name, last_name FROM people WHERE id = ?',
+    [id]
+  );
+  if (existingPerson.length > 0) {
+    const person = existingPerson[0];
+    return {
+      success: false,
+      error: `A person with service number ${id} already exists: ${person.first_name} ${person.last_name}`,
+    };
+  }
+
   const query1 = `
       INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
       VALUES (?, ?, ?, ?, ?, ?, ?)

@@ -35,6 +35,19 @@ export default function PersonModal({ open, onClose, onSave }) {
     e.preventDefault();
     const id = formData.serviceNumber;
 
+    // Check if service number already exists
+    const existingPerson = await window.api.select(
+      'SELECT id, first_name, last_name FROM people WHERE id = ?',
+      [id]
+    );
+    if (existingPerson.length > 0) {
+      const person = existingPerson[0];
+      alert(
+        `A person with service number ${id} already exists: ${person.first_name} ${person.last_name}`
+      );
+      return;
+    }
+
     const query = `
       INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
       VALUES (?, ?, ?, ?, ?, ?, ?)

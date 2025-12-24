@@ -148,6 +148,20 @@ function RegisterCompetitorPageNew() {
     } else {
       // Create new person - use serviceNumber as the id
       racerId = formData.serviceNumber;
+
+      // Check if service number already exists
+      const existingPerson = await window.api.select(
+        'SELECT id, first_name, last_name FROM people WHERE id = ?',
+        [racerId]
+      );
+      if (existingPerson.length > 0) {
+        const person = existingPerson[0];
+        alert(
+          `A person with service number ${racerId} already exists: ${person.first_name} ${person.last_name}`
+        );
+        return;
+      }
+
       const personQuery = `
         INSERT INTO people (id, first_name, last_name, birth_year, country, gender)
         VALUES (?, ?, ?, ?, ?, ?)

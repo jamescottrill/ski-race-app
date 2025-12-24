@@ -135,6 +135,19 @@ function EditCompetitorPageNew() {
       ];
 
       if (formData.serviceNumber !== competitorId) {
+        // Check if new service number already exists
+        const existingPerson = await window.api.select(
+          'SELECT id, first_name, last_name FROM people WHERE id = ?',
+          [formData.serviceNumber]
+        );
+        if (existingPerson.length > 0) {
+          const person = existingPerson[0];
+          alert(
+            `A person with service number ${formData.serviceNumber} already exists: ${person.first_name} ${person.last_name}`
+          );
+          return;
+        }
+
         const peopleQuery = `UPDATE people SET id = ? WHERE id = ?`;
         await window.api.insert(peopleQuery, [formData.serviceNumber, competitorId]);
         const queries = [];
