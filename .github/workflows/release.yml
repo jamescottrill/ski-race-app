@@ -38,6 +38,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Windows build tools
+        if: matrix.platform == 'win'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install dependencies
         run: npm ci
 
