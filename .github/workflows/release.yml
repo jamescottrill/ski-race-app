@@ -18,7 +18,7 @@ jobs:
         include:
           - os: macos-latest
             platform: mac
-          - os: windows-latest
+          - os: windows-2019
             platform: win
 
     runs-on: ${{ matrix.os }}
@@ -46,13 +46,14 @@ jobs:
           cd ../..
           npm run build:dll
         env:
-          npm_config_msvs_version: '2022'
+          npm_config_msvs_version: '2019'
 
       - name: Rebuild native modules (Windows)
         if: matrix.platform == 'win'
         run: npx @electron/rebuild --force --module-dir release/app
         env:
-          npm_config_msvs_version: '2022'
+          npm_config_msvs_version: '2019'
+          GYP_MSVS_VERSION: '2019'
 
       - name: Install dependencies (macOS)
         if: matrix.platform == 'mac'
