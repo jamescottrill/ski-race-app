@@ -178,6 +178,8 @@ class Database {
         start_altitude INTEGER,
         finish_altitude INTEGER,
         homologation TEXT,
+        flip_count INTEGER DEFAULT 15,
+        flip_count_women INTEGER DEFAULT 5,
         PRIMARY KEY (competition_id, race_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id)
       )

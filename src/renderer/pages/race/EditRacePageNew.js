@@ -38,6 +38,8 @@ export default function EditRacePageNew() {
     is_training: false,
     is_seeding: false,
     women_separate: false,
+    flip_count: '15',
+    flip_count_women: '5',
     chief_of_race: '',
     tech_delegate: '',
     referee: '',
@@ -81,7 +83,7 @@ export default function EditRacePageNew() {
         const race = result[0];
         setFormData({
           race_name: race.race_name || '',
-          race_type: race.race_type || 'Giant Slalom',
+          race_type: race.race_type || 'GS',
           race_date: race.race_date || '',
           venue: race.venue || '',
           number_runs: race.number_runs?.toString() || '2',
@@ -90,6 +92,8 @@ export default function EditRacePageNew() {
           is_training: race.is_training === 1,
           is_seeding: race.is_seeding === 1,
           women_separate: race.women_separate === 1,
+          flip_count: race.flip_count?.toString() || '15',
+          flip_count_women: race.flip_count_women?.toString() || '5',
           chief_of_race: race.chief_of_race?.toString() || '',
           tech_delegate: race.tech_delegate?.toString() || '',
           referee: race.referee?.toString() || '',
@@ -136,6 +140,8 @@ export default function EditRacePageNew() {
           is_training = ?,
           is_seeding = ?,
           women_separate = ?,
+          flip_count = ?,
+          flip_count_women = ?,
           chief_of_race = ?,
           tech_delegate = ?,
           referee = ?,
@@ -162,6 +168,8 @@ export default function EditRacePageNew() {
         formData.is_training ? 1 : 0,
         formData.is_seeding ? 1 : 0,
         formData.women_separate ? 1 : 0,
+        parseInt(formData.flip_count, 10) || 15,
+        parseInt(formData.flip_count_women, 10) || 5,
         formData.chief_of_race,
         formData.tech_delegate,
         formData.referee,
@@ -239,7 +247,7 @@ export default function EditRacePageNew() {
                       name="race_name"
                       value={formData.race_name}
                       onChange={handleInputChange}
-                      placeholder="e.g., Men's Giant Slalom"
+                      placeholder="e.g., Giant Slalom"
                       required
                     />
                   </div>
@@ -253,12 +261,11 @@ export default function EditRacePageNew() {
                       onChange={handleInputChange}
                       required
                     >
-                      <option value="Giant Slalom">Giant Slalom</option>
-                      <option value="Slalom">Slalom</option>
-                      <option value="Super-G">Super-G</option>
-                      <option value="Downhill">Downhill</option>
-                      <option value="Combined">Combined</option>
-                      <option value="Parallel">Parallel</option>
+                      <option value="GS">Giant Slalom</option>
+                      <option value="SL">Slalom</option>
+                      <option value="SG">Super-G</option>
+                      <option value="DH">Downhill</option>
+                      <option value="AC">Alpine Combined</option>
                     </SimpleSelect>
                   </div>
 
@@ -297,6 +304,35 @@ export default function EditRacePageNew() {
                       <option value="2">2 Runs</option>
                     </SimpleSelect>
                   </div>
+
+                  <div>
+                    <Label htmlFor="flip_count">Flip Count</Label>
+                    <Input
+                      id="flip_count"
+                      name="flip_count"
+                      type="number"
+                      value={formData.flip_count}
+                      onChange={handleInputChange}
+                      placeholder="15"
+                      min="1"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">Top N bibs randomised in Run 1, reversed in Run 2</p>
+                  </div>
+
+                  {formData.women_separate && (
+                    <div>
+                      <Label htmlFor="flip_count_women">Flip Count (Women)</Label>
+                      <Input
+                        id="flip_count_women"
+                        name="flip_count_women"
+                        type="number"
+                        value={formData.flip_count_women}
+                        onChange={handleInputChange}
+                        placeholder="5"
+                        min="1"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <Label>Race Format</Label>

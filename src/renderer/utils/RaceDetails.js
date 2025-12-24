@@ -4,8 +4,10 @@ const getRaceDetails = async (raceId, competitionId) => {
         r.women_separate AS women_separate
         , r.is_seeding
         , r.is_team
-        , 15 AS randomise_top
-        , 5 AS randomise_top_women
+        , COALESCE(r.flip_count, 15) AS randomise_top
+        , COALESCE(r.flip_count_women, 5) AS randomise_top_women
+        , r.flip_count
+        , r.flip_count_women
         , venue
         , course_name
         , weather
