@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mountain, Plus, Trophy, ListOrdered } from 'lucide-react';
-import { 
-  Button, 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
   CardContent,
   Select,
   SelectContent,
@@ -69,18 +69,10 @@ function LandingPageNew() {
 
         <CardContent className="space-y-6 pt-8">
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-neutral-50 rounded-lg">
+          <div className="grid grid-cols-3  gap-4 p-4 bg-neutral-50 rounded-lg">
             <div className="text-center">
               <p className="text-2xl font-bold text-primary-700">{competitions.length}</p>
               <p className="text-xs text-neutral-600">Competitions</p>
-            </div>
-            <div className="text-center border-x border-neutral-200">
-              <p className="text-2xl font-bold text-primary-700">2024</p>
-              <p className="text-xs text-neutral-600">Season</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary-700">Active</p>
-              <p className="text-xs text-neutral-600">Status</p>
             </div>
           </div>
 
