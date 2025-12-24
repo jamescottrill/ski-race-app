@@ -27,7 +27,6 @@ function EditCompetitorPageNew() {
   const { competitionId, competitorId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
-  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -37,7 +36,6 @@ function EditCompetitorPageNew() {
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
-    team: '',
     arrivalSeed: 2000,
     armySeed: '',
     isNovice: false,
@@ -48,15 +46,6 @@ function EditCompetitorPageNew() {
     regiment: '',
   });
 
-  const fetchTeams = async () => {
-    const query = `SELECT team_id, team_name FROM competition_team WHERE competition_id = ?`;
-    try {
-      const result = await window.api.select(query, [competitionId]);
-      setTeams(result);
-    } catch (error) {
-      console.error('Failed to fetch teams:', error);
-    }
-  };
 
   const fetchCompetitorDetails = async () => {
     if (!competitorId) return;
@@ -67,11 +56,9 @@ function EditCompetitorPageNew() {
       const personQuery = `
         SELECT p.first_name, p.last_name, p.birth_year, p.country, p.id AS service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
-               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title,
-               ctm.team_id
+               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title
         FROM people p
         INNER JOIN competition_competitor cc ON p.id = cc.racer_id
-        LEFT JOIN competition_team_members ctm ON ctm.racer_id = p.id AND ctm.competition_id = cc.competition_id
         WHERE p.id = ? AND cc.competition_id = ?
       `;
 
@@ -87,7 +74,6 @@ function EditCompetitorPageNew() {
           country: competitor.country || 'GBR',
           serviceNumber: competitor.service_number || '',
           gender: competitor.gender || 'M',
-          team: competitor.team_id || '',
           arrivalSeed: competitor.arrival_seed || 2000,
           armySeed: competitor.army_seed || '',
           isNovice: competitor.is_novice === 1,
@@ -106,7 +92,6 @@ function EditCompetitorPageNew() {
   };
 
   useEffect(() => {
-    fetchTeams();
     fetchCompetitorDetails();
   }, [competitorId, competitionId]);
 
@@ -135,7 +120,6 @@ function EditCompetitorPageNew() {
     e.preventDefault();
 
     try {
-      // Update person details (id/service_number cannot be changed)
       const personQuery = `
         UPDATE people
         SET first_name = ?, last_name = ?, birth_year = ?, country = ?, gender = ?
@@ -149,6 +133,23 @@ function EditCompetitorPageNew() {
         formData.gender,
         competitorId,
       ];
+
+      if (formData.serviceNumber !== competitorId) {
+        const peopleQuery = `UPDATE people SET id = ? WHERE id = ?`;
+        await window.api.insert(peopleQuery, [formData.serviceNumber, competitorId]);
+        const queries = [];
+        for (const table of [
+          'competition_team_members',
+          'race_results',
+          'race_competitor',
+          'competition_competitor',
+          'competition_final_seed_list',
+        ]) {
+          const query = `UPDATE ${table} SET racer_id = ? WHERE racer_id = ?`;
+          queries.push(window.api.insert(query, [formData.serviceNumber, competitorId]));
+        }
+        await Promise.all(queries);
+      }
 
       await window.api.insert(personQuery, personParams);
 
@@ -174,28 +175,6 @@ function EditCompetitorPageNew() {
       ];
 
       await window.api.insert(competitorQuery, competitorParams);
-
-      // Update team membership
-      // First remove existing team membership
-      const deleteTeamQuery = `
-        DELETE FROM competition_team_members
-        WHERE racer_id = ? AND competition_id = ?
-      `;
-      await window.api.delete(deleteTeamQuery, [competitorId, competitionId]);
-
-      // Add new team membership if selected
-      if (formData.team) {
-        const teamQuery = `
-          INSERT INTO competition_team_members (competition_id, team_id, racer_id)
-          VALUES (?, ?, ?)
-        `;
-        await window.api.insert(teamQuery, [
-          competitionId,
-          formData.team,
-          competitorId,
-        ]);
-      }
-
       navigate(-1);
     } catch (error) {
       console.error('Failed to update competitor:', error);
@@ -347,19 +326,6 @@ function EditCompetitorPageNew() {
                         onChange={handleInputChange}
                         placeholder="e.g., Royal Engineers"
                       />
-                      <SimpleSelect
-                        label="Team"
-                        name="team"
-                        value={formData.team}
-                        onChange={handleInputChange}
-                      >
-                        <option value="">No Team</option>
-                        {teams.map((team) => (
-                          <option key={team.team_id} value={team.team_id}>
-                            {team.team_name}
-                          </option>
-                        ))}
-                      </SimpleSelect>
                       <SimpleSelect
                         label="Country"
                         name="country"
