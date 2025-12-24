@@ -35,6 +35,10 @@ function LandingPage() {
     navigate('/new-competition');
   };
 
+  const handleMergePeople = () => {
+    navigate('/admin/merge-people');
+  };
+
   const handleSelectCompetition = (event) => {
     setSelectedCompetition(event.target.value);
     navigate(`/competition/${event.target.value}`);
@@ -82,6 +86,19 @@ function LandingPage() {
               ))}
             </Select>
           </FormControl>
+        </div>
+        <div className="border-t border-gray-200 mt-6 pt-4">
+          <Typography variant="body2" className="text-gray-500 text-center mb-2">
+            Admin Tools
+          </Typography>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleMergePeople}
+            className="w-full"
+          >
+            Merge Duplicate People
+          </Button>
         </div>
       </Paper>
     </Container>

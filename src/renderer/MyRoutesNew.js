@@ -8,12 +8,14 @@ import RaceRoutesNew from './routes/RaceRoutesNew';
 import SeedListRoutesNew from './routes/SeedListRoutesNew';
 import AASLRoutes from './routes/AASLRoutes';
 import LayoutNew from './components/LayoutNew';
+import MergePeoplePageNew from './pages/admin/MergePeoplePageNew';
 
 export default function MyRoutesNew() {
   return (
     <>
       <Route path="/" element={<LandingPageNew />} />
       <Route path="/new-competition" element={<CreateCompetitionPageNew />} />
+      <Route path="/admin/merge-people" element={<MergePeoplePageNew />} />
       <Route
         path="/competition/:competitionId"
         element={

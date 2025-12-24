@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mountain, Plus, Trophy, ListOrdered } from 'lucide-react';
+import { Mountain, Plus, Trophy, ListOrdered, GitMerge } from 'lucide-react';
 import {
   Button,
   Card,
@@ -101,6 +101,14 @@ function LandingPageNew() {
                 Manage AASL
               </Button>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/merge-people')}
+              leftIcon={<GitMerge className="w-4 h-4" />}
+            >
+              Merge Duplicate People
+            </Button>
 
             {/* Or Divider */}
             <div className="relative">

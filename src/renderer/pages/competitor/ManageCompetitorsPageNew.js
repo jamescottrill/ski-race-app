@@ -1,15 +1,16 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  UserPlus, 
-  Upload, 
-  UserCog, 
-  Users, 
+import {
+  UserPlus,
+  Upload,
+  UserCog,
+  Users,
   UsersRound,
   ArrowLeft,
   FileUp,
   Edit3,
-  Eye
+  Eye,
+  GitMerge,
 } from 'lucide-react';
 import { 
   PageContainer, 
@@ -61,6 +62,13 @@ function ManageCompetitorsPageNew() {
       icon: UsersRound,
       color: 'primary',
       onClick: () => navigate(`/competition/${competitionId}/team/list`),
+    },
+    {
+      title: 'Merge Duplicate People',
+      description: 'Combine duplicate person records',
+      icon: GitMerge,
+      color: 'warning',
+      onClick: () => navigate('/admin/merge-people'),
     },
   ];
 
