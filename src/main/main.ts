@@ -94,15 +94,37 @@ async function createWindow() {
 
   // Now that we have a valid DB path, create the database
   let db: any;
-  try {
-    db = new Database(dbPath);
-  } catch (error: any) {
-    dialog.showErrorBox(
-      'Database Error',
-      `Failed to open database at:\n${dbPath}\n\nError: ${error.message}`,
-    );
-    app.quit();
-    return;
+  let currentDbPath = dbPath;
+
+  while (!db) {
+    try {
+      db = new Database(currentDbPath);
+    } catch (error: any) {
+      const choice = dialog.showMessageBoxSync({
+        type: 'error',
+        buttons: ['Select Different Database', 'Quit'],
+        defaultId: 0,
+        title: 'Database Error',
+        message: `Failed to open database at:\n${currentDbPath}\n\nError: ${error.message}`,
+      });
+
+      if (choice === 0) {
+        // Clear the saved preference and let user select again
+        const prefs = AppPreferences.loadPreferences();
+        prefs.databasePath = undefined;
+        AppPreferences.savePreferences(prefs);
+
+        const newPath = ensureDatabasePath();
+        if (!newPath) {
+          app.quit();
+          return;
+        }
+        currentDbPath = newPath;
+      } else {
+        app.quit();
+        return;
+      }
+    }
   }
 
   ipcMain.handle('db-select', async (event, query, params) => {
