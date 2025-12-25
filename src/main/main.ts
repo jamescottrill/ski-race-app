@@ -23,19 +23,42 @@ function ensureDatabasePath(): string | undefined {
 
   let dbPath = preferences.databasePath;
   if (!dbPath || !fs.existsSync(dbPath)) {
-    // Prompt user to select or create a database file
-    const result = dialog.showOpenDialogSync({
-      title: 'Select or Create Database File',
-      properties: ['openFile', 'createDirectory', 'promptToCreate'],
-      filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+    // Ask user whether to create new or open existing
+    const choice = dialog.showMessageBoxSync({
+      type: 'question',
+      buttons: ['Create New Database', 'Open Existing Database', 'Cancel'],
+      defaultId: 0,
+      title: 'Database Selection',
+      message: 'No database file found. Would you like to create a new database or open an existing one?',
     });
 
-    if (result && result.length > 0) {
-      dbPath = result[0];
+    if (choice === 0) {
+      // Create new database - use save dialog
+      const result = dialog.showSaveDialogSync({
+        title: 'Create New Database',
+        defaultPath: 'ski-race-results.db',
+        filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+      });
+      if (result) {
+        dbPath = result;
+      }
+    } else if (choice === 1) {
+      // Open existing database - use open dialog
+      const result = dialog.showOpenDialogSync({
+        title: 'Open Existing Database',
+        properties: ['openFile'],
+        filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+      });
+      if (result && result.length > 0) {
+        dbPath = result[0];
+      }
+    }
+
+    if (dbPath) {
       preferences.databasePath = dbPath;
       AppPreferences.savePreferences(preferences);
     } else {
-      // User cancelled - handle how you want. You could quit:
+      // User cancelled
       app.quit();
       return;
     }

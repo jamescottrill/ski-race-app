@@ -50,17 +50,17 @@ function selectDatabaseFile() {
 }
 
 class DatabaseWrapper {
-  constructor() {
-    const dbPath = preferences.databasePath || selectDatabaseFile();
+  constructor(dbPath) {
+    const finalPath = dbPath || preferences.databasePath || selectDatabaseFile();
 
-    if (!dbPath) {
+    if (!finalPath) {
       throw new Error('Database file must be selected to proceed.');
     }
 
     try {
-      this.db = new Database(dbPath);
+      this.db = new Database(finalPath);
       this.db.pragma('journal_mode = WAL');
-      console.log('Connected to the SQLite database at:', dbPath);
+      console.log('Connected to the SQLite database at:', finalPath);
       this.initializeDatabase();
     } catch (err) {
       console.error('Failed to connect to database:', err.message);
