@@ -23,17 +23,16 @@ function ensureDatabasePath(): string | undefined {
 
   let dbPath = preferences.databasePath;
   if (!dbPath || !fs.existsSync(dbPath)) {
-    // Ask user whether to create new or open existing
     const choice = dialog.showMessageBoxSync({
       type: 'question',
       buttons: ['Create New Database', 'Open Existing Database', 'Cancel'],
       defaultId: 0,
       title: 'Database Selection',
-      message: 'No database file found. Would you like to create a new database or open an existing one?',
+      message:
+        'No database file found. Would you like to create a new database or open an existing one?',
     });
 
     if (choice === 0) {
-      // Create new database - use save dialog
       const result = dialog.showSaveDialogSync({
         title: 'Create New Database',
         defaultPath: 'ski-race-results.db',
@@ -43,7 +42,6 @@ function ensureDatabasePath(): string | undefined {
         dbPath = result;
       }
     } else if (choice === 1) {
-      // Open existing database - use open dialog
       const result = dialog.showOpenDialogSync({
         title: 'Open Existing Database',
         properties: ['openFile'],
@@ -58,7 +56,6 @@ function ensureDatabasePath(): string | undefined {
       preferences.databasePath = dbPath;
       AppPreferences.savePreferences(preferences);
     } else {
-      // User cancelled
       app.quit();
       return;
     }
