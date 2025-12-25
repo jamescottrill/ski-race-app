@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, ChevronsUpDown, Search } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from '../primitives/Button';
 import {
