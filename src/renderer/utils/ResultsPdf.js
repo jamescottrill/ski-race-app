@@ -326,9 +326,11 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
       const defaultFileName = `${formattedDate}_RESULTS_${raceName.toUpperCase()}.pdf`;
       window.electronAPI
         .savePDF(buffer, defaultFileName)
-        .then((result) => {
-          if (result.success) {
-            showSuccess('Results PDF saved successfully');
+        .then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
           }
         })
         .catch((err) => {

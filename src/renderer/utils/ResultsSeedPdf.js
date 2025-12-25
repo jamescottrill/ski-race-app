@@ -1,6 +1,7 @@
 import { calculateCategory } from './CompetitorManagement';
 import { getFormattedDate } from './DateUtils';
 import { tableStyles, dnfTable, dsqTable } from './PdfStyles';
+import { showSuccess } from './ErrorHandler';
 
 const resultsSeedPdf = (
   raceDetails,
@@ -292,9 +293,9 @@ const resultsSeedPdf = (
     const defaultFileName = `${formattedDate}_RESULTS_${raceName.toUpperCase()}.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          alert(`PDF saved successfully to: ${filePath}`);
+      .then((r) => {
+        if (r.success) {
+          showSuccess(`PDF saved successfully to: ${r.filePath}`);
         } else {
           alert('PDF save cancelled.');
         }

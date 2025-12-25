@@ -1,4 +1,5 @@
 import pdfMake from 'pdfmake/build/pdfmake';
+import { showSuccess } from './ErrorHandler';
 
 const generateSeedList = (seedList) => {
   const docDefinition = {
@@ -44,13 +45,13 @@ const generateSeedList = (seedList) => {
   pdfDoc.getBuffer((buffer) => {
     window.electronAPI
       .savePDF(buffer)
-      .then((filePath) => {
-        if (filePath) {
-          console.log('PDF saved successfully to:', filePath);
-        } else {
-          console.log('PDF save cancelled.');
-        }
-      })
+      ..then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
+          }
+        })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

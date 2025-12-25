@@ -238,9 +238,11 @@ const startListPdf = (raceDetails, startList, womensStartList) => {
       const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}.pdf`;
       window.electronAPI
         .savePDF(buffer, defaultFileName)
-        .then((result) => {
-          if (result.success) {
-            showSuccess('Start list PDF saved successfully');
+        .then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
           }
         })
         .catch((err) => {

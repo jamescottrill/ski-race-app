@@ -2,6 +2,7 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from '../utils/CompetitorManagement';
 import { getFormattedDate } from '../utils/DateUtils';
 import { tableStyles } from '../utils/PdfStyles';
+import { showSuccess } from '../utils/ErrorHandler';
 
 
 const generatePDF = (seedList, races, title=null) => {
@@ -82,13 +83,13 @@ const generatePDF = (seedList, races, title=null) => {
       : `${formattedDate}_SEED_LIST_AFTER_${races.length}_RACES.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          console.log('PDF saved successfully to:', filePath);
-        } else {
-          console.log('PDF save cancelled.');
-        }
-      })
+      .then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
+          }
+        })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

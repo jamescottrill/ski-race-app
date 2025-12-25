@@ -2,6 +2,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from './CompetitorManagement';
 import { getFormattedDate } from './DateUtils';
 import { tableStyles } from './PdfStyles';
+import { showSuccess } from './ErrorHandler';
 
 // const { vfsFonts } = require('pdfmake/build/vfs_fonts');
 
@@ -69,12 +70,12 @@ const secondRunStartListPdf = (raceDetails, startList) => {
     const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}_RUN_2.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          alert('PDF saved successfully to:', filePath);
-        } else {
-          alert('PDF save cancelled.');
-        }
+      .then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
+          }
       })
       .catch((err) => {
         console.error('Error saving PDF:', err);

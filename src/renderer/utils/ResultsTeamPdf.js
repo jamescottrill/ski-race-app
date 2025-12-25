@@ -3,6 +3,7 @@ import { getFormattedDate } from './DateUtils';
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 import {round} from './MathFx';
+import { showSuccess } from './ErrorHandler';
 // pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 pdfMake.tableLayouts = {
@@ -78,13 +79,13 @@ const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
     const defaultFileName = `${formattedDate}_TEAM_RESULTS_${raceName.toUpperCase()}.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
-      .then((filePath) => {
-        if (filePath) {
-          console.log('PDF saved successfully to:', filePath);
-        } else {
-          console.log('PDF save cancelled.');
-        }
-      })
+      .then((r) => {
+          if (r.success) {
+            showSuccess(`PDF saved successfully to: ${r.filePath}`);
+          } else {
+            alert('PDF save cancelled.');
+          }
+        })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });
