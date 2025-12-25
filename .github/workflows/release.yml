@@ -68,7 +68,10 @@ jobs:
 
       - name: Build and package (Windows)
         if: matrix.platform == 'win'
-        run: npm run package:win
+        run: |
+          npm run build
+          npx electron-builder build --win --publish never -c.npmRebuild=false
+          npm run build:dll
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
