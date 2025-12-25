@@ -1,4 +1,4 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 const { app, dialog } = require('electron');
 const fs = require('fs');
@@ -14,7 +14,6 @@ class AppPreferences {
       }
     } catch (error) {
       console.error('Failed to load preferences:', error);
-      // Return defaults instead of crashing
     }
     this.savePreferences({});
     return {};
@@ -38,8 +37,8 @@ const preferences = AppPreferences.loadPreferences();
 function selectDatabaseFile() {
   const result = dialog.showOpenDialogSync({
     title: 'Select Database File',
-    properties: ['openFile', 'openDirectory', 'createDirectory'], // flexibly allow directory or file
-    filters: [{ name: 'SQLite Database', extensions: ['db'] }], // filter files
+    properties: ['openFile', 'openDirectory', 'createDirectory'],
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }],
   });
 
   if (result && result.length > 0) {
@@ -50,21 +49,7 @@ function selectDatabaseFile() {
   return undefined;
 }
 
-class Database {
-  // constructor() {
-  //   this.db = new sqlite3.Database(
-  //     path.join(__dirname, '../../races.db'),
-  //     (err) => {
-  //       if (!err) {
-  //         console.log('Connected to the SQLite database.');
-  //         this.initializeDatabase(); // Initialize the database when the connection is established
-  //       } else {
-  //         console.error('Could not connect to database:', err.message);
-  //         alert(err.message);
-  //       }
-  //     });
-  // }
-
+class DatabaseWrapper {
   constructor() {
     const dbPath = preferences.databasePath || selectDatabaseFile();
 
@@ -72,19 +57,18 @@ class Database {
       throw new Error('Database file must be selected to proceed.');
     }
 
-    this.db = new sqlite3.Database(dbPath, (err) => {
-      if (!err) {
-        console.log('Connected to the SQLite database at:', dbPath);
-        this.initializeDatabase(); // Initialize tables
-      } else {
-        console.error('Failed to connect to database:', err.message);
-      }
-    });
+    try {
+      this.db = new Database(dbPath);
+      this.db.pragma('journal_mode = WAL');
+      console.log('Connected to the SQLite database at:', dbPath);
+      this.initializeDatabase();
+    } catch (err) {
+      console.error('Failed to connect to database:', err.message);
+      throw err;
+    }
   }
 
   initializeDatabase() {
-    const errors = [];
-    // List all the table creation queries
     const tableCreationQueries = [
       `
       CREATE TABLE IF NOT EXISTS people (
@@ -238,19 +222,6 @@ class Database {
         FOREIGN KEY (run_number) REFERENCES race_run(run_number)
       )
       `,
-      // `
-      // CREATE TABLE IF NOT EXISTS seed_list (
-      //   competition_id TEXT,
-      //   version INTEGER,
-      //   version_id TEXT,
-      //   racer_id TEXT,
-      //   races TEXT,
-      //   seed_points NUMBER,
-      //   PRIMARY KEY (competition_id, version, racer_id),
-      //   FOREIGN KEY (competition_id) REFERENCES competitions(id),
-      //   FOREIGN KEY (racer_id) REFERENCES people(id)
-      // )
-      // `
       `
       CREATE TABLE IF NOT EXISTS aasl (
         service_number TEXT NOT NULL,
@@ -294,117 +265,107 @@ class Database {
       `,
     ];
 
-    // Execute each query to create tables
-    const promises = tableCreationQueries.map((query) => {
-      return new Promise((resolve, reject) => {
-        this.db.run(query, (err) => {
-          if (err) {
-            console.error('Error creating table:', err.message);
-            errors.push(err.message);
-            reject(err);
-          } else {
-            console.log('Table created or already exists.');
-            resolve();
-          }
-        });
-      });
-    });
-
-    Promise.allSettled(promises).then(async (results) => {
-      if (errors.length > 0) {
-        console.error(`Failed to create ${errors.length} table(s):`, errors);
+    const errors = [];
+    for (const query of tableCreationQueries) {
+      try {
+        this.db.exec(query);
+        console.log('Table created or already exists.');
+      } catch (err) {
+        console.error('Error creating table:', err.message);
+        errors.push(err.message);
       }
-    });
+    }
+
+    if (errors.length > 0) {
+      console.error(`Failed to create ${errors.length} table(s):`, errors);
+    }
   }
 
   run(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.run(query, params, function (err) {
-        if (err) {
-          console.error('Error running query:', err.message);
-          reject(err);
-        } else {
-          resolve({ id: this.lastID });
-        }
-      });
+      try {
+        const stmt = this.db.prepare(query);
+        const result = stmt.run(...params);
+        resolve({ id: result.lastInsertRowid, changes: result.changes });
+      } catch (err) {
+        console.error('Error running query:', err.message);
+        reject(err);
+      }
     });
   }
 
   get(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.get(query, params, (err, row) => {
-        if (err) {
-          console.error('Error fetching data:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
+      try {
+        const stmt = this.db.prepare(query);
+        const row = stmt.get(...params);
+        resolve(row);
+      } catch (err) {
+        console.error('Error fetching data:', err.message);
+        reject(err);
+      }
     });
   }
 
   all(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.all(query, params, (err, rows) => {
-        if (err) {
-          console.error('Error fetching data:', err.message);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
+      try {
+        const stmt = this.db.prepare(query);
+        const rows = stmt.all(...params);
+        resolve(rows);
+      } catch (err) {
+        console.error('Error fetching data:', err.message);
+        reject(err);
+      }
     });
   }
 
   delete(query, params = []) {
     return new Promise((resolve, reject) => {
-      this.db.run(query, params, function (err) {
-        if (err) {
-          console.error('Error deleting data:', err.message);
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
-      });
+      try {
+        const stmt = this.db.prepare(query);
+        const result = stmt.run(...params);
+        resolve({ changes: result.changes });
+      } catch (err) {
+        console.error('Error deleting data:', err.message);
+        reject(err);
+      }
     });
   }
 
   beginTransaction() {
     return new Promise((resolve, reject) => {
-      this.db.run('BEGIN TRANSACTION', (err) => {
-        if (err) {
-          console.error('Error beginning transaction:', err.message);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      try {
+        this.db.exec('BEGIN TRANSACTION');
+        resolve();
+      } catch (err) {
+        console.error('Error beginning transaction:', err.message);
+        reject(err);
+      }
     });
   }
 
   commit() {
     return new Promise((resolve, reject) => {
-      this.db.run('COMMIT', (err) => {
-        if (err) {
-          console.error('Error committing transaction:', err.message);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      try {
+        this.db.exec('COMMIT');
+        resolve();
+      } catch (err) {
+        console.error('Error committing transaction:', err.message);
+        reject(err);
+      }
     });
   }
 
   rollback() {
     return new Promise((resolve, reject) => {
-      this.db.run('ROLLBACK', (err) => {
-        if (err) {
-          console.error('Error rolling back transaction:', err.message);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      try {
+        this.db.exec('ROLLBACK');
+        resolve();
+      } catch (err) {
+        console.error('Error rolling back transaction:', err.message);
+        reject(err);
+      }
     });
   }
 
@@ -461,20 +422,14 @@ function importDatabase() {
   if (result && result.length > 0) {
     const importPath = result[0];
 
-    // Verify it's a valid SQLite database
     try {
-      const testDb = new sqlite3.Database(importPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          throw err;
-        }
-      });
+      const testDb = new Database(importPath, { readonly: true });
       testDb.close();
     } catch (error) {
       dialog.showErrorBox('Import Error', 'The selected file is not a valid SQLite database.');
       return null;
     }
 
-    // Update preferences to use the imported database
     preferences.databasePath = importPath;
     AppPreferences.savePreferences(preferences);
 
@@ -484,7 +439,6 @@ function importDatabase() {
       message: `Database imported. The application will now restart to use the new database.`,
     });
 
-    // Return the path - the app should be restarted by the caller
     return importPath;
   }
   return null;
@@ -508,7 +462,7 @@ function getCurrentDatabasePath() {
 }
 
 module.exports = {
-  Database,
+  Database: DatabaseWrapper,
   AppPreferences,
   exportDatabase,
   importDatabase,

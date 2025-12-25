@@ -10,9 +10,6 @@
   },
   "main": "./dist/main/main.js",
   "dependencies": {
-    "sqlite3": "^5.1.7"
-  },
-  "overrides": {
-    "node-addon-api": "6.1.0"
+    "better-sqlite3": "^11.7.0"
   }
 }
