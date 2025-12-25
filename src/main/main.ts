@@ -23,14 +23,15 @@ function ensureDatabasePath(): string | undefined {
 
   let dbPath = preferences.databasePath;
   if (!dbPath || !fs.existsSync(dbPath)) {
-    // Prompt user to select a database file or location
-    const result = dialog.showSaveDialogSync({
+    // Prompt user to select or create a database file
+    const result = dialog.showOpenDialogSync({
       title: 'Select or Create Database File',
+      properties: ['openFile', 'createDirectory', 'promptToCreate'],
       filters: [{ name: 'SQLite Database', extensions: ['db'] }],
     });
 
-    if (result) {
-      dbPath = result;
+    if (result && result.length > 0) {
+      dbPath = result[0];
       preferences.databasePath = dbPath;
       AppPreferences.savePreferences(preferences);
     } else {

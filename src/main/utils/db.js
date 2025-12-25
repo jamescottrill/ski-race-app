@@ -36,8 +36,8 @@ const preferences = AppPreferences.loadPreferences();
 
 function selectDatabaseFile() {
   const result = dialog.showOpenDialogSync({
-    title: 'Select Database File',
-    properties: ['openFile', 'openDirectory', 'createDirectory'],
+    title: 'Select or Create Database File',
+    properties: ['openFile', 'createDirectory', 'promptToCreate'],
     filters: [{ name: 'SQLite Database', extensions: ['db'] }],
   });
 
