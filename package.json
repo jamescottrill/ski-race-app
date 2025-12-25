@@ -1,21 +1,19 @@
 {
+  "name": "ski-race-results",
+  "version": "0.2.0",
   "description": "British Army Ski Race calculator",
   "keywords": [
     "electron",
-    "boilerplate",
     "react",
-    "typescript",
-    "ts",
-    "sass",
-    "webpack",
-    "hot",
-    "reload"
+    "ski-racing",
+    "race-results",
+    "british-army"
   ],
   "license": "MIT",
   "author": {
     "name": "James Cottrill",
-    "email": "james@accessium.io",
-    "url": "https://www.accessium.io"
+    "email": "james@slatedata.co.uk",
+    "url": "https://www.slatedata.co.uk"
   },
   "main": "./src/main/main.ts",
   "scripts": {
@@ -254,12 +252,9 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "owner": "jamescottrill",
+      "repo": "ski-race-app"
     }
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "runtime": {
