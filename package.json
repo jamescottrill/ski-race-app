@@ -195,7 +195,6 @@
     "productName": "Ski Race Results",
     "appId": "io.accessium.skiraceresults",
     "asar": true,
-    "npmRebuild": false,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",
