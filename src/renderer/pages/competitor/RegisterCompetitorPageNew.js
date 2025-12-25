@@ -265,7 +265,7 @@ function RegisterCompetitorPageNew() {
                       { value: '', label: 'Create New Competitor' },
                       ...existingCompetitors.map((competitor) => ({
                         value: competitor.id,
-                        label: `${competitor.first_name} ${competitor.last_name}${competitor.service_number ? ` - ${competitor.service_number}` : ''}`,
+                        label: `${competitor.first_name} ${competitor.last_name}`,
                       })),
                     ]}
                   />

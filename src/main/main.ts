@@ -93,7 +93,14 @@ async function createWindow() {
   }
 
   // Now that we have a valid DB path, create the database
-  const db = new Database(dbPath);
+  let db: any;
+  try {
+    db = new Database(dbPath);
+  } catch (error: any) {
+    dialog.showErrorBox('Database Error', `Failed to open database: ${error.message}`);
+    app.quit();
+    return;
+  }
 
   ipcMain.handle('db-select', async (event, query, params) => {
     try {
@@ -164,7 +171,7 @@ async function createWindow() {
   };
 
   mainWindow = new BrowserWindow({
-    show: false,
+    show: true,
     width: 1024,
     height: 728,
     icon: getAssetPath('icon.png'),
@@ -176,17 +183,12 @@ async function createWindow() {
     },
   });
 
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
+  mainWindow.loadURL(resolveHtmlPath('index.html')).catch((error: any) => {
+    dialog.showErrorBox('Load Error', `Failed to load application: ${error.message}`);
+  });
 
-  mainWindow.on('ready-to-show', () => {
-    if (!mainWindow) {
-      throw new Error('"mainWindow" is not defined');
-    }
-    if (process.env.START_MINIMIZED) {
-      mainWindow.minimize();
-    } else {
-      mainWindow.show();
-    }
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    dialog.showErrorBox('Load Error', `Page failed to load: ${errorDescription} (${errorCode})`);
   });
 
   mainWindow.on('closed', () => {
