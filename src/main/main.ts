@@ -97,7 +97,10 @@ async function createWindow() {
   try {
     db = new Database(dbPath);
   } catch (error: any) {
-    dialog.showErrorBox('Database Error', `Failed to open database: ${error.message}`);
+    dialog.showErrorBox(
+      'Database Error',
+      `Failed to open database at:\n${dbPath}\n\nError: ${error.message}`,
+    );
     app.quit();
     return;
   }

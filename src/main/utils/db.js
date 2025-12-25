@@ -58,12 +58,19 @@ class DatabaseWrapper {
     }
 
     try {
+      // Ensure the directory exists
+      const dbDir = path.dirname(finalPath);
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
       this.db = new Database(finalPath);
       this.db.pragma('journal_mode = WAL');
       console.log('Connected to the SQLite database at:', finalPath);
       this.initializeDatabase();
     } catch (err) {
-      console.error('Failed to connect to database:', err.message);
+      console.error('Failed to connect to database at path:', finalPath);
+      console.error('Error:', err.message);
       throw err;
     }
   }
