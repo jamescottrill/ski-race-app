@@ -7,7 +7,8 @@ import {
   UserCheck,
   Award,
   Shield,
-  ChevronRight
+  ChevronRight,
+  User,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -112,17 +113,30 @@ export default function ViewCompetitorsPageNew() {
       accessorKey: 'actions',
       enableSorting: false,
       cell: ({ row }) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/competition/${competitionId}/competitor/${row.original.id}/edit`);
-          }}
-          leftIcon={<Edit className="w-3 h-3" />}
-        >
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/competition/${competitionId}/competitor/${row.original.id}/profile`);
+            }}
+            leftIcon={<User className="w-3 h-3" />}
+          >
+            Profile
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/competition/${competitionId}/competitor/${row.original.id}/edit`);
+            }}
+            leftIcon={<Edit className="w-3 h-3" />}
+          >
+            Edit
+          </Button>
+        </div>
       ),
     },
   ];

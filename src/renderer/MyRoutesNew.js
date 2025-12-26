@@ -9,6 +9,8 @@ import SeedListRoutesNew from './routes/SeedListRoutesNew';
 import AASLRoutes from './routes/AASLRoutes';
 import LayoutNew from './components/LayoutNew';
 import MergePeoplePageNew from './pages/admin/MergePeoplePageNew';
+import FindCompetitorPage from './pages/competitor/FindCompetitorPage';
+import CompetitorProfilePage from './pages/competitor/CompetitorProfilePage';
 
 export default function MyRoutesNew() {
   return (
@@ -16,6 +18,8 @@ export default function MyRoutesNew() {
       <Route path="/" element={<LandingPageNew />} />
       <Route path="/new-competition" element={<CreateCompetitionPageNew />} />
       <Route path="/admin/merge-people" element={<MergePeoplePageNew />} />
+      <Route path="/competitor/find" element={<FindCompetitorPage />} />
+      <Route path="/competitor/:competitorId/profile" element={<CompetitorProfilePage />} />
       <Route
         path="/competition/:competitionId"
         element={
