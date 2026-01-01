@@ -176,10 +176,12 @@ export default function CompetitorProfilePage() {
       cell: ({ row }) => {
         const r = row.original;
         if (!r.run1_time) return '-';
-        const total = r.number_runs > 1 && r.run2_time
-          ? r.run1_time + r.run2_time
-          : r.run1_time;
-        return formatTime(total);
+        if (r.run1_dnf || r.run1_dns || r.run1_dsq) return '-';
+        if (r.number_runs > 1) {
+          if (r.run2_dnf || r.run2_dns || r.run2_dsq || !r.run2_time) return '-';
+          return formatTime(r.run1_time + r.run2_time);
+        }
+        return formatTime(r.run1_time);
       },
     },
     {

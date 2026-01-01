@@ -34,6 +34,14 @@ export const getCompetitorRaceHistory = async (competitorId) => {
         AND NOT COALESCE(is_dsq, 0)
         AND race_time IS NOT NULL
     ),
+    race_factors AS (
+      SELECT 'SL' AS race_type, 730 AS factor
+      UNION ALL SELECT 'GS', 1010
+      UNION ALL SELECT 'SG', 1190
+      UNION ALL SELECT 'DH', 1250
+      UNION ALL SELECT 'AC', 1360
+    ),
+    -- For seeding races: best time per individual run
     best_time_per_run AS (
       SELECT
         race_id,
@@ -43,13 +51,30 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       FROM valid_results
       GROUP BY race_id, competition_id, run_number
     ),
-    race_factors AS (
-      SELECT 'SL' AS race_type, 730 AS factor
-      UNION ALL SELECT 'GS', 1010
-      UNION ALL SELECT 'SG', 1190
-      UNION ALL SELECT 'DH', 1250
-      UNION ALL SELECT 'AC', 1360
+    -- For non-seeding races: combined time (only racers who completed both runs)
+    combined_times AS (
+      SELECT
+        vr1.race_id,
+        vr1.competition_id,
+        vr1.racer_id,
+        vr1.race_time + vr2.race_time AS combined_time
+      FROM valid_results vr1
+      INNER JOIN valid_results vr2
+        ON vr2.race_id = vr1.race_id
+        AND vr2.competition_id = vr1.competition_id
+        AND vr2.racer_id = vr1.racer_id
+        AND vr2.run_number = 2
+      WHERE vr1.run_number = 1
     ),
+    best_combined_time AS (
+      SELECT
+        race_id,
+        competition_id,
+        MIN(combined_time) AS min_time
+      FROM combined_times
+      GROUP BY race_id, competition_id
+    ),
+    -- Seeding race: run 1 seed points
     run1_seed_points AS (
       SELECT
         vr.race_id,
@@ -67,7 +92,9 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       LEFT JOIN race_factors rf
         ON rf.race_type = r.race_type
       WHERE vr.run_number = 1
+        AND r.is_seeding = 1
     ),
+    -- Seeding race: run 2 seed points
     run2_seed_points AS (
       SELECT
         vr.race_id,
@@ -85,6 +112,46 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       LEFT JOIN race_factors rf
         ON rf.race_type = r.race_type
       WHERE vr.run_number = 2
+        AND r.is_seeding = 1
+    ),
+    -- Non-seeding race: combined seed points
+    combined_seed_points AS (
+      SELECT
+        ct.race_id,
+        ct.competition_id,
+        ct.racer_id,
+        ((ct.combined_time - bct.min_time) / bct.min_time) * COALESCE(rf.factor, 1000) AS seed_points
+      FROM combined_times ct
+      INNER JOIN best_combined_time bct
+        ON bct.race_id = ct.race_id
+        AND bct.competition_id = ct.competition_id
+      INNER JOIN races r
+        ON r.race_id = ct.race_id
+        AND r.competition_id = ct.competition_id
+      LEFT JOIN race_factors rf
+        ON rf.race_type = r.race_type
+      WHERE r.is_seeding = 0 OR r.is_seeding IS NULL
+    ),
+    -- Non-seeding single run race seed points
+    single_run_seed_points AS (
+      SELECT
+        vr.race_id,
+        vr.competition_id,
+        vr.racer_id,
+        ((vr.race_time - bt.min_time) / bt.min_time) * COALESCE(rf.factor, 1000) AS seed_points
+      FROM valid_results vr
+      INNER JOIN best_time_per_run bt
+        ON bt.race_id = vr.race_id
+        AND bt.competition_id = vr.competition_id
+        AND bt.run_number = vr.run_number
+      INNER JOIN races r
+        ON r.race_id = vr.race_id
+        AND r.competition_id = vr.competition_id
+      LEFT JOIN race_factors rf
+        ON rf.race_type = r.race_type
+      WHERE vr.run_number = 1
+        AND r.number_runs = 1
+        AND (r.is_seeding = 0 OR r.is_seeding IS NULL)
     )
     SELECT
       r.race_id,
@@ -109,10 +176,15 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       sp1.seed_points AS run1_seed_points,
       sp2.seed_points AS run2_seed_points,
       CASE
-        WHEN r.number_runs = 1 THEN sp1.seed_points
-        WHEN sp1.seed_points IS NOT NULL AND sp2.seed_points IS NOT NULL THEN
-          MIN(sp1.seed_points, sp2.seed_points)
-        ELSE COALESCE(sp1.seed_points, sp2.seed_points)
+        WHEN r.is_seeding = 1 THEN
+          CASE
+            WHEN r.number_runs = 1 THEN sp1.seed_points
+            WHEN sp1.seed_points IS NOT NULL AND sp2.seed_points IS NOT NULL THEN
+              MIN(sp1.seed_points, sp2.seed_points)
+            ELSE COALESCE(sp1.seed_points, sp2.seed_points)
+          END
+        WHEN r.number_runs = 1 THEN srsp.seed_points
+        ELSE csp.seed_points
       END AS earned_seed_points
     FROM race_competitor rc
     INNER JOIN races r
@@ -138,6 +210,14 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       ON sp2.race_id = rc.race_id
       AND sp2.competition_id = rc.competition_id
       AND sp2.racer_id = rc.racer_id
+    LEFT JOIN combined_seed_points csp
+      ON csp.race_id = rc.race_id
+      AND csp.competition_id = rc.competition_id
+      AND csp.racer_id = rc.racer_id
+    LEFT JOIN single_run_seed_points srsp
+      ON srsp.race_id = rc.race_id
+      AND srsp.competition_id = rc.competition_id
+      AND srsp.racer_id = rc.racer_id
     WHERE rc.racer_id = ?
     ORDER BY r.race_date DESC, r.race_id
   `;
@@ -227,6 +307,13 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
         AND NOT COALESCE(is_dsq, 0)
         AND race_time IS NOT NULL
     ),
+    race_factors AS (
+      SELECT 'SL' AS race_type, 730 AS factor
+      UNION ALL SELECT 'GS', 1010
+      UNION ALL SELECT 'SG', 1190
+      UNION ALL SELECT 'DH', 1250
+      UNION ALL SELECT 'AC', 1360
+    ),
     best_time_per_run AS (
       SELECT
         race_id,
@@ -236,12 +323,27 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       FROM valid_results
       GROUP BY race_id, competition_id, run_number
     ),
-    race_factors AS (
-      SELECT 'SL' AS race_type, 730 AS factor
-      UNION ALL SELECT 'GS', 1010
-      UNION ALL SELECT 'SG', 1190
-      UNION ALL SELECT 'DH', 1250
-      UNION ALL SELECT 'AC', 1360
+    combined_times AS (
+      SELECT
+        vr1.race_id,
+        vr1.competition_id,
+        vr1.racer_id,
+        vr1.race_time + vr2.race_time AS combined_time
+      FROM valid_results vr1
+      INNER JOIN valid_results vr2
+        ON vr2.race_id = vr1.race_id
+        AND vr2.competition_id = vr1.competition_id
+        AND vr2.racer_id = vr1.racer_id
+        AND vr2.run_number = 2
+      WHERE vr1.run_number = 1
+    ),
+    best_combined_time AS (
+      SELECT
+        race_id,
+        competition_id,
+        MIN(combined_time) AS min_time
+      FROM combined_times
+      GROUP BY race_id, competition_id
     ),
     run1_seed_points AS (
       SELECT
@@ -260,6 +362,7 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       LEFT JOIN race_factors rf
         ON rf.race_type = r.race_type
       WHERE vr.run_number = 1
+        AND r.is_seeding = 1
     ),
     run2_seed_points AS (
       SELECT
@@ -278,6 +381,44 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       LEFT JOIN race_factors rf
         ON rf.race_type = r.race_type
       WHERE vr.run_number = 2
+        AND r.is_seeding = 1
+    ),
+    combined_seed_points AS (
+      SELECT
+        ct.race_id,
+        ct.competition_id,
+        ct.racer_id,
+        ((ct.combined_time - bct.min_time) / bct.min_time) * COALESCE(rf.factor, 1000) AS seed_points
+      FROM combined_times ct
+      INNER JOIN best_combined_time bct
+        ON bct.race_id = ct.race_id
+        AND bct.competition_id = ct.competition_id
+      INNER JOIN races r
+        ON r.race_id = ct.race_id
+        AND r.competition_id = ct.competition_id
+      LEFT JOIN race_factors rf
+        ON rf.race_type = r.race_type
+      WHERE r.is_seeding = 0 OR r.is_seeding IS NULL
+    ),
+    single_run_seed_points AS (
+      SELECT
+        vr.race_id,
+        vr.competition_id,
+        vr.racer_id,
+        ((vr.race_time - bt.min_time) / bt.min_time) * COALESCE(rf.factor, 1000) AS seed_points
+      FROM valid_results vr
+      INNER JOIN best_time_per_run bt
+        ON bt.race_id = vr.race_id
+        AND bt.competition_id = vr.competition_id
+        AND bt.run_number = vr.run_number
+      INNER JOIN races r
+        ON r.race_id = vr.race_id
+        AND r.competition_id = vr.competition_id
+      LEFT JOIN race_factors rf
+        ON rf.race_type = r.race_type
+      WHERE vr.run_number = 1
+        AND r.number_runs = 1
+        AND (r.is_seeding = 0 OR r.is_seeding IS NULL)
     )
     SELECT
       r.race_id,
@@ -285,12 +426,18 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       r.race_type,
       r.race_name,
       r.number_runs,
+      r.is_seeding,
       c.competition_name,
       CASE
-        WHEN r.number_runs = 1 THEN sp1.seed_points
-        WHEN sp1.seed_points IS NOT NULL AND sp2.seed_points IS NOT NULL THEN
-          MIN(sp1.seed_points, sp2.seed_points)
-        ELSE COALESCE(sp1.seed_points, sp2.seed_points)
+        WHEN r.is_seeding = 1 THEN
+          CASE
+            WHEN r.number_runs = 1 THEN sp1.seed_points
+            WHEN sp1.seed_points IS NOT NULL AND sp2.seed_points IS NOT NULL THEN
+              MIN(sp1.seed_points, sp2.seed_points)
+            ELSE COALESCE(sp1.seed_points, sp2.seed_points)
+          END
+        WHEN r.number_runs = 1 THEN srsp.seed_points
+        ELSE csp.seed_points
       END AS calculated_seed_points
     FROM race_competitor rc
     INNER JOIN races r
@@ -306,8 +453,15 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       ON sp2.race_id = rc.race_id
       AND sp2.competition_id = rc.competition_id
       AND sp2.racer_id = rc.racer_id
+    LEFT JOIN combined_seed_points csp
+      ON csp.race_id = rc.race_id
+      AND csp.competition_id = rc.competition_id
+      AND csp.racer_id = rc.racer_id
+    LEFT JOIN single_run_seed_points srsp
+      ON srsp.race_id = rc.race_id
+      AND srsp.competition_id = rc.competition_id
+      AND srsp.racer_id = rc.racer_id
     WHERE rc.racer_id = ?
-      AND (sp1.seed_points IS NOT NULL OR sp2.seed_points IS NOT NULL)
     ORDER BY r.race_date ASC
   `;
   return window.api.select(query, [competitorId]);
