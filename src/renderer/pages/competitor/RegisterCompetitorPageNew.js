@@ -30,7 +30,6 @@ function RegisterCompetitorPageNew() {
   const { competitionId } = useParams();
   const [existingCompetitors, setExistingCompetitors] = useState([]);
   const [selectedCompetitorId, setSelectedCompetitorId] = useState('');
-  const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -39,7 +38,6 @@ function RegisterCompetitorPageNew() {
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
-    team: '',
     // arrivalSeed: 2000,
     armySeed: '',
     isNovice: false,
@@ -64,16 +62,6 @@ function RegisterCompetitorPageNew() {
       setExistingCompetitors(result);
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
-    }
-  };
-
-  const fetchTeams = async () => {
-    const query = `SELECT team_id, team_name FROM competition_team WHERE competition_id = ?`;
-    try {
-      const result = await window.api.select(query, [competitionId]);
-      setTeams(result);
-    } catch (error) {
-      console.error('Failed to fetch teams:', error);
     }
   };
 
@@ -116,7 +104,6 @@ function RegisterCompetitorPageNew() {
 
   useEffect(() => {
     fetchExistingCompetitors();
-    fetchTeams();
   }, [competitionId]);
 
   useEffect(() => {
@@ -213,16 +200,6 @@ function RegisterCompetitorPageNew() {
 
     try {
       await window.api.insert(competitorQuery, competitorParams);
-
-      // Add to team if selected
-      if (formData.team) {
-        const teamQuery = `
-          INSERT INTO competition_team_members (competition_id, team_id, racer_id)
-          VALUES (?, ?, ?)
-        `;
-        await window.api.insert(teamQuery, [competitionId, formData.team, racerId]);
-      }
-
       navigate(-1);
     } catch (error) {
       console.error('Failed to register competitor:', error);
@@ -341,19 +318,6 @@ function RegisterCompetitorPageNew() {
                         onChange={handleInputChange}
                         placeholder="e.g., Royal Engineers"
                       />
-                      <SimpleSelect
-                        label="Team"
-                        name="team"
-                        value={formData.team}
-                        onChange={handleInputChange}
-                      >
-                        <option value="">No Team</option>
-                        {teams.map((team) => (
-                          <option key={team.team_id} value={team.team_id}>
-                            {team.team_name}
-                          </option>
-                        ))}
-                      </SimpleSelect>
                       <SimpleSelect
                         label="Country"
                         name="country"
@@ -483,15 +447,6 @@ function RegisterCompetitorPageNew() {
                   </div>
                   <p className="text-neutral-600">
                     Default arrival seed is 2000. Army seed is optional and based on previous performance.
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-primary-700 font-medium mb-2">
-                    <Users className="w-4 h-4" />
-                    Team Assignment
-                  </div>
-                  <p className="text-neutral-600">
-                    Competitors can be assigned to teams during or after registration.
                   </p>
                 </div>
               </div>
