@@ -322,6 +322,7 @@ class DatabaseWrapper {
         resolve(rows);
       } catch (err) {
         console.error('Error fetching data:', err.message);
+        console.error('Error fetching data:', query);
         reject(err);
       }
     });
