@@ -12,7 +12,7 @@ const seedPointsOneRun = `
                                rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
-                        INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id
+                        INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
@@ -50,7 +50,7 @@ WITH factors AS (SELECT 730 AS factor, 'SL' AS race
                                rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
-                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id
+                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
                         WHERE TRUE
                           AND run_number = 1
                           AND race_id = ?),
@@ -58,7 +58,7 @@ WITH factors AS (SELECT 730 AS factor, 'SL' AS race
                                rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
                         FROM race_results rr
-                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id
+                               INNER JOIN competition_competitor cc ON cc.racer_id = rr.racer_id AND cc.competition_id = rr.competition_id AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
                         WHERE TRUE
                           AND run_number = 2
                           AND race_id = ?),

@@ -8,7 +8,9 @@ import {
   Shield,
   Calendar,
   Hash,
-  AlertCircle
+  AlertCircle,
+  UserX,
+  RotateCcw,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -43,6 +45,7 @@ function EditCompetitorPageNew() {
     isSenior: false,
     isVeteran: false,
     isReserve: false,
+    isWithdrawn: false,
     regiment: '',
   });
 
@@ -56,7 +59,7 @@ function EditCompetitorPageNew() {
       const personQuery = `
         SELECT p.first_name, p.last_name, p.birth_year, p.country, p.id AS service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
-               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title
+               cc.is_veteran, cc.is_reserve, cc.is_withdrawn, cc.regiment, cc.title
         FROM people p
         INNER JOIN competition_competitor cc ON p.id = cc.racer_id
         WHERE p.id = ? AND cc.competition_id = ?
@@ -81,6 +84,7 @@ function EditCompetitorPageNew() {
           isSenior: competitor.is_senior === 1,
           isVeteran: competitor.is_veteran === 1,
           isReserve: competitor.is_reserve === 1,
+          isWithdrawn: competitor.is_withdrawn === 1,
           regiment: competitor.regiment || '',
         });
       }
@@ -210,6 +214,32 @@ function EditCompetitorPageNew() {
     }
   };
 
+  const handleWithdraw = async () => {
+    if (window.confirm('Are you sure you want to withdraw this competitor? They will no longer appear in seed lists or future start lists, but their race history will be preserved.')) {
+      try {
+        await window.api.insert(
+          'UPDATE competition_competitor SET is_withdrawn = 1 WHERE racer_id = ? AND competition_id = ?',
+          [competitorId, competitionId]
+        );
+        setFormData(prev => ({ ...prev, isWithdrawn: true }));
+      } catch (error) {
+        console.error('Failed to withdraw competitor:', error);
+      }
+    }
+  };
+
+  const handleReinstate = async () => {
+    try {
+      await window.api.insert(
+        'UPDATE competition_competitor SET is_withdrawn = 0 WHERE racer_id = ? AND competition_id = ?',
+        [competitorId, competitionId]
+      );
+      setFormData(prev => ({ ...prev, isWithdrawn: false }));
+    } catch (error) {
+      console.error('Failed to reinstate competitor:', error);
+    }
+  };
+
   if (loading) {
     return (
       <PageContainer>
@@ -241,9 +271,26 @@ function EditCompetitorPageNew() {
     <PageContainer>
       <PageHeader
         title="Edit Competitor"
-        subtitle={`${formData.firstName} ${formData.lastName}`}
+        subtitle={`${formData.firstName} ${formData.lastName}${formData.isWithdrawn ? ' (Withdrawn)' : ''}`}
         actions={
           <div className="flex gap-3">
+            {formData.isWithdrawn ? (
+              <Button
+                variant="success"
+                onClick={handleReinstate}
+                leftIcon={<RotateCcw className="w-4 h-4" />}
+              >
+                Reinstate
+              </Button>
+            ) : (
+              <Button
+                variant="warning"
+                onClick={handleWithdraw}
+                leftIcon={<UserX className="w-4 h-4" />}
+              >
+                Withdraw
+              </Button>
+            )}
             <Button
               variant="danger"
               onClick={handleDelete}
@@ -458,11 +505,22 @@ function EditCompetitorPageNew() {
                 </div>
                 <div className="p-3 bg-warning/10 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
+                    <UserX className="w-4 h-4 text-warning mt-0.5" />
                     <div>
-                      <p className="font-medium text-warning">Removing Competitor</p>
+                      <p className="font-medium text-warning">Withdrawing</p>
                       <p className="text-neutral-600 mt-1">
-                        This only removes them from this competition, not from the system.
+                        Excludes from future seed and start lists. Past race results are preserved and the competitor can be reinstated later.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 bg-danger/10 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Trash2 className="w-4 h-4 text-danger mt-0.5" />
+                    <div>
+                      <p className="font-medium text-danger">Removing</p>
+                      <p className="text-neutral-600 mt-1">
+                        Permanently removes from this competition. Use withdraw instead if you want to keep their race history.
                       </p>
                     </div>
                   </div>

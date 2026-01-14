@@ -9,6 +9,8 @@ import {
   Shield,
   ChevronRight,
   User,
+  UserX,
+  RotateCcw,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -26,6 +28,7 @@ import { calculateCategory } from '../../utils/CompetitorManagement';
 export default function ViewCompetitorsPageNew() {
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('active');
   const { competitionId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
@@ -34,7 +37,8 @@ export default function ViewCompetitorsPageNew() {
     setLoading(true);
     const query = `
       SELECT p.id, p.first_name, p.last_name, p.gender, p.birth_year, p.id AS service_number, p.country,
-             cc.regiment, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title
+             cc.regiment, cc.is_novice, cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
+             cc.is_withdrawn
       FROM people p
       INNER JOIN competition_competitor cc ON p.id = cc.racer_id
       WHERE cc.competition_id = ?
@@ -54,6 +58,38 @@ export default function ViewCompetitorsPageNew() {
   useEffect(() => {
     fetchCompetitors();
   }, [competitionId]);
+
+  const handleWithdraw = async (e, competitorId) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to withdraw this competitor? They will no longer appear in seed lists or future start lists.')) {
+      try {
+        await window.api.insert(
+          'UPDATE competition_competitor SET is_withdrawn = 1 WHERE racer_id = ? AND competition_id = ?',
+          [competitorId, competitionId]
+        );
+        fetchCompetitors();
+      } catch (error) {
+        console.error('Failed to withdraw competitor:', error);
+      }
+    }
+  };
+
+  const handleReinstate = async (e, competitorId) => {
+    e.stopPropagation();
+    try {
+      await window.api.insert(
+        'UPDATE competition_competitor SET is_withdrawn = 0 WHERE racer_id = ? AND competition_id = ?',
+        [competitorId, competitionId]
+      );
+      fetchCompetitors();
+    } catch (error) {
+      console.error('Failed to reinstate competitor:', error);
+    }
+  };
+
+  const activeCompetitors = competitors.filter(c => !c.is_withdrawn);
+  const withdrawnCompetitors = competitors.filter(c => c.is_withdrawn);
+  const displayedCompetitors = activeTab === 'active' ? activeCompetitors : withdrawnCompetitors;
 
   const columns = [
     {
@@ -136,24 +172,46 @@ export default function ViewCompetitorsPageNew() {
           >
             Edit
           </Button>
+          {activeTab === 'active' ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-warning hover:text-warning hover:bg-warning/10"
+              onClick={(e) => handleWithdraw(e, row.original.id)}
+              leftIcon={<UserX className="w-3 h-3" />}
+            >
+              Withdraw
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-success hover:text-success hover:bg-success/10"
+              onClick={(e) => handleReinstate(e, row.original.id)}
+              leftIcon={<RotateCcw className="w-3 h-3" />}
+            >
+              Reinstate
+            </Button>
+          )}
         </div>
       ),
     },
   ];
 
-  // Calculate stats
+  // Calculate stats (based on active competitors only)
   const stats = {
-    total: competitors.length,
-    male: competitors.filter(c => c.gender === 'M').length,
-    female: competitors.filter(c => c.gender === 'F').length,
-    novice: competitors.filter(c => c.is_novice).length,
+    total: activeCompetitors.length,
+    male: activeCompetitors.filter(c => c.gender === 'M').length,
+    female: activeCompetitors.filter(c => c.gender === 'F').length,
+    novice: activeCompetitors.filter(c => c.is_novice).length,
+    withdrawn: withdrawnCompetitors.length,
   };
 
   return (
     <PageContainer>
       <PageHeader
         title="View Competitors"
-        subtitle={`${competitors.length} competitors registered`}
+        subtitle={`${activeCompetitors.length} active competitors${withdrawnCompetitors.length > 0 ? `, ${withdrawnCompetitors.length} withdrawn` : ''}`}
         actions={
           <div className="flex gap-3">
             <Button
@@ -214,6 +272,24 @@ export default function ViewCompetitorsPageNew() {
         </Card>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={activeTab === 'active' ? 'primary' : 'outline'}
+          onClick={() => setActiveTab('active')}
+          leftIcon={<Users className="w-4 h-4" />}
+        >
+          Active ({activeCompetitors.length})
+        </Button>
+        <Button
+          variant={activeTab === 'withdrawn' ? 'primary' : 'outline'}
+          onClick={() => setActiveTab('withdrawn')}
+          leftIcon={<UserX className="w-4 h-4" />}
+        >
+          Withdrawn ({withdrawnCompetitors.length})
+        </Button>
+      </div>
+
       {/* Competitors Table */}
       <Card>
         <CardContent noPadding>
@@ -221,22 +297,26 @@ export default function ViewCompetitorsPageNew() {
             <div className="flex items-center justify-center h-64">
               <div className="text-neutral-500">Loading competitors...</div>
             </div>
-          ) : competitors.length === 0 ? (
+          ) : displayedCompetitors.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <Users className="w-12 h-12 text-neutral-300" />
-              <p className="text-neutral-500">No competitors registered yet</p>
-              <Button
-                variant="primary"
-                onClick={() => navigate(`/competition/${competitionId}/competitor/new`)}
-                leftIcon={<Users className="w-4 h-4" />}
-              >
-                Register First Competitor
-              </Button>
+              <p className="text-neutral-500">
+                {activeTab === 'active' ? 'No competitors registered yet' : 'No withdrawn competitors'}
+              </p>
+              {activeTab === 'active' && (
+                <Button
+                  variant="primary"
+                  onClick={() => navigate(`/competition/${competitionId}/competitor/new`)}
+                  leftIcon={<Users className="w-4 h-4" />}
+                >
+                  Register First Competitor
+                </Button>
+              )}
             </div>
           ) : (
             <DataTable
               columns={columns}
-              data={competitors}
+              data={displayedCompetitors}
               onRowClick={(row) => navigate(`/competition/${competitionId}/competitor/${row.id}/edit`)}
               pageSize={25}
             />

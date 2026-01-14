@@ -76,215 +76,264 @@ class DatabaseWrapper {
   }
 
   initializeDatabase() {
-    const tableCreationQueries = [
-      `
-      CREATE TABLE IF NOT EXISTS people (
-        id TEXT PRIMARY KEY,
-        first_name TEXT,
-        last_name TEXT,
-        title TEXT,
-        birth_year INT,
-        country TEXT,
-        gender TEXT,
-        is_competitor BOOLEAN,
-        is_committee BOOLEAN
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS competitions (
-        id TEXT PRIMARY KEY,
-        competition_name TEXT,
-        competition_description TEXT
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS competition_competitor (
-        competition_id TEXT,
-        racer_id TEXT,
-        arrival_army_seed NUMBER,
-        arrival_corps_seed NUMBER,
-        title TEXT,
-        is_novice BOOLEAN,
-        is_junior BOOLEAN,
-        is_senior BOOLEAN,
-        is_veteran BOOLEAN,
-        is_reserve BOOLEAN,
-        is_female BOOLEAN,
-        is_hc BOOLEAN,
-        regiment TEXT,
-        PRIMARY KEY (competition_id, racer_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (racer_id) REFERENCES people(id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS competition_team (
-        competition_id TEXT,
-        team_id TEXT,
-        team_name TEXT,
-        is_corps BOOLEAN,
-        is_reserve BOOLEAN,
-        is_female BOOLEAN,
-        is_hc BOOLEAN,
-        PRIMARY KEY (competition_id, team_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id)
-      )
-      `,
-      `
-        CREATE TABLE IF NOT EXISTS competition_team_members (
-          competition_id TEXT,
-          team_id TEXT,
-          race_id TEXT,
-          racer_id TEXT,
-          PRIMARY KEY (competition_id, team_id, race_id, racer_id),
-          FOREIGN KEY (competition_id) REFERENCES competitions(id),
-          FOREIGN KEY (racer_id) REFERENCES people(id),
-          FOREIGN KEY (team_id) REFERENCES competition_team(team_id),
-          FOREIGN KEY (race_id) REFERENCES races(race_id)
-          )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS races (
-        competition_id TEXT,
-        race_id TEXT,
-        race_name TEXT,
-        race_date DATE,
-        race_type TEXT,
-        is_individual BOOLEAN,
-        is_team BOOLEAN,
-        is_training BOOLEAN,
-        is_seeding BOOLEAN,
-        women_separate BOOLEAN,
-        number_runs INTEGER,
-        venue TEXT,
-        course_name TEXT,
-        weather TEXT,
-        snow TEXT,
-        temp_start INTEGER,
-        temp_finish INTEGER,
-        chief_of_race STRING,
-        tech_delegate STRING,
-        referee STRING,
-        asst_referee STRING,
-        start_altitude INTEGER,
-        finish_altitude INTEGER,
-        homologation TEXT,
-        flip_count INTEGER DEFAULT 15,
-        flip_count_women INTEGER DEFAULT 5,
-        PRIMARY KEY (competition_id, race_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS  race_run (
-        competition_id TEXT,
-        race_id TEXT,
-        run_id TEXT,
-        run_number INTEGER,
-        course_setter TEXT,
-        number_gates INTEGER,
-        turning_gates INTEGER,
-        start_time TIME,
-        forerunner_a TEXT,
-        forerunner_b TEXT,
-        forerunner_c TEXT,
-        forerunner_d TEXT,
-        is_complete BOOLEAN,
-        PRIMARY KEY (competition_id, race_id, run_number),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS race_competitor (
-        competition_id TEXT,
-        race_id TEXT,
-        racer_id TEXT,
-        bib_number INTEGER,
-        seed_points FLOAT,
-        PRIMARY KEY (competition_id, race_id, racer_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id),
-        FOREIGN KEY (racer_id) REFERENCES people(id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS  race_results (
-        competition_id TEXT,
-        race_id TEXT,
-        run_id TEXT,
-        run_number INTEGER,
-        racer_id TEXT,
-        race_time FLOAT,
-        is_dns BOOLEAN,
-        is_dnf BOOLEAN,
-        is_dsq BOOLEAN,
-        is_ns BOOLEAN,
-        dsq_gate INTEGER,
-        dsq_reason TEXT,
-        PRIMARY KEY (competition_id, race_id, run_number, racer_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id),
-        FOREIGN KEY (racer_id) REFERENCES people(id),
-        FOREIGN KEY (run_number) REFERENCES race_run(run_number)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS aasl (
-        service_number TEXT NOT NULL,
-        first_name TEXT,
-        last_name TEXT,
-        gender TEXT,
-        category TEXT,
-        seed_points NUMBER NOT NULL,
-        season TEXT NOT NULL,
-        import_date TEXT,
-        PRIMARY KEY (service_number, season),
-        FOREIGN KEY (service_number) REFERENCES people(id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS competition_cpp (
-        id TEXT PRIMARY KEY,
-        competition_id TEXT NOT NULL,
-        cpp_value NUMBER NOT NULL,
-        calculation_date TEXT,
-        t1_sum NUMBER,
-        t2_sum NUMBER,
-        t3_sum NUMBER,
-        skiers_used INTEGER,
-        FOREIGN KEY (competition_id) REFERENCES competitions(id)
-      )
-      `,
-      `
-      CREATE TABLE IF NOT EXISTS competition_final_seed_list (
-        competition_id TEXT NOT NULL,
-        racer_id TEXT NOT NULL,
-        raw_seed_points NUMBER,
-        cpp_applied NUMBER,
-        final_seed_points NUMBER NOT NULL,
-        aasl_points NUMBER,
-        finalised_date TEXT,
-        PRIMARY KEY (competition_id, racer_id),
-        FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (racer_id) REFERENCES people(id)
-      )
-      `,
-    ];
+    const tableSchemas = {
+      people: {
+        columns: {
+          id: 'TEXT PRIMARY KEY',
+          first_name: 'TEXT',
+          last_name: 'TEXT',
+          title: 'TEXT',
+          birth_year: 'INT',
+          country: 'TEXT',
+          gender: 'TEXT',
+          is_competitor: 'BOOLEAN',
+          is_committee: 'BOOLEAN',
+        },
+      },
+      competitions: {
+        columns: {
+          id: 'TEXT PRIMARY KEY',
+          competition_name: 'TEXT',
+          competition_description: 'TEXT',
+          competition_type: 'TEXT',
+          season: 'TEXT',
+        },
+      },
+      competition_competitor: {
+        columns: {
+          competition_id: 'TEXT',
+          racer_id: 'TEXT',
+          arrival_army_seed: 'NUMBER',
+          arrival_corps_seed: 'NUMBER',
+          title: 'TEXT',
+          is_novice: 'BOOLEAN',
+          is_junior: 'BOOLEAN',
+          is_senior: 'BOOLEAN',
+          is_veteran: 'BOOLEAN',
+          is_reserve: 'BOOLEAN',
+          is_female: 'BOOLEAN',
+          is_hc: 'BOOLEAN',
+          is_withdrawn: 'BOOLEAN DEFAULT 0',
+          regiment: 'TEXT',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, racer_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (racer_id) REFERENCES people(id)',
+        ],
+      },
+      competition_team: {
+        columns: {
+          competition_id: 'TEXT',
+          team_id: 'TEXT',
+          team_name: 'TEXT',
+          is_corps: 'BOOLEAN',
+          is_reserve: 'BOOLEAN',
+          is_female: 'BOOLEAN',
+          is_hc: 'BOOLEAN',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, team_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+        ],
+      },
+      competition_team_members: {
+        columns: {
+          competition_id: 'TEXT',
+          team_id: 'TEXT',
+          race_id: 'TEXT',
+          racer_id: 'TEXT',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, team_id, race_id, racer_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (racer_id) REFERENCES people(id)',
+          'FOREIGN KEY (team_id) REFERENCES competition_team(team_id)',
+          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+        ],
+      },
+      races: {
+        columns: {
+          competition_id: 'TEXT',
+          race_id: 'TEXT',
+          race_name: 'TEXT',
+          race_date: 'DATE',
+          race_type: 'TEXT',
+          is_individual: 'BOOLEAN',
+          is_team: 'BOOLEAN',
+          is_training: 'BOOLEAN',
+          is_seeding: 'BOOLEAN',
+          women_separate: 'BOOLEAN',
+          number_runs: 'INTEGER',
+          venue: 'TEXT',
+          course_name: 'TEXT',
+          weather: 'TEXT',
+          snow: 'TEXT',
+          temp_start: 'INTEGER',
+          temp_finish: 'INTEGER',
+          chief_of_race: 'STRING',
+          tech_delegate: 'STRING',
+          referee: 'STRING',
+          asst_referee: 'STRING',
+          start_altitude: 'INTEGER',
+          finish_altitude: 'INTEGER',
+          homologation: 'TEXT',
+          flip_count: 'INTEGER DEFAULT 15',
+          flip_count_women: 'INTEGER DEFAULT 5',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, race_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+        ],
+      },
+      race_run: {
+        columns: {
+          competition_id: 'TEXT',
+          race_id: 'TEXT',
+          run_id: 'TEXT',
+          run_number: 'INTEGER',
+          course_setter: 'TEXT',
+          number_gates: 'INTEGER',
+          turning_gates: 'INTEGER',
+          start_time: 'TIME',
+          forerunner_a: 'TEXT',
+          forerunner_b: 'TEXT',
+          forerunner_c: 'TEXT',
+          forerunner_d: 'TEXT',
+          is_complete: 'BOOLEAN',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, race_id, run_number)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+        ],
+      },
+      race_competitor: {
+        columns: {
+          competition_id: 'TEXT',
+          race_id: 'TEXT',
+          racer_id: 'TEXT',
+          bib_number: 'INTEGER',
+          seed_points: 'FLOAT',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, race_id, racer_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+          'FOREIGN KEY (racer_id) REFERENCES people(id)',
+        ],
+      },
+      race_results: {
+        columns: {
+          competition_id: 'TEXT',
+          race_id: 'TEXT',
+          run_id: 'TEXT',
+          run_number: 'INTEGER',
+          racer_id: 'TEXT',
+          race_time: 'FLOAT',
+          is_dns: 'BOOLEAN',
+          is_dnf: 'BOOLEAN',
+          is_dsq: 'BOOLEAN',
+          is_ns: 'BOOLEAN',
+          dsq_gate: 'INTEGER',
+          dsq_reason: 'TEXT',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, race_id, run_number, racer_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+          'FOREIGN KEY (racer_id) REFERENCES people(id)',
+          'FOREIGN KEY (run_number) REFERENCES race_run(run_number)',
+        ],
+      },
+      aasl: {
+        columns: {
+          service_number: 'TEXT NOT NULL',
+          first_name: 'TEXT',
+          last_name: 'TEXT',
+          gender: 'TEXT',
+          category: 'TEXT',
+          seed_points: 'NUMBER NOT NULL',
+          season: 'TEXT NOT NULL',
+          import_date: 'TEXT',
+        },
+        constraints: [
+          'PRIMARY KEY (service_number, season)',
+          'FOREIGN KEY (service_number) REFERENCES people(id)',
+        ],
+      },
+      competition_cpp: {
+        columns: {
+          id: 'TEXT PRIMARY KEY',
+          competition_id: 'TEXT NOT NULL',
+          cpp_value: 'NUMBER NOT NULL',
+          calculation_date: 'TEXT',
+          t1_sum: 'NUMBER',
+          t2_sum: 'NUMBER',
+          t3_sum: 'NUMBER',
+          skiers_used: 'INTEGER',
+        },
+        constraints: ['FOREIGN KEY (competition_id) REFERENCES competitions(id)'],
+      },
+      competition_final_seed_list: {
+        columns: {
+          competition_id: 'TEXT NOT NULL',
+          racer_id: 'TEXT NOT NULL',
+          raw_seed_points: 'NUMBER',
+          cpp_applied: 'NUMBER',
+          final_seed_points: 'NUMBER NOT NULL',
+          aasl_points: 'NUMBER',
+          finalised_date: 'TEXT',
+        },
+        constraints: [
+          'PRIMARY KEY (competition_id, racer_id)',
+          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
+          'FOREIGN KEY (racer_id) REFERENCES people(id)',
+        ],
+      },
+    };
 
     const errors = [];
-    for (const query of tableCreationQueries) {
+
+    for (const [tableName, schema] of Object.entries(tableSchemas)) {
       try {
-        this.db.exec(query);
-        console.log('Table created or already exists.');
+        const createQuery = this.buildCreateTableQuery(tableName, schema);
+        this.db.exec(createQuery);
+        this.ensureColumnsExist(tableName, schema.columns);
       } catch (err) {
-        console.error('Error creating table:', err.message);
-        errors.push(err.message);
+        console.error(`Error with table ${tableName}:`, err.message);
+        errors.push(`${tableName}: ${err.message}`);
       }
     }
 
     if (errors.length > 0) {
-      console.error(`Failed to create ${errors.length} table(s):`, errors);
+      console.error(`Failed to create/update ${errors.length} table(s):`, errors);
+    }
+  }
+
+  buildCreateTableQuery(tableName, schema) {
+    const columnDefs = Object.entries(schema.columns)
+      .map(([name, type]) => `${name} ${type}`)
+      .join(',\n        ');
+
+    const constraints = schema.constraints ? `,\n        ${schema.constraints.join(',\n        ')}` : '';
+
+    return `CREATE TABLE IF NOT EXISTS ${tableName} (\n        ${columnDefs}${constraints}\n      )`;
+  }
+
+  ensureColumnsExist(tableName, columns) {
+    const tableInfo = this.db.prepare(`PRAGMA table_info(${tableName})`).all();
+    const existingColumns = new Set(tableInfo.map((col) => col.name));
+
+    for (const [columnName, columnType] of Object.entries(columns)) {
+      if (!existingColumns.has(columnName)) {
+        try {
+          this.db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`);
+          console.log(`Added column ${columnName} to ${tableName}`);
+        } catch (err) {
+          console.error(`Error adding column ${columnName} to ${tableName}:`, err.message);
+        }
+      }
     }
   }
 

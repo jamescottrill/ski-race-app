@@ -406,6 +406,7 @@ const getPeople = async (competitionId) => {
   --     LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
   --     LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
       WHERE cc.competition_id = ?
+        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
   --     AND NOT COALESCE(ct.is_hc, FALSE)
   --     AND NOT COALESCE(ct.is_female, FALSE)
       `,
@@ -428,7 +429,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
       raceTypePromises.push(results);
     });
     if (raceIds.length === 0) {
-      const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
+      const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL) ORDER BY seed_points`;
       return window.api.select(query, [competitionId]);
     }
   const resultsPromise = [];
