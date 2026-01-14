@@ -26,7 +26,7 @@ function LandingPageNew() {
 
   const fetchCompetitions = async () => {
     try {
-      const query = 'SELECT id, competition_name FROM competitions';
+      const query = 'SELECT id, competition_name, competition_type, season FROM competitions ORDER BY season DESC, competition_name';
       const result = await window.api.select(query);
       setCompetitions(result);
     } catch (error) {
@@ -149,7 +149,15 @@ function LandingPageNew() {
                       <SelectItem key={competition.id} value={competition.id}>
                         <div className="flex items-center gap-2">
                           <Trophy className="w-4 h-4 text-primary-600" />
-                          {competition.competition_name}
+                          <span>{competition.competition_name}</span>
+                          {competition.season && (
+                            <span className="text-neutral-500 text-xs">({competition.season})</span>
+                          )}
+                          {competition.competition_type && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-primary-100 text-primary-700">
+                              {competition.competition_type}
+                            </span>
+                          )}
                         </div>
                       </SelectItem>
                     ))

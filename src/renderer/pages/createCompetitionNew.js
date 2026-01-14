@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuid4 } from 'uuid';
 import { ArrowLeft, Trophy, Calendar, MapPin, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { 
+import {
   Card,
   CardHeader,
   CardTitle,
@@ -13,31 +13,61 @@ import {
   TextField,
   PageContainer,
   PageHeader,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../design-system';
 import { useBackButton } from '../utils/navigation';
+
+const COMPETITION_TYPES = [
+  { value: 'Corps', label: 'Corps' },
+  { value: 'Qualifying', label: 'Qualifying' },
+  { value: 'Army', label: 'Army' },
+];
+
+const SEASON_REGEX = /^\d{2}\/\d{2}$/;
 
 function CreateCompetitionPageNew() {
   const [competitionName, setCompetitionName] = useState('');
   const [competitionDescription, setCompetitionDescription] = useState('');
+  const [competitionType, setCompetitionType] = useState('');
+  const [season, setSeason] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const handleBack = useBackButton();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
+
     if (!competitionName.trim()) {
       toast.error('Competition name is required');
+      return;
+    }
+
+    if (!competitionType) {
+      toast.error('Competition type is required');
+      return;
+    }
+
+    if (!season.trim()) {
+      toast.error('Season is required');
+      return;
+    }
+
+    if (!SEASON_REGEX.test(season)) {
+      toast.error('Season must be in YY/YY format (e.g., 25/26)');
       return;
     }
 
     setLoading(true);
     const id = uuid4();
     const query = `
-      INSERT INTO competitions (id, competition_name, competition_description)
-      VALUES (?, ?, ?)
+      INSERT INTO competitions (id, competition_name, competition_description, competition_type, season)
+      VALUES (?, ?, ?, ?, ?)
     `;
-    const params = [id, competitionName, competitionDescription];
+    const params = [id, competitionName, competitionDescription, competitionType, season];
 
     try {
       const result = await window.api.insert(query, params);
@@ -86,7 +116,7 @@ function CreateCompetitionPageNew() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <TextField
                     label="Competition Name"
-                    placeholder="e.g., Army Championships 2024"
+                    placeholder="Ex ALPINE TIGER 25"
                     value={competitionName}
                     onChange={(e) => setCompetitionName(e.target.value)}
                     required
@@ -95,17 +125,67 @@ function CreateCompetitionPageNew() {
                     helperText="This will be displayed throughout the application"
                   />
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-neutral-700">
+                        Competition Type
+                      </label>
+                      <Select value={competitionType} onValueChange={setCompetitionType}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COMPETITION_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-neutral-500">
+                        Corps, Qualifying, or Army championship
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="season-input"
+                        className="block text-sm font-medium text-neutral-700"
+                      >
+                        Season
+                      </label>
+                      <input
+                        id="season-input"
+                        type="text"
+                        className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm
+                          transition-all duration-200 placeholder:text-neutral-400
+                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                          hover:border-neutral-400"
+                        placeholder="25/26"
+                        value={season}
+                        onChange={(e) => setSeason(e.target.value)}
+                      />
+                      <p className="text-sm text-neutral-500">
+                        Format: YY/YY (e.g. 25/26) - This is used to ensure competitions are linked in the same season.
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-neutral-700">
+                    <label
+                      htmlFor="description-input"
+                      className="block text-sm font-medium text-neutral-700"
+                    >
                       Description
                     </label>
                     <textarea
+                      id="description-input"
                       className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm
                         transition-all duration-200 placeholder:text-neutral-400
                         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
                         hover:border-neutral-400"
                       rows={4}
-                      placeholder="e.g., Annual British Army Alpine Ski Championships including GS, SL, and SG races"
+                      placeholder="e.g. Royal Artillery Corps Championships"
                       value={competitionDescription}
                       onChange={(e) => setCompetitionDescription(e.target.value)}
                     />
