@@ -56,11 +56,11 @@ export default function ImportCompetitorsFromCompetitionPage() {
   const fetchCompetitions = async () => {
     try {
       const result = await window.api.select(
-        `SELECT id, competition_name, season
-         FROM competitions
-         WHERE id != ?
-         ORDER BY season desc `,
-        [competitionId]
+        `WITH current_comp AS (SELECT season FROM competitions WHERE id = ?) SELECT id, competition_name, c.season
+         FROM competitions c
+         INNER JOIN current_comp cc ON c.season = cc.season
+         WHERE id != ?`,
+        [competitionId,competitionId]
       );
       setCompetitions(result);
     } catch (error) {
