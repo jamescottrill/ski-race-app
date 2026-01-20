@@ -295,13 +295,11 @@ const calculateRacerSeedPoints = async (
           row[`${mostRecentRace}-penalty`] = true;
         }
       }
-      if(log) console.log(nonNullRaces);
       const bestThree4 = nonNullRaces
         .sort((a, b) => (a === null) - (b === null) || a - b)
         .slice(0, 3);
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
       finalSeedPoints = round(finalSeedPoints);
-      if(log) console.log(finalSeedPoints );
       break;
     default:
       const numMinusTwo = numRaces - 2;

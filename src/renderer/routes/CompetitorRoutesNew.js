@@ -6,6 +6,7 @@ import EditCompetitorPageNew from '../pages/competitor/EditCompetitorPageNew';
 import RegisterCompetitorPageNew from '../pages/competitor/RegisterCompetitorPageNew';
 import ViewCompetitorsPageNew from '../pages/competitor/ViewCompetitorsPageNew';
 import UploadCompetitorsPageNew from '../pages/competitor/UploadCompetitorsPageNew';
+import ImportCompetitorsFromCompetitionPage from '../pages/competitor/ImportCompetitorsFromCompetitionPage';
 import CompetitorProfilePage from '../pages/competitor/CompetitorProfilePage';
 import TeamListPageNew from '../pages/team/TeamListPageNew';
 import CreateTeamPageNew from '../pages/team/CreateTeamPageNew';
@@ -42,6 +43,10 @@ function CompetitorRoutesNew() {
       <Route
         path="competition/:competitionId/competitor/bulk"
         element={<LayoutNew><UploadCompetitorsPageNew /></LayoutNew>}
+      />
+      <Route
+        path="competition/:competitionId/competitor/import-from-competition"
+        element={<LayoutNew><ImportCompetitorsFromCompetitionPage /></LayoutNew>}
       />
       <Route
         path="competition/:competitionId/competitor/:competitorId/profile"

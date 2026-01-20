@@ -11,6 +11,7 @@ import {
   Edit3,
   Eye,
   GitMerge,
+  Download,
 } from 'lucide-react';
 import { 
   PageContainer, 
@@ -41,6 +42,13 @@ function ManageCompetitorsPageNew() {
       icon: Upload,
       color: 'success',
       onClick: () => navigate(`/competition/${competitionId}/competitor/bulk`),
+    },
+    {
+      title: 'Import from Competition',
+      description: 'Import competitors with finalised seed points from a previous competition',
+      icon: Download,
+      color: 'info',
+      onClick: () => navigate(`/competition/${competitionId}/competitor/import-from-competition`),
     },
     {
       title: 'Edit Competitors',

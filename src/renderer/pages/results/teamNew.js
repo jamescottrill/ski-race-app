@@ -51,13 +51,6 @@ function TeamResultsNew() {
             raceList.map((e) => e.id)
           );
 
-        console.log('Seed list data:', seedListData);
-        console.log('Race list:', raceList);
-        if (seedListData.length > 0) {
-          console.log('Sample seed data keys:', Object.keys(seedListData[0]));
-          console.log('First race id:', raceList[0].id, 'type:', typeof raceList[0].id);
-        }
-
         // Get teams from competition_team
         const teamsQuery = `
           SELECT team_id, team_name, is_corps, is_reserve, is_female, is_hc
@@ -122,7 +115,7 @@ function TeamResultsNew() {
               })
               .filter((p) => p !== null && !isNaN(p))
               .sort((a, b) => a - b);
-            console.log(memberSeedPoints);
+
             // Determine how many members count based on team type
             // Corps women: 2, Corps men: 4, Regular: 3
             let countingMembers = 3;
