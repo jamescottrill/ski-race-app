@@ -38,7 +38,8 @@ export default function IndividualResultsNew() {
         WHERE rr.competition_id = ?
           AND NOT r.is_training
           AND rr.is_complete
-          AND r.is_individual
+         AND r.is_individual
+        AND NOT r.is_seeding
         ORDER BY r.race_date ASC`;
     const res = await window.api.select(query, [competitionId]);
     setRaces(res);
@@ -151,7 +152,7 @@ export default function IndividualResultsNew() {
         accessorKey: race.id.toString(),
         cell: ({ row }) => (
           <div className="text-center font-mono">
-            {row.original[race.id].toFixed(2) || ''}
+            {row.original[race.id] || ''}
           </div>
         )
       }));

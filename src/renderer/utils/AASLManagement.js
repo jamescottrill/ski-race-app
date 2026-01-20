@@ -8,6 +8,9 @@
  * @param {string} season - Optional season to filter by
  * @returns {Promise<Object|null>} AASL entry or null if not found
  */
+
+import { v4 } from 'uuid';
+
 export const getAASLPoints = async (serviceNumber, season = null) => {
   const query = season
     ? `SELECT * FROM aasl WHERE service_number = ? AND season = ? ORDER BY import_date DESC LIMIT 1`
@@ -19,6 +22,28 @@ export const getAASLPoints = async (serviceNumber, season = null) => {
     return result.length > 0 ? result[0] : null;
   } catch (error) {
     console.error('Failed to get AASL points:', error);
+    return null;
+  }
+};
+
+/**
+ * Get AASL points for a person by name
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {string} season - Optional season to filter by
+ * @returns {Promise<Object|null>} AASL entry or null if not found
+ */
+export const getAASLPointsByName = async (firstName, lastName, season = null) => {
+  const query = season
+    ? `SELECT * FROM aasl WHERE UPPER(first_name) = UPPER(?) AND UPPER(last_name) = UPPER(?) AND season = ? ORDER BY import_date DESC LIMIT 1`
+    : `SELECT * FROM aasl WHERE UPPER(first_name) = UPPER(?) AND UPPER(last_name) = UPPER(?) ORDER BY season DESC, import_date DESC LIMIT 1`;
+  const params = season ? [firstName, lastName, season] : [firstName, lastName];
+
+  try {
+    const result = await window.api.select(query, params);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('Failed to get AASL points by name:', error);
     return null;
   }
 };
@@ -60,6 +85,7 @@ export const getAASLSeasons = async () => {
 
 /**
  * Import AASL entries from parsed data
+ * Supports matching by service number OR by name (first_name + last_name)
  * @param {Array} entries - Array of AASL entries to import
  * @param {string} season - Season for these entries
  * @returns {Promise<Object>} Import result with success/error counts
@@ -70,46 +96,68 @@ export const importAASLEntries = async (entries, season) => {
   let updateCount = 0;
   const errors = [];
   const importDate = new Date().toISOString();
-
+  console.log(entries)
   for (const entry of entries) {
     try {
-      // Check if entry already exists for this service_number and season
-      const existing = await window.api.select(
-        `SELECT service_number FROM aasl WHERE service_number = ? AND season = ?`,
-        [entry.serviceNumber, season]
-      );
+      let existing = null;
+      let matchedBy = null;
 
-      if (existing.length > 0) {
+      // First try to match by service number if provided
+      if (entry.serviceNumber) {
+        try{
+        const byServiceNumber = await window.api.select(
+          `SELECT service_number FROM aasl WHERE service_number = ? AND season = ?`,
+          [entry.serviceNumber, season]
+        );
+        if (byServiceNumber.length > 0) {
+          existing = byServiceNumber[0];
+          matchedBy = 'serviceNumber';
+        }
+          } catch(err) {
+          console.log(err);
+        }
+      }
+      if (existing && existing.length > 0) {
         // Update existing entry
         const updateQuery = `
           UPDATE aasl
-          SET first_name = ?, last_name = ?, gender = ?, category = ?,
+          SET first_name = ?, last_name = ?,
               seed_points = ?, import_date = ?
           WHERE service_number = ? AND season = ?
         `;
         await window.api.insert(updateQuery, [
           entry.firstName,
           entry.lastName,
-          entry.gender,
-          entry.category,
           entry.seedPoints,
           importDate,
-          entry.serviceNumber,
+          existing.service_number,
           season
         ]);
         updateCount++;
       } else {
         // Insert new entry
+        console.log(entry);
+        const sn = await window.api.select(
+          `SELECT id AS service_number FROM people WHERE UPPER(first_name) = UPPER(?) AND UPPER(last_name) = UPPER(?)`,
+          [entry.firstName, entry.lastName]
+        );
+        const serviceNumber = sn.length > 0 ? sn[0].service_number : v4();
+        if (!sn.length > 0) {
+          await window.api.insert(`INSERT INTO PEOPLE(id, first_name, last_name) VALUES(?,?,?)`,
+            [
+              serviceNumber,
+              entry.firstName,
+              entry.lastName
+        ]);
+        }
         const insertQuery = `
-          INSERT INTO aasl (service_number, first_name, last_name, gender, category, seed_points, season, import_date)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO aasl (service_number, first_name, last_name, seed_points, season, import_date)
+          VALUES (?, ?, ?, ?, ?, ?)
         `;
         await window.api.insert(insertQuery, [
-          entry.serviceNumber,
+          serviceNumber,
           entry.firstName,
           entry.lastName,
-          entry.gender,
-          entry.category,
           entry.seedPoints,
           season,
           importDate
@@ -121,7 +169,7 @@ export const importAASLEntries = async (entries, season) => {
       errors.push({ entry, error: error.message });
     }
   }
-
+  console.error(errors);
   return {
     success: errorCount === 0,
     successCount,

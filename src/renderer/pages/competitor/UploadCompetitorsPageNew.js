@@ -28,6 +28,7 @@ import {
   showSuccess,
   showWarning,
 } from '../../utils/ErrorHandler';
+import { v4 as uuid4 } from 'uuid';
 
 export default function UploadCompetitorsPageNew() {
   const { competitionId } = useParams();
@@ -169,8 +170,8 @@ export default function UploadCompetitorsPageNew() {
             competitor.Unit ||
             '',
           arrivalSeed: competitor.arrivalSeed || competitor['Arrival Seed'] || 2000,
-          isNovice: competitor.novice === 'Y' || competitor.Novice === 'Y',
-          isReserve: competitor.reserve === 'Y' || competitor.Reserve === 'Y',
+          isNovice: (competitor.novice || competitor.Novice || 'N').toUpperCase() === 'Y',
+          isReserve: (competitor.reserve || competitor.Reserve || 'N').toUpperCase() === 'Y',
           isFemale:
             (competitor.gender || competitor.Gender || 'M').toUpperCase() ===
             'F',
@@ -182,9 +183,10 @@ export default function UploadCompetitorsPageNew() {
           continue;
         }
         if (!formData.serviceNumber) {
-          console.warn('Skipping competitor with missing Service Number:', competitor);
-          errorCount++;
-          continue;
+          formData.serviceNumber = uuid4();
+          // console.warn('Skipping competitor with missing Service Number:', competitor);
+          // errorCount++;
+          // continue;
         }
 
         try {
@@ -197,7 +199,11 @@ export default function UploadCompetitorsPageNew() {
             updateCount++;
           } else {
             // Create new competitor
-            await createCompetitor(formData, competitionId);
+            const result = await createCompetitor(formData, competitionId);
+            if (!result.success) {
+              console.log(formData);
+              throw new Error(result.error);
+            }
             successCount++;
           }
         } catch (error) {

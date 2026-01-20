@@ -157,7 +157,7 @@ export default function EditRacePageNew() {
         WHERE race_id = ? AND competition_id = ?
       `;
 
-      await window.api.select(updateQuery, [
+      await window.api.insert(updateQuery, [
         formData.race_name,
         formData.race_type,
         formData.race_date,

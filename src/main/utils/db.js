@@ -204,8 +204,7 @@ class DatabaseWrapper {
         },
         constraints: [
           'PRIMARY KEY (competition_id, race_id, run_number)',
-          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
-          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+          'FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id)',
         ],
       },
       race_competitor: {
@@ -218,8 +217,7 @@ class DatabaseWrapper {
         },
         constraints: [
           'PRIMARY KEY (competition_id, race_id, racer_id)',
-          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
-          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+          'FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id)',
           'FOREIGN KEY (racer_id) REFERENCES people(id)',
         ],
       },
@@ -240,10 +238,8 @@ class DatabaseWrapper {
         },
         constraints: [
           'PRIMARY KEY (competition_id, race_id, run_number, racer_id)',
-          'FOREIGN KEY (competition_id) REFERENCES competitions(id)',
-          'FOREIGN KEY (race_id) REFERENCES races(race_id)',
+          'FOREIGN KEY (competition_id, race_id, run_number) REFERENCES race_run(competition_id, race_id, run_number)',
           'FOREIGN KEY (racer_id) REFERENCES people(id)',
-          'FOREIGN KEY (run_number) REFERENCES race_run(run_number)',
         ],
       },
       aasl: {

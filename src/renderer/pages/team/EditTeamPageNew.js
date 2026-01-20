@@ -21,6 +21,8 @@ export default function EditTeamPageNew() {
     team_name: '',
     is_corps: false,
     is_reserve: false,
+    is_female: false,
+    is_hc: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,7 +35,7 @@ export default function EditTeamPageNew() {
   const fetchTeam = async () => {
     try {
       const result = await window.api.select(
-        `SELECT team_name, is_corps, is_reserve
+        `SELECT team_name, is_corps, is_reserve, is_female, is_hc
          FROM competition_team
          WHERE competition_id = ? AND team_id = ?`,
         [competitionId, teamId]
@@ -45,6 +47,8 @@ export default function EditTeamPageNew() {
           team_name: team.team_name || '',
           is_corps: Boolean(team.is_corps),
           is_reserve: Boolean(team.is_reserve),
+          is_female: Boolean(team.is_female),
+          is_hc: Boolean(team.is_hc),
         });
       } else {
         setError('Team not found');
@@ -75,12 +79,14 @@ export default function EditTeamPageNew() {
     try {
       await window.api.insert(
         `UPDATE competition_team
-         SET team_name = ?, is_corps = ?, is_reserve = ?
+         SET team_name = ?, is_corps = ?, is_reserve = ?, is_female = ?, is_hc = ?
          WHERE competition_id = ? AND team_id = ?`,
         [
           formData.team_name.trim(),
           formData.is_corps ? 1 : 0,
           formData.is_reserve ? 1 : 0,
+          formData.is_female ? 1 : 0,
+          formData.is_hc ? 1 : 0,
           competitionId,
           teamId
         ]
@@ -142,7 +148,7 @@ export default function EditTeamPageNew() {
                 />
               </div>
 
-              <div className="flex gap-6">
+              <div className="flex flex-wrap gap-6">
                 <Checkbox
                   checked={formData.is_corps}
                   onChange={(e) => handleChange('is_corps', e.target.checked)}
@@ -152,6 +158,16 @@ export default function EditTeamPageNew() {
                   checked={formData.is_reserve}
                   onChange={(e) => handleChange('is_reserve', e.target.checked)}
                   label="Reserve Team"
+                />
+                <Checkbox
+                  checked={formData.is_female}
+                  onChange={(e) => handleChange('is_female', e.target.checked)}
+                  label="Female Team"
+                />
+                <Checkbox
+                  checked={formData.is_hc}
+                  onChange={(e) => handleChange('is_hc', e.target.checked)}
+                  label="HC (Hors Concours)"
                 />
               </div>
             </div>

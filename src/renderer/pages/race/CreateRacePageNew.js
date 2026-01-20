@@ -31,7 +31,7 @@ export default function CreateRacePageNew() {
 
   const [formData, setFormData] = useState({
     raceName: '',
-    raceType: 'Slalom',
+    raceType: 'SL',
     isIndividual: true,
     isTeam: false,
     isTraining: false,
@@ -190,7 +190,13 @@ export default function CreateRacePageNew() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                  <Checkbox
+                    label="Individual Race"
+                    name="isIndividual"
+                    checked={formData.isIndividual}
+                    onChange={handleChange}
+                  />
                   <Checkbox
                     label="Team Race"
                     name="isTeam"

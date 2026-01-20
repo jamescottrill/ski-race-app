@@ -36,16 +36,52 @@ export default function ImportAASLPage() {
     serviceNumber: '',
     firstName: '',
     lastName: '',
+    nameAndInitials: '',
     gender: '',
     category: '',
-    seedPoints: ''
+    seedPoints: '',
+    seedNo: '',
+    rank: '',
+    unit: ''
   });
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
       parseExcelFile(selectedFile);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && (droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls') || droppedFile.name.endsWith('.csv'))) {
+      setFile(droppedFile);
+      parseExcelFile(droppedFile);
+    } else {
+      toast.error('Please drop an Excel or CSV file');
     }
   };
 
@@ -77,27 +113,50 @@ export default function ImportAASLPage() {
 
   const autoDetectColumns = (headers) => {
     const mapping = { ...columnMapping };
-    const lowerHeaders = headers.map(h => String(h).toLowerCase());
+    const lowerHeaders = headers.map(h => String(h).toLowerCase().trim());
 
     lowerHeaders.forEach((header, index) => {
       const originalHeader = headers[index];
-      if (header.includes('service') || header.includes('number') || header.includes('id')) {
+
+      // Seed No column
+      if (header === 'seed no' || header === 'seedno' || header === 'seed number') {
+        mapping.seedNo = originalHeader;
+      }
+      // Rank column
+      if (header === 'rank' || header === 'title') {
+        mapping.rank = originalHeader;
+      }
+      // Name & Initials (combined name field)
+      if (header.includes('name') && header.includes('initial')) {
+        mapping.nameAndInitials = originalHeader;
+      }
+      // Unit column
+      if (header === 'unit' || header.includes('regiment')) {
+        mapping.unit = originalHeader;
+      }
+      // Seed Points - be specific to avoid matching "Seed No"
+      if ((header.includes('seed') && header.includes('point')) || header === 'seeding' || header === 'aasl') {
+        mapping.seedPoints = originalHeader;
+      }
+      // Service number
+      if (header.includes('service') || header === 'id') {
         mapping.serviceNumber = originalHeader;
       }
+      // First name (if separate)
       if (header.includes('first') || header === 'forename') {
         mapping.firstName = originalHeader;
       }
-      if (header.includes('last') || header.includes('surname') || header === 'name') {
+      // Last name (if separate)
+      if ((header.includes('last') || header.includes('surname')) && !header.includes('initial')) {
         mapping.lastName = originalHeader;
       }
+      // Gender
       if (header.includes('gender') || header.includes('sex')) {
         mapping.gender = originalHeader;
       }
+      // Category
       if (header.includes('category') || header.includes('cat')) {
         mapping.category = originalHeader;
-      }
-      if (header.includes('seed') || header.includes('point') || header.includes('aasl')) {
-        mapping.seedPoints = originalHeader;
       }
     });
 
@@ -108,6 +167,40 @@ export default function ImportAASLPage() {
     setColumnMapping(prev => ({ ...prev, [field]: value }));
   };
 
+  const parseNameAndInitials = (nameStr) => {
+    if (!nameStr) return { lastName: '', firstName: '' };
+    const str = nameStr.trim();
+
+    // Fallback: assume last word(s) are initials, rest is surname
+    const parts = str.split(' ');
+    if (parts.length === 1) {
+      return { lastName: parts[0], firstName: '' };
+    }
+
+    // Check if last parts look like initials (single letters)
+    let initialsStart = parts.length;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].length <= 2) {
+        initialsStart = i;
+      } else {
+        break;
+      }
+    }
+
+    if (initialsStart === parts.length) {
+      // No initials found, assume last part is first name
+      return {
+        lastName: parts.slice(0, -1).join(' '),
+        firstName: parts[parts.length - 1]
+      };
+    }
+
+    return {
+      lastName: parts.slice(0, initialsStart).join(' '),
+      firstName: parts.slice(initialsStart).join(' ')
+    };
+  };
+
   const getMappedData = () => {
     return parsedData.map((row, index) => {
       const getColumnValue = (column) => {
@@ -115,15 +208,38 @@ export default function ImportAASLPage() {
         return colIndex >= 0 ? row[colIndex] : '';
       };
 
+      // Parse name from either separate fields or combined Name & Initials
+      let firstName = String(getColumnValue(columnMapping.firstName) || '').trim();
+      let lastName = String(getColumnValue(columnMapping.lastName) || '').trim();
+
+      if (!firstName && !lastName && columnMapping.nameAndInitials) {
+        const parsed = parseNameAndInitials(
+          getColumnValue(columnMapping.nameAndInitials),
+        );
+        firstName = parsed.firstName;
+        lastName = parsed.lastName;
+      }
+
+      const serviceNumber = String(getColumnValue(columnMapping.serviceNumber) || '').trim();
+      const seedPoints = parseFloat(getColumnValue(columnMapping.seedPoints)) || 0.00;
+      const rank = String(getColumnValue(columnMapping.rank) || '').trim();
+      const unit = String(getColumnValue(columnMapping.unit) || '').trim();
+
+      // Valid if we have (name OR service number) AND seed points
+      const hasIdentifier = (lastName && firstName) || serviceNumber;
+      const isValid = hasIdentifier && seedPoints >=0;
+
       return {
         rowIndex: index,
-        serviceNumber: String(getColumnValue(columnMapping.serviceNumber) || '').trim(),
-        firstName: String(getColumnValue(columnMapping.firstName) || '').trim(),
-        lastName: String(getColumnValue(columnMapping.lastName) || '').trim(),
+        serviceNumber,
+        firstName,
+        lastName,
+        rank,
+        unit,
         gender: String(getColumnValue(columnMapping.gender) || '').trim().toUpperCase().charAt(0),
         category: String(getColumnValue(columnMapping.category) || '').trim(),
-        seedPoints: parseFloat(getColumnValue(columnMapping.seedPoints)) || 0,
-        isValid: !!getColumnValue(columnMapping.serviceNumber) && !!getColumnValue(columnMapping.seedPoints)
+        seedPoints,
+        isValid
       };
     });
   };
@@ -169,11 +285,11 @@ export default function ImportAASLPage() {
           : <X className="w-4 h-4 text-danger-600" />
       )
     },
-    { header: 'Service Number', accessorKey: 'serviceNumber' },
-    { header: 'First Name', accessorKey: 'firstName' },
+    { header: 'Rank', accessorKey: 'rank' },
     { header: 'Last Name', accessorKey: 'lastName' },
-    { header: 'Gender', accessorKey: 'gender' },
-    { header: 'Category', accessorKey: 'category' },
+    { header: 'First Name', accessorKey: 'firstName' },
+    { header: 'Unit', accessorKey: 'unit' },
+    { header: 'Service No', accessorKey: 'serviceNumber' },
     {
       header: 'Seed Points',
       accessorKey: 'seedPoints',
@@ -202,7 +318,17 @@ export default function ImportAASLPage() {
         <Card>
           <CardContent>
             <h3 className="text-lg font-semibold text-neutral-900 mb-4">Step 1: Upload Excel File</h3>
-            <div className="border-2 border-dashed border-neutral-300 rounded-lg p-8 text-center">
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-neutral-300'
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <FileSpreadsheet className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
               <input
                 type="file"
@@ -243,14 +369,21 @@ export default function ImportAASLPage() {
                   />
                 </div>
               </div>
+              <p className="text-sm text-neutral-600 mb-4">
+                Map your columns below. You need either a Name & Initials column OR separate First/Last Name columns.
+                Service Number is optional - entries can be matched by name.
+              </p>
               <div className="grid grid-cols-3 gap-4">
                 {Object.entries({
-                  serviceNumber: 'Service Number *',
+                  nameAndInitials: 'Name & Initials',
                   firstName: 'First Name',
                   lastName: 'Last Name',
+                  rank: 'Rank',
+                  unit: 'Unit',
+                  serviceNumber: 'Service Number',
+                  seedPoints: 'Seed Points *',
                   gender: 'Gender',
-                  category: 'Category',
-                  seedPoints: 'Seed Points *'
+                  category: 'Category'
                 }).map(([key, label]) => (
                   <div key={key}>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">

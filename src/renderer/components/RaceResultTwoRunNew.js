@@ -55,7 +55,8 @@ const raceQuery = `
                                run2.is_dsq                                                               AS run_2_dsq,
                                run1.is_dnf                                                               AS run_1_dnf,
                                run2.is_dnf                                                               AS run_2_dnf,
-                               run1.is_ns                                                                AS is_ns,
+                               run1.is_ns                                                                AS run_1_ns,
+                               run2.is_ns                                                                AS run_2_ns,
                                run1.dsq_gate                                                             AS run_1_dsq_gate,
                                run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
@@ -83,11 +84,8 @@ const raceQuery = `
                                JOIN people p ON p.id = run1.racer_id
                                JOIN race_competitor rc ON run1.race_id = rc.race_id AND run1.racer_id = rc.racer_id
                                JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
---                                LEFT JOIN competition_team_members ctm ON p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id
---                                LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type
---                         WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
                )
           SELECT
             *,
@@ -98,7 +96,7 @@ const raceQuery = `
         `;
 
 const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
-  const [data, setData] = useState([]);
+  const [finished, setFinished] = useState([]);
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
   const [run1Dsq, setRun1Dsq] = useState([]);
@@ -123,9 +121,10 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
         raceId: result.raceId,
         run1Time: convertRaceTime(result.run_1_time),
         run2Time: convertRaceTime(result.run_2_time),
-        run1Ns: result.is_ns,
-        run1Dns: result.run_1_dns,
-        run2Dns: result.run_2_dns,
+        run1Ns: result.run_1_ns,
+        run2Ns: result.run_2_ns,
+        run1Dns: result.run_1_dns || result.run_1_ns,
+        run2Dns: result.run_2_dns || result.run_2_ns,
         run1Dsq: result.run_1_dsq,
         run2Dsq: result.run_2_dsq,
         run1Dnf: result.run_1_dnf,
@@ -162,7 +161,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
 
     const r1Dnf = mapped
       .filter((e) => {
-        return e.run1Dnf || e.run1Ns;
+        return e.run1Dnf;
       })
       .sort(function (a, b) {
         return a.bibNumber - b.bibNumber;
@@ -170,7 +169,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     setRun1Dnf(r1Dnf);
     const r1Dns = mapped
       .filter((e) => {
-        return e.run1Dns;
+        return e.run1Dns || e.run1Ns;
       })
       .sort(function (a, b) {
         return a.bibNumber - b.bibNumber;
@@ -194,7 +193,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     setRun2Dnf(r2Dnf);
     const r2Dns = mapped
       .filter((e) => {
-        return e.run2Dns;
+        return e.run2Dns || e.run2Ns;
       })
       .sort(function (a, b) {
         return a.bibNumber - b.bibNumber;
@@ -215,7 +214,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       .sort(function (a, b) {
         return a.position - b.position;
       });
-    setData(finished);
+    setFinished(finished);
   };
 
   const initRaceDetails = async () => {
@@ -232,13 +231,12 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     initRaceDetails().catch(console.error);
     // init();
     // init().catch(console.error);
-    console.log(data);
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
     resultsTwoPdf(
       raceDetails,
-      data,
+      finished,
       run1Dns,
       run1Dnf,
       run1Dsq,
@@ -388,25 +386,24 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
 
   return (
     <div className="space-y-6">
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <DataTable
               columns={columns}
-              data={data}
-              showPagination={true}
+              data={finished}
+              showPagination
               pageSize={50}
               className="w-full"
             />
           </CardContent>
         </Card>
       )}
-      {data.length === 0 && (
+      {finished.length === 0 && (
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous run as finished.
             </div>
           </CardContent>
         </Card>
@@ -489,65 +486,65 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
           </CardContent>
         </Card>
       )}
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <h2 className="text-lg font-semibold mb-4 text-center">Junior Results</h2>
             <DataTable
               columns={categoryColumns}
-              data={data.filter((e) => e.is_junior).slice(0, 3)}
+              data={finished.filter((e) => e.is_junior).slice(0, 3)}
               showPagination={false}
               className="w-full"
             />
           </CardContent>
         </Card>
       )}
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <h2 className="text-lg font-semibold mb-4 text-center">Novice Results</h2>
             <DataTable
               columns={categoryColumns}
-              data={data.filter((e) => e.is_novice).slice(0, 3)}
+              data={finished.filter((e) => e.is_novice).slice(0, 3)}
               showPagination={false}
               className="w-full"
             />
           </CardContent>
         </Card>
       )}
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <h2 className="text-lg font-semibold mb-4 text-center">Veteran Results</h2>
             <DataTable
               columns={categoryColumns}
-              data={data.filter((e) => e.is_veteran).slice(0, 3)}
+              data={finished.filter((e) => e.is_veteran).slice(0, 3)}
               showPagination={false}
               className="w-full"
             />
           </CardContent>
         </Card>
       )}
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <h2 className="text-lg font-semibold mb-4 text-center">Female Results</h2>
             <DataTable
               columns={categoryColumns}
-              data={data.filter((e) => e.gender === "F").slice(0, 3)}
+              data={finished.filter((e) => e.gender === "F").slice(0, 3)}
               showPagination={false}
               className="w-full"
             />
           </CardContent>
         </Card>
       )}
-      {data.length > 0 && (
+      {finished.length > 0 && (
         <Card>
           <CardContent>
             <h2 className="text-lg font-semibold mb-4 text-center">Open Results</h2>
             <DataTable
               columns={categoryColumns}
-              data={data.slice(0, 3)}
+              data={finished.slice(0, 3)}
               showPagination={false}
               className="w-full"
             />

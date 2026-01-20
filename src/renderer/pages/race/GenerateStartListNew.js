@@ -300,8 +300,8 @@ export default function GenerateStartListNew() {
           <Input
             type="number"
             min="1"
-            value={row.original.bib_number}
-            onChange={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
+            defaultValue={row.original.bib_number}
+            onBlur={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
             className="w-16 font-mono text-center"
           />
         ) : (
@@ -545,7 +545,7 @@ export default function GenerateStartListNew() {
               {loading ? (
                 <div className="text-center py-8">Loading start list...</div>
               ) : startList && startList.length > 0 ? (
-                <DataTable columns={getColumns(startList, setStartList, editMode)} data={startList} pageSize={50} />
+                <DataTable columns={getColumns(startList, setStartList, editMode)} data={startList} pageSize={150} />
               ) : (
                 <div className="text-center py-8 text-neutral-500">
                   No start list generated yet

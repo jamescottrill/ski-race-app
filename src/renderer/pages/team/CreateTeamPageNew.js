@@ -23,6 +23,8 @@ export default function CreateTeamPageNew() {
     team_name: '',
     is_corps: false,
     is_reserve: false,
+    is_female: false,
+    is_hc: false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -46,14 +48,16 @@ export default function CreateTeamPageNew() {
       const teamId = uuidv4();
 
       await window.api.insert(
-        `INSERT INTO competition_team (competition_id, team_id, team_name, is_corps, is_reserve)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO competition_team (competition_id, team_id, team_name, is_corps, is_reserve, is_female, is_hc)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           competitionId,
           teamId,
           formData.team_name.trim(),
           formData.is_corps ? 1 : 0,
           formData.is_reserve ? 1 : 0,
+          formData.is_female ? 1 : 0,
+          formData.is_hc ? 1 : 0,
         ]
       );
 
@@ -107,7 +111,7 @@ export default function CreateTeamPageNew() {
                 </p>
               </div>
 
-              <div className="flex gap-6">
+              <div className="flex flex-wrap gap-6">
                 <Checkbox
                   checked={formData.is_corps}
                   onChange={(e) => handleChange('is_corps', e.target.checked)}
@@ -117,6 +121,16 @@ export default function CreateTeamPageNew() {
                   checked={formData.is_reserve}
                   onChange={(e) => handleChange('is_reserve', e.target.checked)}
                   label="Reserve Team"
+                />
+                <Checkbox
+                  checked={formData.is_female}
+                  onChange={(e) => handleChange('is_female', e.target.checked)}
+                  label="Female Team"
+                />
+                <Checkbox
+                  checked={formData.is_hc}
+                  onChange={(e) => handleChange('is_hc', e.target.checked)}
+                  label="HC (Hors Concours)"
                 />
               </div>
             </div>

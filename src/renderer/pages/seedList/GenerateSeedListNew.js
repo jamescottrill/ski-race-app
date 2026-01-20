@@ -9,7 +9,8 @@ import {
   AlertCircle,
   CheckCircle,
   TrendingUp,
-  Save
+  Save,
+  Search
 } from 'lucide-react';
 import {
   PageContainer,
@@ -19,6 +20,7 @@ import {
   Button,
   DataTable,
   Badge,
+  TextField,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
@@ -44,7 +46,16 @@ function GenerateSeedListNew() {
   const [cppCalculating, setCppCalculating] = useState(false);
   const [showCPPSection, setShowCPPSection] = useState(false);
   const [storedCPP, setStoredCPP] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const handleBack = useBackButton();
+
+  const filteredSeedList = seedList.filter((competitor) => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
+    const fullName = `${competitor.first_name || ''} ${competitor.last_name || ''}`.toLowerCase();
+    const reverseName = `${competitor.last_name || ''} ${competitor.first_name || ''}`.toLowerCase();
+    return fullName.includes(search) || reverseName.includes(search);
+  });
 
   useEffect(() => {
     fetchCompletedRaces();
@@ -430,14 +441,26 @@ function GenerateSeedListNew() {
                       </div>
                     </div>
 
-                    <div className="text-sm text-neutral-600">
-                      <p className="font-medium mb-2">Reference Skiers ({cppResult.skiersUsed}):</p>
-                      <div className="flex flex-wrap gap-2">
-                        {cppResult.qualifyingSkiers?.map((skier, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {skier.name} (AASL: {skier.aasl_points?.toFixed(2)}, Seed: {skier.seed_points?.toFixed(2)})
-                          </Badge>
-                        ))}
+                    <div className="text-sm text-neutral-600 space-y-3">
+                      <div>
+                        <p className="font-medium mb-2">T1 Skiers (lowest AASL on seed list):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {cppResult.t1Skiers?.map((skier, idx) => (
+                            <Badge key={idx} variant="outline">
+                              {skier.name} (AASL: {skier.aasl_points?.toFixed(2)})
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-medium mb-2">T2/T3 Skiers (lowest AASL in top 10):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {cppResult.t2Skiers?.map((skier, idx) => (
+                            <Badge key={idx} variant="outline">
+                              {skier.name} (AASL: {skier.aasl_points?.toFixed(2)}, Seed: {skier.seed_points?.toFixed(2)})
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -475,11 +498,27 @@ function GenerateSeedListNew() {
               </p>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={seedList}
-              pageSize={50}
-            />
+            <>
+              <div className="p-4 border-b border-neutral-200">
+                <TextField
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  leftIcon={<Search className="w-4 h-4" />}
+                  className="max-w-sm"
+                />
+                {searchTerm && (
+                  <p className="text-sm text-neutral-500 mt-2">
+                    Showing {filteredSeedList.length} of {seedList.length} competitors
+                  </p>
+                )}
+              </div>
+              <DataTable
+                columns={columns}
+                data={filteredSeedList}
+                pageSize={50}
+              />
+            </>
           )}
         </CardContent>
       </Card>

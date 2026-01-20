@@ -47,7 +47,8 @@ export default function RaceTeamResultTwoRunNew({
                           ROUND(race_time, 2) AS race_time,
                           COALESCE(is_dsq, FALSE) AS is_dsq,
                           COALESCE(is_dnf, FALSE) AS is_dnf,
-                          COALESCE(is_dns, FALSE) AS is_dns
+                          COALESCE(is_dns, FALSE) AS is_dns,
+                          COALESCE(is_ns, FALSE) AS is_ns
                    FROM race_results rr
                    WHERE TRUE
                      AND run_number = 2
@@ -63,7 +64,7 @@ export default function RaceTeamResultTwoRunNew({
                           run2.is_dsq                                                               AS run_2_dsq,
                           run1.is_dnf                                                               AS run_1_dnf,
                           run2.is_dnf                                                               AS run_2_dnf,
-                          run1.is_ns                                                                AS is_ns,
+                          CASE WHEN run1.is_ns OR run2.is_ns THEN 1 ELSE 0 END                     AS is_ns,
                           CASE WHEN run1.is_dns OR run2.is_dns THEN 1 ELSE 0 END                   AS is_dns,
                           CASE WHEN run1.is_dnf OR run2.is_dnf THEN 1 ELSE 0 END                   AS is_dnf,
                           CASE WHEN run1.is_dsq OR run2.is_dsq THEN 1 ELSE 0 END                   AS is_dsq,
@@ -89,7 +90,10 @@ export default function RaceTeamResultTwoRunNew({
      SELECT
        *,
        ROUND((total_time - mintime) / mintime * factor, 2) AS seed_points,
-       RANK() OVER (ORDER BY total_time) AS position
+       RANK() OVER (ORDER BY total_time) AS position,
+       (SELECT COALESCE(ct2.is_hc, 0) FROM competition_team ct2
+        JOIN competition_team_members ctm2 ON ct2.team_id = ctm2.team_id AND ct2.competition_id = ctm2.competition_id
+        WHERE ctm2.racer_id = data.racer_id AND ctm2.race_id = data.race_id LIMIT 1) AS is_hc
      FROM data
      ORDER BY total_time
    `;
@@ -123,8 +127,7 @@ export default function RaceTeamResultTwoRunNew({
           !result.run_2_dns &&
           !result.run_2_dnf &&
           !result.run_2_dsq &&
-          !result.run_1_ns &&
-          !result.run_2_ns,
+          !result.is_ns,
         totalTime: convertRaceTime(result.total_time),
         totalTimeSecs: result.total_time,
         firstName: result.first_name,
@@ -140,13 +143,14 @@ export default function RaceTeamResultTwoRunNew({
         is_senior: result.is_senior,
         is_veteran: result.is_veteran,
         is_reserve: result.is_reserve,
+        isHc: Boolean(result.is_hc),
       };
     });
     const finished = mapped
       .filter((e) => {
         return e.completed;
       });
-    console.log(finished);
+    console.log(mapped);
 
     const teamResults = [];
     const dnfTeams = [];
@@ -157,16 +161,26 @@ export default function RaceTeamResultTwoRunNew({
       const sortedRacers = finished.filter((r) => r.teamName === teamName).sort((a, b) => a.points - b.points);
       const topNRacers = sortedRacers.slice(0, 3);
       if (sortedRacers.length < 3) {
-        dnfTeams.push({"teamName": teamName});
-        return
+        dnfTeams.push({ teamName });
+        return;
       }
       const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
       const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.totalTimeSecs, 0);
       const topNTimes = convertRaceTime(topNTimesSecs);
-      const results = {teamName: teamName, racers: topNRacers, points: topNPoints, time: topNTimes};
-      teamResults.push(results);
+      const isHc = topNRacers.length > 0 && topNRacers[0].isHc;
+      const teamResult = { teamName, racers: topNRacers, points: topNPoints, time: topNTimes, isHc };
+      teamResults.push(teamResult);
     });
-    teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
+    teamResults.sort((a, b) => a.points - b.points);
+    let position = 1;
+    teamResults.forEach((result) => {
+      if (result.isHc) {
+        result.position = '';
+      } else {
+        result.position = position;
+        position += 1;
+      }
+    });
     setData(teamResults);
     setDnfTeams(dnfTeams);
   };

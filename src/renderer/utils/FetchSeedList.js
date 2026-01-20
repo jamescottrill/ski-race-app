@@ -79,9 +79,7 @@ const calculateRacerSeedPoints = async (
   row,
   raceIds,
   competitionId,
-  seedResultDf,
   prevSL,
-  // prevSL2,
 ) => {
   // Extract all UUID keys (assuming UUIDs are non-standard alphanumeric)
   const racePoints = Object.keys(row)
@@ -120,7 +118,7 @@ const calculateRacerSeedPoints = async (
         competitor whose seed position is below the number of the last finisher in the race will
         be awarded either the same race points as the last finisher plus a penalty of 20%, or
         his own seed points, whichever are greater.
-        There is also an exception for competitors who do not start due to injury: - this hasn't been coded yet…
+        There is also an exception for competitors who do not start due to injury:
         If a competitor does not start in any one race, either through sickness,
         injury, reasons beyond his control, or the ruling of the Race Jury (e.g. Rule 704.8.3), his
         position on the current seed list will be matched to the race points awarded to the competitor
@@ -130,7 +128,6 @@ const calculateRacerSeedPoints = async (
          */
         // eslint-disable-next-line no-use-before-define
         // Racers get the seed results they should have had from the most recent, non-successful race.
-        // let previousSeedList = prevSL;
         let previousRaces = raceIds.slice(0, 2);
         const sR = await window.api.select(
           `SELECT race_id
@@ -148,11 +145,10 @@ const calculateRacerSeedPoints = async (
           competitionId,
           previousRaces,
         );
-
         // This gets the previously calculated seed list, because once a competitor has artificial seed points,
         // they keep them for the rest of the competition.
         // They never need to get the first race as it's either the initial seeding points,
-        // or if they've missed all three races they'll have previous seed points from the race
+        // or if they've missed all they'll have previous seed points from the race
         let mostRecentRace = raceIds[2];
         if (row[mostRecentRace] !== null) {
           // If we're not using the most recent race then we also need to get the seed list at the time of the previous race.
@@ -172,7 +168,6 @@ const calculateRacerSeedPoints = async (
         const competitorResult = results.findIndex(
           (x) => x.racer_id === row.racer_id,
         );
-        const raceStart = results[competitorResult].bib_number;
         const finishedResults = results.filter((x) => {
           return (
             x.seed_points !== null &&
@@ -265,7 +260,6 @@ const calculateRacerSeedPoints = async (
           const competitorResult = results.findIndex(
             (x) => x.racer_id === row.racer_id,
           );
-          const raceStart = results[competitorResult].bib_number;
           const finishedResults = results.filter((x) => {
             return (
               x.seed_points !== null &&
@@ -301,11 +295,13 @@ const calculateRacerSeedPoints = async (
           row[`${mostRecentRace}-penalty`] = true;
         }
       }
+      if(log) console.log(nonNullRaces);
       const bestThree4 = nonNullRaces
-        .sort((a, b) => a - b || isNaN(a) - isNaN(b))
+        .sort((a, b) => (a === null) - (b === null) || a - b)
         .slice(0, 3);
       finalSeedPoints = (bestThree4[0] + bestThree4[1] + bestThree4[2]) / 3;
       finalSeedPoints = round(finalSeedPoints);
+      if(log) console.log(finalSeedPoints );
       break;
     default:
       const numMinusTwo = numRaces - 2;
@@ -344,7 +340,6 @@ const calculateRacerSeedPoints = async (
           const competitorResult = results.findIndex(
             (x) => x.racer_id === row.racer_id,
           );
-          const raceStart = results[competitorResult].bib_number;
           const finishedResults = results.filter((x) => {
             return (
               x.seed_points !== null &&
@@ -507,9 +502,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
         x,
         raceIds,
         competitionId,
-        pivDf,
         previousSeedList,
-        // previousSeedList2,
       );
       resultP.push(res);
     });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, UserPlus, UserMinus, Search } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { ArrowLeft, Users, UserPlus, UserMinus, Search, Copy } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -12,9 +12,9 @@ import {
   Input,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import toast from 'react-hot-toast';
 
 export default function TeamMembersPageNew() {
-  const navigate = useNavigate();
   const { competitionId, teamId } = useParams();
   const handleBack = useBackButton();
 
@@ -25,6 +25,7 @@ export default function TeamMembersPageNew() {
   const [availableCompetitors, setAvailableCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -146,6 +147,58 @@ export default function TeamMembersPageNew() {
     }
   };
 
+  const handleCopyToAllRaces = async () => {
+    if (races.length <= 1) {
+      toast.error('No other races to copy to');
+      return;
+    }
+
+    if (teamMembers.length === 0) {
+      toast.error('No team members to copy');
+      return;
+    }
+
+    setCopying(true);
+    try {
+      let copiedCount = 0;
+      let skippedCount = 0;
+
+      for (const race of races) {
+        if (race.race_id === selectedRaceId) continue;
+
+        for (const member of teamMembers) {
+          try {
+            const existing = await window.api.select(
+              `SELECT 1 FROM competition_team_members
+               WHERE competition_id = ? AND team_id = ? AND race_id = ? AND racer_id = ?`,
+              [competitionId, teamId, race.race_id, member.racer_id]
+            );
+
+            if (existing.length === 0) {
+              await window.api.insert(
+                `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id)
+                 VALUES (?, ?, ?, ?)`,
+                [competitionId, teamId, race.race_id, member.racer_id]
+              );
+              copiedCount++;
+            } else {
+              skippedCount++;
+            }
+          } catch (err) {
+            console.error('Failed to copy member:', err);
+          }
+        }
+      }
+
+      toast.success(`Copied ${copiedCount} members to ${races.length - 1} race(s). ${skippedCount} already existed.`);
+    } catch (error) {
+      console.error('Failed to copy to all races:', error);
+      toast.error('Failed to copy team members');
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const filteredAvailableCompetitors = useMemo(() => {
     if (!searchTerm.trim()) {
       return availableCompetitors;
@@ -250,26 +303,38 @@ export default function TeamMembersPageNew() {
       {/* Race Selector */}
       <Card className="mb-6">
         <CardContent>
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-neutral-700">
-              Select Race:
-            </label>
-            {races.length === 0 ? (
-              <p className="text-neutral-500 text-sm">
-                No team races have been created yet. Create a team race first to assign members.
-              </p>
-            ) : (
-              <select
-                value={selectedRaceId}
-                onChange={(e) => setSelectedRaceId(e.target.value)}
-                className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-neutral-700">
+                Select Race:
+              </label>
+              {races.length === 0 ? (
+                <p className="text-neutral-500 text-sm">
+                  No team races have been created yet. Create a team race first to assign members.
+                </p>
+              ) : (
+                <select
+                  value={selectedRaceId}
+                  onChange={(e) => setSelectedRaceId(e.target.value)}
+                  className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {races.map(race => (
+                    <option key={race.race_id} value={race.race_id}>
+                      {race.race_name} ({race.race_type})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {races.length > 1 && teamMembers.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleCopyToAllRaces}
+                disabled={copying}
+                leftIcon={<Copy className="w-4 h-4" />}
               >
-                {races.map(race => (
-                  <option key={race.race_id} value={race.race_id}>
-                    {race.race_name} ({race.race_type})
-                  </option>
-                ))}
-              </select>
+                {copying ? 'Copying...' : `Copy to All Races (${races.length - 1})`}
+              </Button>
             )}
           </div>
           {selectedRace && (

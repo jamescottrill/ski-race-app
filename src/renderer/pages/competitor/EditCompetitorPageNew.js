@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Save,
   ArrowLeft,
@@ -77,7 +78,7 @@ function EditCompetitorPageNew() {
           country: competitor.country || 'GBR',
           serviceNumber: competitor.service_number || '',
           gender: competitor.gender || 'M',
-          arrivalSeed: competitor.arrival_seed || 2000,
+          arrivalSeed: competitor.arrival_corps_seed || 2000,
           armySeed: competitor.army_seed || '',
           isNovice: competitor.is_novice === 1,
           isJunior: competitor.is_junior === 1,
@@ -101,23 +102,21 @@ function EditCompetitorPageNew() {
 
   const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
+
+    setFormData((prev) => {
+      const newValue = type === 'checkbox' ? checked : value;
+      const updates = { ...prev, [name]: newValue };
+
+      if (name === 'birthYear') {
+        const birthYear = parseInt(value, 10);
+        if (!isNaN(birthYear)) {
+          updates.isJunior = birthYear >= 2004;
+          updates.isSenior = birthYear <= 2003 && birthYear > 1991;
+          updates.isVeteran = birthYear <= 1991;
+        }
+      }
+      return updates;
     });
-
-    if (name === 'birthYear') {
-      const currentYear = new Date().getFullYear();
-      const birthYear = parseInt(value);
-      const age = currentYear - birthYear;
-
-      setFormData(prev => ({
-        ...prev,
-        isJunior: birthYear >= 2004,
-        isSenior: birthYear <= 2003 && birthYear > 1991,
-        isVeteran: birthYear <= 1991,
-      }));
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -178,8 +177,8 @@ function EditCompetitorPageNew() {
         WHERE racer_id = ? AND competition_id = ?
       `;
       const competitorParams = [
-        formData.arrivalSeed,
-        formData.armySeed || null,
+        parseFloat(formData.arrivalSeed),
+        parseFloat(formData.armySeed) || null,
         formData.isNovice ? 1 : 0,
         formData.isJunior ? 1 : 0,
         formData.isSenior ? 1 : 0,
@@ -190,11 +189,16 @@ function EditCompetitorPageNew() {
         competitorId,
         competitionId,
       ];
-
-      await window.api.insert(competitorQuery, competitorParams);
+      console.log(competitorParams);
+      const result = await window.api.insert(competitorQuery, competitorParams);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update competitor');
+      }
+      toast.success('Competitor updated successfully');
       navigate(-1);
     } catch (error) {
       console.error('Failed to update competitor:', error);
+      toast.error(`Failed to update competitor: ${error.message}`);
     }
   };
 

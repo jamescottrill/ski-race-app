@@ -142,7 +142,8 @@ const updateCompetitor = async (
 };
 
 const createCompetitor = async (formData, competitionId) => {
-  let { isJunior, isVeteran } = false;
+  let isJunior = false;
+  let isVeteran = false;
   let isSenior = true;
   if (formData.birthYear) {
     ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
@@ -152,7 +153,7 @@ const createCompetitor = async (formData, competitionId) => {
   // Check if service number already exists
   const existingPerson = await window.api.select(
     'SELECT id, first_name, last_name FROM people WHERE id = ?',
-    [id]
+    [id],
   );
   if (existingPerson.length > 0) {
     const person = existingPerson[0];
@@ -162,51 +163,52 @@ const createCompetitor = async (formData, competitionId) => {
     };
   }
 
-  const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-  const params1 = [
-    id,
-    formData.firstName,
-    formData.lastName,
-    formData.title,
-    formData.birthYear,
-    formData.country,
-    formData.gender,
-  ];
-
-  try {
-    const result1 = await window.api.insert(query1, params1);
-    if (!result1.success) {
-      throw new Error('Failed to create person: ' + result1.error);
-    }
-
-    const query2 = `
+  const operations = [
+    {
+      type: 'insert',
+      query: `
+        INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        id,
+        formData.firstName,
+        formData.lastName,
+        formData.title,
+        formData.birthYear,
+        formData.country,
+        formData.gender,
+      ],
+    },
+    {
+      type: 'insert',
+      query: `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
          is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-    const params2 = [
-      competitionId,
-      id,
-      formData.isNovice,
-      isJunior,
-      isSenior,
-      isVeteran,
-      formData.isReserve,
-      formData.isFemale,
-      formData.title,
-      formData.regiment,
-      formData.arrivalSeed || 2000,
-    ];
+      `,
+      params: [
+        competitionId,
+        id,
+        formData.isNovice ? 1 : 0,
+        isJunior ? 1 : 0,
+        isSenior ? 1 : 0,
+        isVeteran ? 1 : 0,
+        formData.isReserve ? 1 : 0,
+        formData.isFemale ? 1 : 0,
+        formData.title,
+        formData.regiment,
+        formData.arrivalSeed || 2000,
+      ],
+    },
+  ];
 
-    const result2 = await window.api.insert(query2, params2);
-    if (!result2.success) {
-      throw new Error('Failed to add to competition: ' + result2.error);
+  try {
+    const result = await window.api.transaction(operations);
+    if (!result.success) {
+      throw new Error('Transaction failed');
     }
-
     return { success: true, id };
   } catch (error) {
     console.error('Failed to create competitor:', error);

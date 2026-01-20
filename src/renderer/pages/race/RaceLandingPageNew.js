@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Plus, 
-  Eye, 
+import {
+  Plus,
+  Eye,
   Trophy,
   Calendar,
   MapPin,
@@ -11,8 +11,8 @@ import {
   Users,
   User
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -21,6 +21,7 @@ import {
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { RACE_TYPE_COLOURS, RACE_TYPE_NAMES } from '../../queries/CompetitorHistory';
 
 export default function RaceLandingPageNew() {
   const [races, setRaces] = useState([]);
@@ -69,13 +70,13 @@ export default function RaceLandingPageNew() {
       cell: ({ row }) => (
         <span className={cn(
           'px-2 py-1 rounded-md text-xs font-medium',
-          row.original.race_type === 'Slalom' && 'bg-blue-100 text-blue-700',
-          row.original.race_type === 'Giant Slalom' && 'bg-purple-100 text-purple-700',
-          row.original.race_type === 'Super G' && 'bg-orange-100 text-orange-700',
-          row.original.race_type === 'Downhill' && 'bg-red-100 text-red-700',
-          row.original.race_type === 'Alpine Combined' && 'bg-green-100 text-green-700',
+          row.original.race_type === 'SL' && 'bg-blue-100 text-blue-700',
+          row.original.race_type === 'GS' && 'bg-purple-100 text-purple-700',
+          row.original.race_type === 'SG' && 'bg-orange-100 text-orange-700',
+          row.original.race_type === 'DH' && 'bg-red-100 text-red-700',
+          row.original.race_type === 'AC' && 'bg-green-100 text-green-700',
         )}>
-          {row.original.race_type}
+          {RACE_TYPE_NAMES[row.original.race_type] || row.original.race_type}
         </span>
       ),
     },
@@ -105,7 +106,7 @@ export default function RaceLandingPageNew() {
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-neutral-400" />
           <span className="text-sm">
-            {row.original.race_date 
+            {row.original.race_date
               ? new Date(row.original.race_date).toLocaleDateString('en-GB', {
                   day: 'numeric',
                   month: 'short',

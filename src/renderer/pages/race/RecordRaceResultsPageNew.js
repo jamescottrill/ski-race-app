@@ -374,10 +374,10 @@ function RecordRaceResultsPageNew() {
       }));
       await updateField(competitorId, runNumber, 'race_time', null);
 
-      // Refresh next run's start order if it exists
+      // Update next run's competitor list if it exists
       const nextRun = runNumber + 1;
-      if (nextRun <= (raceDetails?.number_runs || 1) && competitors[nextRun]) {
-        await fetchCompetitorsForRun(nextRun);
+      if (nextRun <= (raceDetails?.number_runs || 1)) {
+        await createNextRunResults(runNumber, nextRun, true);
       }
       return;
     }
@@ -454,10 +454,10 @@ function RecordRaceResultsPageNew() {
       newStatus === 'NS' ? 1 : 0,
     );
 
-    // Refresh next run's start order if it exists
+    // Update next run's competitor list if it exists
     const nextRun = runNumber + 1;
-    if (nextRun <= (raceDetails?.number_runs || 1) && competitors[nextRun]) {
-      await fetchCompetitorsForRun(nextRun);
+    if (nextRun <= (raceDetails?.number_runs || 1)) {
+      await createNextRunResults(runNumber, nextRun, true);
     }
   };
 

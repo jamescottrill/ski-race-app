@@ -4,11 +4,11 @@
  * CPP is a normalisation mechanism to enable fair comparison of racers'
  * performance across different meetings.
  *
- * Formula: CPP = (T1 + T2 - T3) / divisor
+ * Formula: CPP = (T1 + T2 - T3) / 10
  *
- * T1: Sum of AASL points for reference skiers with lowest AASL points on current seed list
- * T2: Sum of AASL points for those same skiers (who finished in top 10)
- * T3: Sum of current meeting seed points for those same skiers
+ * T1: Sum of AASL points for the 5 skiers with lowest AASL points on current seed list
+ * T2: Sum of AASL points for the 5 skiers with lowest AASL points who finished in top 10
+ * T3: Sum of current meeting seed points for the same skiers as T2
  *
  * Divisor: 10 (5 skiers), 8 (4 skiers), 6 (3 skiers)
  */
@@ -46,29 +46,38 @@ export const calculateCPP = async (competitionId, seedList) => {
     };
   }
 
-  // Step 2: Sort by AASL points (lowest first) and take top 5
+  // Step 2: Sort all competitors by AASL points (lowest first)
   const sortedByAASL = [...competitorsWithAASL].sort((a, b) => a.aasl_points - b.aasl_points);
 
-  // Step 3: Filter to those who finished in top 10 of current seed list
-  const qualifyingSkiers = sortedByAASL
+  // T1 Group: 5 skiers with lowest AASL points (from entire seed list)
+  const t1Skiers = sortedByAASL.slice(0, 5);
+
+  // T2/T3 Group: 5 skiers with lowest AASL points who also finished in top 10
+  const t2Skiers = sortedByAASL
     .filter(skier => skier.seed_position <= 10)
     .slice(0, 5);
 
-  if (qualifyingSkiers.length < 3) {
+  if (t2Skiers.length < 3) {
     return {
       success: false,
-      error: `Not enough qualifying skiers (found ${qualifyingSkiers.length}, need at least 3)`,
-      qualifyingSkiers: qualifyingSkiers.length
+      error: `Not enough skiers with AASL points in top 10 (found ${t2Skiers.length}, need at least 3)`,
+      t2SkiersFound: t2Skiers.length
     };
   }
 
-  // Step 4: Calculate T1, T2, T3
-  const T1 = qualifyingSkiers.reduce((sum, s) => sum + s.aasl_points, 0);
-  const T2 = T1; // Same skiers, same AASL points
-  const T3 = qualifyingSkiers.reduce((sum, s) => sum + s.seed_points, 0);
+  // Use the smaller group size as our reference
+  const numSkiers = Math.min(t1Skiers.length, t2Skiers.length);
 
-  // Step 5: Calculate CPP with appropriate divisor
-  const numSkiers = qualifyingSkiers.length;
+  // Take only numSkiers from each group for consistency
+  const t1SkiersFinal = t1Skiers.slice(0, numSkiers);
+  const t2SkiersFinal = t2Skiers.slice(0, numSkiers);
+
+  // Step 3: Calculate T1, T2, T3
+  const T1 = t1SkiersFinal.reduce((sum, s) => sum + s.aasl_points, 0);
+  const T2 = t2SkiersFinal.reduce((sum, s) => sum + s.aasl_points, 0);
+  const T3 = t2SkiersFinal.reduce((sum, s) => sum + s.seed_points, 0);
+
+  // Step 4: Calculate CPP with appropriate divisor
   let divisor;
   switch (numSkiers) {
     case 5:
@@ -91,13 +100,14 @@ export const calculateCPP = async (competitionId, seedList) => {
 
   return {
     success: true,
-    cpp: cpp,
+    cpp,
     t1: T1,
     t2: T2,
     t3: T3,
-    divisor: divisor,
+    divisor,
     skiersUsed: numSkiers,
-    qualifyingSkiers: qualifyingSkiers,
+    t1Skiers: t1SkiersFinal,
+    t2Skiers: t2SkiersFinal,
     formula: `(${T1.toFixed(2)} + ${T2.toFixed(2)} - ${T3.toFixed(2)}) / ${divisor} = ${cpp.toFixed(2)}`
   };
 };

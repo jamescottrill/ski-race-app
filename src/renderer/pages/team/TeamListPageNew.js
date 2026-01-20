@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Plus, Edit2, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Edit2, Trash2, UserPlus, Copy } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -8,9 +8,12 @@ import {
   CardContent,
   Button,
   DataTable,
-  Badge
+  Badge,
+  SimpleSelect,
+  Label
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import toast from 'react-hot-toast';
 
 export default function TeamListPageNew() {
   const navigate = useNavigate();
@@ -18,10 +21,96 @@ export default function TeamListPageNew() {
   const handleBack = useBackButton();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [races, setRaces] = useState([]);
+  const [copying, setCopying] = useState(false);
+  const [sourceRaceId, setSourceRaceId] = useState('');
 
   useEffect(() => {
     fetchTeams();
+    fetchRaces();
   }, [competitionId]);
+
+  const fetchRaces = async () => {
+    try {
+      const result = await window.api.select(
+        `SELECT race_id, race_name, race_type FROM races
+         WHERE competition_id = ? AND is_team = 1
+         ORDER BY race_date`,
+        [competitionId]
+      );
+      setRaces(result);
+      if (result.length > 0) {
+        setSourceRaceId(result[0].race_id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch races:', error);
+    }
+  };
+
+  const handleCopyAllTeamsToAllRaces = async () => {
+    if (!sourceRaceId) {
+      toast.error('Please select a source race');
+      return;
+    }
+
+    if (races.length <= 1) {
+      toast.error('No other races to copy to');
+      return;
+    }
+
+    setCopying(true);
+    try {
+      const sourceMembers = await window.api.select(
+        `SELECT team_id, racer_id FROM competition_team_members
+         WHERE competition_id = ? AND race_id = ?`,
+        [competitionId, sourceRaceId]
+      );
+
+      if (sourceMembers.length === 0) {
+        toast.error('No team members in the source race');
+        setCopying(false);
+        return;
+      }
+
+      let copiedCount = 0;
+      let skippedCount = 0;
+
+      for (const race of races) {
+        if (race.race_id === sourceRaceId) continue;
+
+        for (const member of sourceMembers) {
+          try {
+            const existing = await window.api.select(
+              `SELECT 1 FROM competition_team_members
+               WHERE competition_id = ? AND team_id = ? AND race_id = ? AND racer_id = ?`,
+              [competitionId, member.team_id, race.race_id, member.racer_id]
+            );
+
+            if (existing.length === 0) {
+              await window.api.insert(
+                `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id)
+                 VALUES (?, ?, ?, ?)`,
+                [competitionId, member.team_id, race.race_id, member.racer_id]
+              );
+              copiedCount++;
+            } else {
+              skippedCount++;
+            }
+          } catch (err) {
+            console.error('Failed to copy member:', err);
+          }
+        }
+      }
+
+      toast.success(`Copied ${copiedCount} assignments to ${races.length - 1} race(s). ${skippedCount} already existed.`);
+      await fetchTeams();
+    } catch (error) {
+      console.error('Failed to copy teams:', error);
+      toast.error('Failed to copy teams');
+    } finally {
+      setCopying(false);
+    }
+  };
 
   const fetchTeams = async () => {
     try {
@@ -161,7 +250,46 @@ export default function TeamListPageNew() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      {/* Bulk Copy Section */}
+      {races.length > 1 && (
+        <Card className="mb-6">
+          <CardContent>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Copy className="w-5 h-5 text-primary-500" />
+              Bulk Team Assignment
+            </h3>
+            <p className="text-sm text-neutral-600 mb-4">
+              Copy all team assignments from one race to all other team races.
+            </p>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <Label htmlFor="source-race">Source Race</Label>
+                <SimpleSelect
+                  id="source-race"
+                  value={sourceRaceId}
+                  onChange={(e) => setSourceRaceId(e.target.value)}
+                >
+                  {races.map(race => (
+                    <option key={race.race_id} value={race.race_id}>
+                      {race.race_name} ({race.race_type})
+                    </option>
+                  ))}
+                </SimpleSelect>
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleCopyAllTeamsToAllRaces}
+                disabled={copying || !sourceRaceId}
+                leftIcon={<Copy className="w-4 h-4" />}
+              >
+                {copying ? 'Copying...' : `Copy to ${races.length - 1} Other Race(s)`}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -169,18 +297,6 @@ export default function TeamListPageNew() {
               <p className="text-2xl font-bold text-primary-700">{teams.length}</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-neutral-600">Alpine Teams</p>
-              <p className="text-2xl font-bold text-info">
-                {teams.filter(t => t.team_type === 'Alpine').length}
-              </p>
-            </div>
-            <Users className="w-8 h-8 text-info/30" />
           </div>
         </Card>
 

@@ -42,6 +42,7 @@ export default function ImportRaceResultsPageNew() {
   const [importStatus, setImportStatus] = useState(null);
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     fetchRaceDetails();
@@ -86,10 +87,8 @@ export default function ImportRaceResultsPageNew() {
     }
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const processFile = (file) => {
     if (!file) return;
-
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -103,6 +102,41 @@ export default function ImportRaceResultsPageNew() {
         setImportStatus({ type: 'error', message: 'Failed to parse CSV file' });
       }
     });
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    processFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+      processFile(file);
+    } else {
+      setImportStatus({ type: 'error', message: 'Please drop a CSV file' });
+    }
   };
 
   const autoDetectColumns = (headers, data) => {
@@ -395,7 +429,17 @@ export default function ImportRaceResultsPageNew() {
         <Card>
           <CardContent>
             <h3 className="text-lg font-semibold mb-4">Step 1: Upload CSV File</h3>
-            <div className="border-2 border-dashed border-neutral-300 rounded-lg p-8 text-center">
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-neutral-300'
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 accept=".csv"

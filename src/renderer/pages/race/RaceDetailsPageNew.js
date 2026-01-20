@@ -61,7 +61,13 @@ export default function RaceDetailsPageNew() {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this race?')) {
       try {
-        await window.api.delete('DELETE FROM races WHERE race_id = ?', [raceId]);
+        const operations = [
+          { type: 'delete', query: 'DELETE FROM race_results WHERE race_id = ?', params: [raceId] },
+          { type: 'delete', query: 'DELETE FROM race_run WHERE race_id = ?', params: [raceId] },
+          { type: 'delete', query: 'DELETE FROM race_competitor WHERE race_id = ?', params: [raceId] },
+          { type: 'delete', query: 'DELETE FROM races WHERE race_id = ?', params: [raceId] },
+        ];
+        await window.api.transaction(operations);
         navigate(`/competition/${competitionId}/race`);
       } catch (error) {
         console.error('Failed to delete race:', error);
@@ -97,6 +103,11 @@ export default function RaceDetailsPageNew() {
             <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/import`)} leftIcon={<Upload className="w-4 h-4" />}>
               Import Results
             </Button>
+            {raceDetails?.is_team === 1 && (
+              <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/teams`)} leftIcon={<Users className="w-4 h-4" />}>
+                Manage Teams
+              </Button>
+            )}
             <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/edit`)} leftIcon={<Edit className="w-4 h-4" />}>
               Edit
             </Button>

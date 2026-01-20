@@ -11,6 +11,7 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { generatePDF } from '../../pdfs/SeedList';
+import { fetchSeedList } from '../../utils/FetchSeedList';
 
 function TeamResultsNew() {
   const { competitionId } = useParams();
@@ -25,11 +26,12 @@ function TeamResultsNew() {
       try {
         // Get completed team races
         const racesQuery = `
-          SELECT DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate
+          SELECT DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate, r.is_seeding AS isSeeding
           FROM race_run rr
             INNER JOIN races r ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
           WHERE rr.competition_id = ?
             AND NOT r.is_training
+            AND NOT r.is_seeding
             AND rr.is_complete
             AND r.is_team
           ORDER BY r.race_date ASC
@@ -43,6 +45,19 @@ function TeamResultsNew() {
           return;
         }
 
+        // Get seed points for all competitors using fetchSeedList
+        let seedListData = await fetchSeedList(
+            competitionId,
+            raceList.map((e) => e.id)
+          );
+
+        console.log('Seed list data:', seedListData);
+        console.log('Race list:', raceList);
+        if (seedListData.length > 0) {
+          console.log('Sample seed data keys:', Object.keys(seedListData[0]));
+          console.log('First race id:', raceList[0].id, 'type:', typeof raceList[0].id);
+        }
+
         // Get teams from competition_team
         const teamsQuery = `
           SELECT team_id, team_name, is_corps, is_reserve, is_female, is_hc
@@ -51,7 +66,7 @@ function TeamResultsNew() {
         `;
         const teams = await window.api.select(teamsQuery, [competitionId]);
 
-        // For each team, get members and their results for each race
+        // For each team, get members and their seed points for each race
         const teamStandings = [];
 
         for (const team of teams) {
@@ -69,30 +84,13 @@ function TeamResultsNew() {
           let validRaceCount = 0;
 
           for (const race of raceList) {
-            // Get team members for this race and their race points
+            // Get team members for this race
             const membersQuery = `
-              SELECT
-                ctm.racer_id,
-                p.first_name,
-                p.last_name,
-                (
-                  SELECT SUM(
-                    CASE
-                      WHEN rr.is_dns = 1 OR rr.is_dnf = 1 OR rr.is_dsq = 1 OR rr.is_ns = 1 THEN 999
-                      ELSE COALESCE(rr.race_time, 999)
-                    END
-                  )
-                  FROM race_results rr
-                  WHERE rr.racer_id = ctm.racer_id
-                    AND rr.race_id = ctm.race_id
-                    AND rr.competition_id = ctm.competition_id
-                ) as total_time
+              SELECT ctm.racer_id
               FROM competition_team_members ctm
-              INNER JOIN people p ON p.id = ctm.racer_id
               WHERE ctm.competition_id = ?
                 AND ctm.team_id = ?
                 AND ctm.race_id = ?
-              ORDER BY total_time ASC
             `;
             const members = await window.api.select(membersQuery, [
               competitionId,
@@ -104,7 +102,27 @@ function TeamResultsNew() {
             if (members.length > teamResult.member_count) {
               teamResult.member_count = members.length;
             }
-
+            // Get seed points for each team member from the seed list
+            // Only include actual finishing seed points, not artificial/penalty points
+            const memberSeedPoints = members
+              .map((member) => {
+                const seedData = seedListData.find(
+                  (s) => s.racer_id === member.racer_id
+                );
+                // Check if this racer has actual (non-penalty) seed points for this race
+                if (
+                  seedData &&
+                  seedData[race.id] !== null &&
+                  seedData[race.id] !== undefined &&
+                  !seedData[`${race.id}-penalty`]
+                ) {
+                  return parseFloat(seedData[race.id]);
+                }
+                return null;
+              })
+              .filter((p) => p !== null && !isNaN(p))
+              .sort((a, b) => a - b);
+            console.log(memberSeedPoints);
             // Determine how many members count based on team type
             // Corps women: 2, Corps men: 4, Regular: 3
             let countingMembers = 3;
@@ -112,13 +130,11 @@ function TeamResultsNew() {
               countingMembers = team.is_female ? 2 : 4;
             }
 
-            // Sum the top N members' times
-            const topTimes = members
-              .slice(0, countingMembers)
-              .map((m) => parseFloat(m.total_time) || 999);
+            // Sum the top N members' seed points
+            const topPoints = memberSeedPoints.slice(0, countingMembers);
 
-            if (topTimes.length >= countingMembers && !topTimes.some((t) => t >= 999)) {
-              const raceTotal = topTimes.reduce((sum, t) => sum + t, 0);
+            if (topPoints.length >= countingMembers) {
+              const raceTotal = topPoints.reduce((sum, p) => sum + p, 0);
               teamResult[race.id] = raceTotal;
               totalPoints += raceTotal;
               validRaceCount += 1;
@@ -134,18 +150,26 @@ function TeamResultsNew() {
           }
         }
 
-        // Sort by total points (lower is better - it's time-based)
+        // Sort all teams by total points (lower is better)
         teamStandings.sort((a, b) => a.total_points - b.total_points);
 
-        // Add positions with tie handling
+        // Add positions with tie handling (only for non-HC teams)
         let position = 1;
         let previousTotal = null;
+        let previousIndex = 0;
         teamStandings.forEach((team, index) => {
-          if (previousTotal !== null && team.total_points !== previousTotal) {
-            position = index + 1;
+          if (team.is_hc) {
+            // HC teams don't get a position
+            team.position = 'HC';
+          } else {
+            // Only increment position based on non-HC teams
+            if (previousTotal !== null && team.total_points !== previousTotal) {
+              position = previousIndex + 1;
+            }
+            team.position = position;
+            previousTotal = team.total_points;
+            previousIndex += 1;
           }
-          team.position = position;
-          previousTotal = team.total_points;
         });
 
         setTeamResults(teamStandings);
@@ -171,6 +195,16 @@ function TeamResultsNew() {
         accessorKey: 'position',
         cell: ({ row }) => {
           const position = row.original.position;
+          const isHc = row.original.is_hc;
+
+          if (isHc) {
+            return (
+              <div className="w-8 h-8 bg-neutral-100 border border-neutral-300 rounded-full flex items-center justify-center text-neutral-500 font-semibold text-xs">
+                HC
+              </div>
+            );
+          }
+
           if (position === 1) {
             return (
               <div className="flex items-center gap-2">
@@ -180,7 +214,8 @@ function TeamResultsNew() {
                 <Trophy className="w-5 h-5 text-amber-500" />
               </div>
             );
-          } else if (position === 2) {
+          }
+          if (position === 2) {
             return (
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center text-white font-bold">
@@ -189,7 +224,8 @@ function TeamResultsNew() {
                 <Medal className="w-5 h-5 text-gray-500" />
               </div>
             );
-          } else if (position === 3) {
+          }
+          if (position === 3) {
             return (
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
