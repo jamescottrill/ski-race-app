@@ -95,7 +95,6 @@ export default function ImportCompetitorsFromCompetitionPage() {
       if (compResult.length > 0) {
         setSourceCompetition(compResult[0]);
       }
-      console.log(sourceCompetitionId);
       const racesResult = await window.api.select(
         `SELECT DISTINCT r.race_id AS id, r.race_name AS text, r.race_date AS raceDate
          FROM races r
@@ -105,7 +104,6 @@ export default function ImportCompetitorsFromCompetitionPage() {
          ORDER BY r.race_date`,
         [sourceCompetitionId]
       );
-      console.log(racesResult);
       setRaces(racesResult);
 
       if (racesResult.length === 0) {
@@ -210,7 +208,11 @@ export default function ImportCompetitorsFromCompetitionPage() {
         );
 
         if (existing.length > 0) {
-          errorCount++;
+          await window.api.insert(
+            `UPDATE competition_competitor
+                    SET arrival_corps_seed = ?
+                    WHERE competition_id = ? AND racer_id = ?`,
+            [competitor.final_seed_points, competitionId, racerId])
           continue;
         }
 
