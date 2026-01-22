@@ -54,16 +54,19 @@ function RecordRaceResultsPageNew() {
   const fetchRaceDetails = async () => {
     try {
       const query = `
-        SELECT race_name, race_type, number_runs, is_team, is_seeding
+        SELECT race_name, race_type, number_runs, is_team, is_seeding, women_separate, flip_count, flip_count_women
         FROM races
         WHERE race_id = ? AND competition_id = ?
       `;
       const result = await window.api.select(query, [raceId, competitionId]);
       if (result.length > 0) {
         setRaceDetails(result[0]);
+        return result[0];
       }
+      return null;
     } catch (error) {
       console.error('Failed to fetch race details:', error);
+      return null;
     }
   };
 
@@ -84,8 +87,10 @@ function RecordRaceResultsPageNew() {
       } else if (result.length > 0) {
         setActiveTab(String(result[0].run_number));
       }
+      return result;
     } catch (error) {
       console.error('Failed to fetch race runs:', error);
+      return [];
     }
   };
 
@@ -210,18 +215,24 @@ function RecordRaceResultsPageNew() {
     return person ? `${person.first_name} ${person.last_name}` : '';
   };
 
-  const fetchCompetitorsForRun = async (runNumber) => {
+  const fetchCompetitorsForRun = async (runNumber, details = raceDetails) => {
     try {
       let query;
       let params;
+      const womenSeparate = details?.women_separate;
 
       if (runNumber === 1) {
+        const orderBy = womenSeparate
+          ? `ORDER BY CASE WHEN p.gender = 'F' THEN 0 ELSE 1 END, rc.start_order`
+          : `ORDER BY rc.start_order`;
         query = `
           SELECT
             p.id as competitor_id,
             p.first_name,
             p.last_name,
+            p.gender,
             rc.bib_number,
+            rc.start_order,
             cc.regiment,
             rr.race_time,
             rr.is_dnf,
@@ -235,7 +246,7 @@ function RecordRaceResultsPageNew() {
           INNER JOIN competition_competitor cc ON p.id = cc.racer_id AND cc.competition_id = ?
           INNER JOIN race_competitor rc ON p.id = rc.racer_id AND rc.race_id = ? AND rc.competition_id = ?
           LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
-          ORDER BY rc.bib_number
+          ${orderBy}
         `;
         params = [
           competitionId,
@@ -246,12 +257,17 @@ function RecordRaceResultsPageNew() {
           runNumber,
         ];
       } else {
+        const orderBy = womenSeparate
+          ? `ORDER BY rr_prev.race_time ASC NULLS LAST, CASE WHEN p.gender = 'F' THEN 0 ELSE 1 END, rc.start_order ASC`
+          : `ORDER BY rr_prev.race_time ASC NULLS LAST, rc.start_order ASC`;
         query = `
           SELECT
             p.id as competitor_id,
             p.first_name,
             p.last_name,
+            p.gender,
             rc.bib_number,
+            rc.start_order,
             cc.regiment,
             rr.race_time,
             rr.is_dnf,
@@ -271,7 +287,7 @@ function RecordRaceResultsPageNew() {
           LEFT JOIN race_results rr ON rr.racer_id = p.id AND rr.race_id = ? AND rr.competition_id = ? AND rr.run_number = ?
           LEFT JOIN race_results rr_prev ON rr_prev.racer_id = p.id AND rr_prev.race_id = ? AND rr_prev.competition_id = ? AND rr_prev.run_number = ?
           WHERE EXISTS (SELECT 1 FROM race_results rr2 WHERE rr2.racer_id = p.id AND rr2.race_id = ? AND rr2.competition_id = ? AND rr2.run_number = ?)
-          ORDER BY rr_prev.race_time ASC NULLS LAST, rc.bib_number ASC
+          ${orderBy}
         `;
         params = [
           competitionId,
@@ -292,22 +308,37 @@ function RecordRaceResultsPageNew() {
       let result = await window.api.select(query, params);
 
       if (runNumber > 1 && result.length > 0) {
-        const finishedCompetitors = result.filter(
-          (c) => c.prev_race_time != null,
-        );
-        const unfinishedCompetitors = result.filter(
-          (c) => c.prev_race_time == null,
-        );
+        const flipCount = details?.flip_count || 15;
+        const flipCountWomen = details?.flip_count_women || 5;
 
-        const flipCount = raceDetails?.flip_count || 15;
-        const topN = finishedCompetitors.slice(0, flipCount).reverse();
-        const restFinished = finishedCompetitors.slice(flipCount);
+        if (womenSeparate) {
+          const women = result.filter((c) => c.gender === 'F');
+          const men = result.filter((c) => c.gender === 'M');
 
-        unfinishedCompetitors.sort(
-          (a, b) => (a.bib_number || 0) - (b.bib_number || 0),
-        );
+          const applyFlipLogic = (competitors, flip) => {
+            const finished = competitors.filter((c) => c.prev_race_time != null);
+            const unfinished = competitors.filter((c) => c.prev_race_time == null);
+            const topN = finished.slice(0, flip).reverse();
+            const rest = finished.slice(flip);
+            unfinished.sort((a, b) => (a.start_order || 0) - (b.start_order || 0));
+            return [...topN, ...rest, ...unfinished];
+          };
 
-        result = [...topN, ...restFinished, ...unfinishedCompetitors];
+          result = [...applyFlipLogic(women, flipCountWomen), ...applyFlipLogic(men, flipCount)];
+        } else {
+          const finishedCompetitors = result.filter(
+            (c) => c.prev_race_time != null,
+          );
+          const unfinishedCompetitors = result.filter(
+            (c) => c.prev_race_time == null,
+          );
+
+          const topN = finishedCompetitors.slice(0, flipCount).reverse();
+          const restFinished = finishedCompetitors.slice(flipCount);
+          unfinishedCompetitors.sort((a, b) => (a.start_order || 0) - (b.start_order || 0));
+
+          result = [...topN, ...restFinished, ...unfinishedCompetitors];
+        }
       }
 
       const competitorData = result.map((comp) => ({
@@ -339,16 +370,26 @@ function RecordRaceResultsPageNew() {
 
   useEffect(() => {
     const init = async () => {
-      await fetchRaceDetails();
-      await fetchRaceRuns();
+      const details = await fetchRaceDetails();
+      const runs = await fetchRaceRuns();
       await fetchPeople();
+
+      // Fetch initial competitors with the correct details
+      if (runs && runs.length > 0) {
+        const notCompleted = runs.filter((r) => !r.is_complete);
+        const initialRun = notCompleted.length > 0 ? notCompleted[0].run_number : runs[0].run_number;
+        await fetchCompetitorsForRun(initialRun, details);
+        await fetchRunDetails(initialRun);
+      }
+
       setLoading(false);
     };
+
     init();
   }, [raceId, competitionId]);
 
   useEffect(() => {
-    if (activeTab) {
+    if (activeTab && !loading) {
       const runNumber = parseInt(activeTab, 10);
       if (!competitors[activeTab]) {
         fetchCompetitorsForRun(runNumber);
