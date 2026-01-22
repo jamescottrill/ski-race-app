@@ -110,18 +110,14 @@ export default function GenerateStartListNew() {
     try {
       const query = `
       SELECT
-        p.id AS racer_id, p.first_name, p.last_name, p.gender, rc.bib_number,
+        p.id AS racer_id, p.first_name, p.last_name, p.gender, rc.bib_number, rc.start_order,
         cc.is_reserve, cc.is_junior, cc.is_senior, cc.is_veteran, cc.title,
         cc.is_veteran, cc.is_female, cc.is_novice, seed_points, cc.regiment AS team
         FROM race_competitor rc
       INNER JOIN people p ON rc.racer_id = p.id
       INNER JOIN competition_competitor cc ON rc.racer_id = cc.racer_id AND rc.competition_id = cc.competition_id
---       LEFT JOIN competition_team_members ctm ON ctm.competition_id = rc.competition_id AND ctm.racer_id = rc.racer_id
---       LEFT JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
       WHERE rc.competition_id = ? AND rc.race_id = ?
---       AND NOT COALESCE(ct.is_female, FALSE)
---       AND NOT COALESCE(ct.is_hc, FALSE)
-      ORDER BY bib_number
+      ORDER BY start_order
       `;
       const results = await window.api.select(query, [competitionId, raceId]);
       if (results.length > 0) {
@@ -146,7 +142,6 @@ export default function GenerateStartListNew() {
     try {
       setLoading(true);
 
-      // Clear existing start list for this race
       await window.api.delete(
         `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
         [competitionId, raceId],
@@ -156,31 +151,40 @@ export default function GenerateStartListNew() {
         (competitor) => !struckOutCompetitors[competitor.racer_id],
       );
 
-      // Separate women if needed
       if (raceDetails.women_separate) {
-        const womenSeedList = filteredSeedList.filter((c) => c.gender === 'F');
-        const menSeedList = filteredSeedList.filter((c) => c.gender === 'M');
+        const womenInTop = filteredSeedList
+          .slice(0, raceDetails.randomise_top)
+          .filter((c) => c.gender === 'F').length;
+        const expandedTop = raceDetails.randomise_top + womenInTop;
+        const topCompetitors = shuffleArray(filteredSeedList.slice(0, expandedTop));
+        const restCompetitors = filteredSeedList.slice(expandedTop);
 
-        // Process women's list
-        if (womenSeedList.length > raceDetails.randomise_top_women) {
-          const topWomen = shuffleArray(womenSeedList.slice(0, raceDetails.randomise_top_women));
-          const restWomen = womenSeedList.slice(raceDetails.randomise_top_women);
-          filteredSeedList = [...topWomen, ...restWomen];
+        const withBibs = [...topCompetitors, ...restCompetitors].map((c, i) => ({
+          ...c,
+          bib_number: i + 1,
+        }));
+
+        let womenList = withBibs.filter((c) => c.gender === 'F');
+        let menList = withBibs.filter((c) => c.gender === 'M');
+
+        womenList.sort((a, b) => a.bib_number - b.bib_number);
+        if (womenList.length > raceDetails.randomise_top_women) {
+          const topWomen = shuffleArray(womenList.slice(0, raceDetails.randomise_top_women));
+          const restWomen = womenList.slice(raceDetails.randomise_top_women);
+          womenList = [...topWomen, ...restWomen];
         } else {
-          filteredSeedList = shuffleArray(womenSeedList);
+          womenList = shuffleArray(womenList);
         }
 
-        // Process men's list
-        if (menSeedList.length > raceDetails.randomise_top) {
-          const topMen = shuffleArray(menSeedList.slice(0, raceDetails.randomise_top));
-          const restMen = menSeedList.slice(raceDetails.randomise_top);
-          const menList = [...topMen, ...restMen];
-          filteredSeedList = [...filteredSeedList, ...menList];
-        } else {
-          filteredSeedList = [...filteredSeedList, ...shuffleArray(menSeedList)];
-        }
+        menList.sort((a, b) => a.bib_number - b.bib_number);
+        console.log(menList);
+        let startOrder = 1;
+        womenList = womenList.map((c) => ({ ...c, start_order: startOrder++ }));
+        startOrder = 1;
+        menList = menList.map((c) => ({ ...c, start_order: startOrder++ }));
+
+        filteredSeedList = [...womenList, ...menList];
       } else {
-        // Mixed start list
         if (filteredSeedList.length > raceDetails.randomise_top) {
           const topCompetitors = shuffleArray(filteredSeedList.slice(0, raceDetails.randomise_top));
           const restCompetitors = filteredSeedList.slice(raceDetails.randomise_top);
@@ -188,19 +192,24 @@ export default function GenerateStartListNew() {
         } else {
           filteredSeedList = shuffleArray(filteredSeedList);
         }
+
+        filteredSeedList = filteredSeedList.map((c, i) => ({
+          ...c,
+          bib_number: i + 1,
+          start_order: i + 1,
+        }));
       }
 
-      // Insert into race_competitor table
-      const insertPromises = filteredSeedList.map((competitor, i) => {
-        const bibNumber = i + 1;
+      const insertPromises = filteredSeedList.map((competitor) => {
         return window.api.insert(
-          `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, start_order, seed_points)
+           VALUES (?, ?, ?, ?, ?, ?)`,
           [
             competitionId,
             raceId,
             competitor.racer_id,
-            bibNumber,
+            competitor.bib_number,
+            competitor.start_order,
             competitor.seed_points || 0,
           ],
         );
@@ -232,7 +241,21 @@ export default function GenerateStartListNew() {
     if (competitorIndex === -1) return;
 
     newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber };
-    newList.sort((a, b) => a.bib_number - b.bib_number);
+
+    setList(newList);
+    setHasChanges(true);
+  };
+
+  const handleStartOrderChange = (list, setList, racerId, newStartOrder) => {
+    const startOrder = parseInt(newStartOrder, 10);
+    if (isNaN(startOrder) || startOrder < 1) return;
+
+    const newList = [...list];
+    const competitorIndex = newList.findIndex(c => c.racer_id === racerId);
+    if (competitorIndex === -1) return;
+
+    newList[competitorIndex] = { ...newList[competitorIndex], start_order: startOrder };
+    newList.sort((a, b) => a.start_order - b.start_order);
 
     setList(newList);
     setHasChanges(true);
@@ -248,8 +271,8 @@ export default function GenerateStartListNew() {
 
       for (const competitor of allCompetitors) {
         await window.api.insert(
-          `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
-          [competitor.bib_number, competitionId, raceId, competitor.racer_id]
+          `UPDATE race_competitor SET bib_number = ?, start_order = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
+          [competitor.bib_number, competitor.start_order, competitionId, raceId, competitor.racer_id]
         );
       }
 
@@ -291,68 +314,90 @@ export default function GenerateStartListNew() {
     init();
   }, [raceId]);
 
-  const getColumns = (list, setList, isEditMode) => [
-    {
-      header: 'Bib',
-      accessorKey: 'bib_number',
-      cell: ({ row }) => (
-        isEditMode ? (
-          <Input
-            type="number"
-            min="1"
-            defaultValue={row.original.bib_number}
-            onBlur={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
-            className="w-16 font-mono text-center"
-          />
-        ) : (
-          <Badge variant="primary" className="font-mono">
-            {row.original.bib_number}
-          </Badge>
+  const getColumns = (list, setList, isEditMode, womenSeparate = false) => {
+    const columns = [
+      ...(womenSeparate ? [{
+        header: 'Start',
+        accessorKey: 'start_order',
+        cell: ({ row }) => (
+          isEditMode ? (
+            <Input
+              type="number"
+              min="1"
+              defaultValue={row.original.start_order}
+              onBlur={(e) => handleStartOrderChange(list, setList, row.original.racer_id, e.target.value)}
+              className="w-16 font-mono text-center"
+            />
+          ) : (
+            <span className="font-mono text-neutral-600">
+              {row.original.start_order}
+            </span>
+          )
         )
-      )
-    },
-    {
-      header: 'Name',
-      accessorKey: 'name',
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">
-            {row.original.last_name}, {row.original.first_name}
-            {row.original.title && <span className="ml-2 text-neutral-500">{row.original.title}</span>}
+      }] : []),
+      {
+        header: 'Bib',
+        accessorKey: 'bib_number',
+        cell: ({ row }) => (
+          isEditMode ? (
+            <Input
+              type="number"
+              min="1"
+              defaultValue={row.original.bib_number}
+              onBlur={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
+              className="w-16 font-mono text-center"
+            />
+          ) : (
+            <Badge variant="primary" className="font-mono">
+              {row.original.bib_number}
+            </Badge>
+          )
+        )
+      },
+      {
+        header: 'Name',
+        accessorKey: 'name',
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">
+              {row.original.last_name}, {row.original.first_name}
+              {row.original.title && <span className="ml-2 text-neutral-500">{row.original.title}</span>}
+            </div>
+            <div className="text-xs text-neutral-500">{row.original.team}</div>
           </div>
-          <div className="text-xs text-neutral-500">{row.original.team}</div>
-        </div>
-      )
-    },
-    {
-      header: 'Category',
-      accessorKey: 'category',
-      cell: ({ row }) => {
-        const categories = [];
-        if (row.original.is_female) categories.push('F');
-        if (row.original.is_junior) categories.push('J');
-        if (row.original.is_senior) categories.push('S');
-        if (row.original.is_veteran) categories.push('V');
-        if (row.original.is_novice) categories.push('N');
-        if (row.original.is_reserve) categories.push('R');
+        )
+      },
+      {
+        header: 'Category',
+        accessorKey: 'category',
+        cell: ({ row }) => {
+          const categories = [];
+          if (row.original.is_female) categories.push('F');
+          if (row.original.is_junior) categories.push('J');
+          if (row.original.is_senior) categories.push('S');
+          if (row.original.is_veteran) categories.push('V');
+          if (row.original.is_novice) categories.push('N');
+          if (row.original.is_reserve) categories.push('R');
 
-        return (
-          <Badge variant="secondary" className="mr-1">
-            {categories.join("")}
-          </Badge>
-        );
+          return (
+            <Badge variant="secondary" className="mr-1">
+              {categories.join("")}
+            </Badge>
+          );
+        }
+      },
+      {
+        header: 'Seed Points',
+        accessorKey: 'seed_points',
+        cell: ({ row }) => (
+          <span className="font-mono">
+            {row.original.seed_points ? row.original.seed_points.toFixed(2) : '0.00'}
+          </span>
+        )
       }
-    },
-    {
-      header: 'Seed Points',
-      accessorKey: 'seed_points',
-      cell: ({ row }) => (
-        <span className="font-mono">
-          {row.original.seed_points ? row.original.seed_points.toFixed(2) : '0.00'}
-        </span>
-      )
-    }
-  ];
+    ];
+    return columns;
+  };
 
   const seedListColumns = [
     {
@@ -531,7 +576,7 @@ export default function GenerateStartListNew() {
                   <Users className="w-5 h-5 text-pink-600" />
                   Women's Start List
                 </h3>
-                <DataTable columns={getColumns(womenStartList, setWomenStartList, editMode)} data={womenStartList} pageSize={50} />
+                <DataTable columns={getColumns(womenStartList, setWomenStartList, editMode, true)} data={womenStartList} pageSize={50} />
               </CardContent>
             </Card>
           )}
@@ -545,7 +590,7 @@ export default function GenerateStartListNew() {
               {loading ? (
                 <div className="text-center py-8">Loading start list...</div>
               ) : startList && startList.length > 0 ? (
-                <DataTable columns={getColumns(startList, setStartList, editMode)} data={startList} pageSize={150} />
+                <DataTable columns={getColumns(startList, setStartList, editMode, raceDetails.women_separate)} data={startList} pageSize={150} />
               ) : (
                 <div className="text-center py-8 text-neutral-500">
                   No start list generated yet

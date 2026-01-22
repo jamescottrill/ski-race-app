@@ -213,6 +213,7 @@ class DatabaseWrapper {
           race_id: 'TEXT',
           racer_id: 'TEXT',
           bib_number: 'INTEGER',
+          start_order: 'INTEGER',
           seed_points: 'FLOAT',
         },
         constraints: [
