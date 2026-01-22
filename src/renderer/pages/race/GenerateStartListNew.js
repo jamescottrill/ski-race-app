@@ -100,13 +100,14 @@ export default function GenerateStartListNew() {
         throw new Error('Race details not found');
       }
       setRaceDetails(details);
+      return details;
     } catch (error) {
       handleDatabaseError('load race details', error);
-      // Keep default race details
+      return null;
     }
   };
 
-  const getStartList = async () => {
+  const getStartList = async (womenSeparate = raceDetails.women_separate) => {
     try {
       const query = `
       SELECT
@@ -122,7 +123,7 @@ export default function GenerateStartListNew() {
       const results = await window.api.select(query, [competitionId, raceId]);
       if (results.length > 0) {
         setStartListExists(true);
-        if (raceDetails.women_separate) {
+        if (womenSeparate) {
           setStartList(results.filter((r) => r.gender === 'M'));
           setWomenStartList(results.filter((r) => r.gender === 'F'));
         } else {
@@ -303,9 +304,11 @@ export default function GenerateStartListNew() {
     const init = async () => {
       try {
         setLoading(true);
-        await fetchRaceDetails();
-        await getFetchSeedList();
-        await getStartList();
+        const details = await fetchRaceDetails();
+        await getStartList(details?.women_separate ?? false);
+        if (startList === null) {
+          await getFetchSeedList();
+        }
       } catch (error) {
         handleDatabaseError('initialise race page', error);
         setLoading(false);
