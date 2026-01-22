@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Users,
@@ -11,6 +11,7 @@ import {
   User,
   UserX,
   RotateCcw,
+  Search,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -20,6 +21,7 @@ import {
   Button,
   DataTable,
   Badge,
+  TextField,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
@@ -29,6 +31,7 @@ export default function ViewCompetitorsPageNew() {
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
+  const [searchTerm, setSearchTerm] = useState('');
   const { competitionId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
@@ -89,7 +92,20 @@ export default function ViewCompetitorsPageNew() {
 
   const activeCompetitors = competitors.filter(c => !c.is_withdrawn);
   const withdrawnCompetitors = competitors.filter(c => c.is_withdrawn);
-  const displayedCompetitors = activeTab === 'active' ? activeCompetitors : withdrawnCompetitors;
+
+  const filteredCompetitors = useMemo(() => {
+    const baseList = activeTab === 'active' ? activeCompetitors : withdrawnCompetitors;
+    if (!searchTerm.trim()) return baseList;
+    const term = searchTerm.toLowerCase();
+    return baseList.filter(c =>
+      c.first_name?.toLowerCase().includes(term) ||
+      c.last_name?.toLowerCase().includes(term) ||
+      c.regiment?.toLowerCase().includes(term) ||
+      c.service_number?.toString().toLowerCase().includes(term)
+    );
+  }, [activeTab, activeCompetitors, withdrawnCompetitors, searchTerm]);
+
+  const displayedCompetitors = filteredCompetitors;
 
   const columns = [
     {
@@ -272,22 +288,31 @@ export default function ViewCompetitorsPageNew() {
         </Card>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant={activeTab === 'active' ? 'primary' : 'outline'}
-          onClick={() => setActiveTab('active')}
-          leftIcon={<Users className="w-4 h-4" />}
-        >
-          Active ({activeCompetitors.length})
-        </Button>
-        <Button
-          variant={activeTab === 'withdrawn' ? 'primary' : 'outline'}
-          onClick={() => setActiveTab('withdrawn')}
-          leftIcon={<UserX className="w-4 h-4" />}
-        >
-          Withdrawn ({withdrawnCompetitors.length})
-        </Button>
+      {/* Tabs and Search */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          <Button
+            variant={activeTab === 'active' ? 'primary' : 'outline'}
+            onClick={() => setActiveTab('active')}
+            leftIcon={<Users className="w-4 h-4" />}
+          >
+            Active ({activeCompetitors.length})
+          </Button>
+          <Button
+            variant={activeTab === 'withdrawn' ? 'primary' : 'outline'}
+            onClick={() => setActiveTab('withdrawn')}
+            leftIcon={<UserX className="w-4 h-4" />}
+          >
+            Withdrawn ({withdrawnCompetitors.length})
+          </Button>
+        </div>
+        <TextField
+          placeholder="Search by name, regiment, or service number..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          leftIcon={<Search className="w-4 h-4" />}
+          className="w-80"
+        />
       </div>
 
       {/* Competitors Table */}

@@ -224,38 +224,38 @@ const calculateRacerSeedPoints = async (
       break;
     case 4:
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
+      // ALWAYS copy over previous penalty points first
+      const log = row.racer_id === '51689919-32d5-40ac-92e3-869c035d4a28';
+      const competitorRanking4 = prevSL.findIndex(
+        (x) => x.racer_id === row.racer_id,
+      );
+      const compSL4 = prevSL[competitorRanking4];
+      if (log) console.log("row", row)
+      if (log) console.log("compSL4", compSL4)
+      raceIds.forEach((raceId) => {
+        if (
+          compSL4[raceId] !== undefined &&
+          compSL4[raceId] !== null &&
+          !Number.isNaN(compSL4[raceId]) &&
+          (row[raceId] === null || Number.isNaN(row[raceId]))
+        ) {
+          row[raceId] = round(compSL4[raceId]);
+          if (compSL4[`${raceId}-penalty`]) {
+            row[`${raceId}-penalty`] = true;
+          }
+          nonNullRaces.push(round(compSL4[raceId]));
+        }
+      });
+      if (log) console.log("nonNullRaces", nonNullRaces)
+
+      // THEN check if new penalty points are needed for the current race
       if (nonNullRaces.length < 3) {
         const mostRecentRace = raceIds[3];
-
-        const previousRaces = raceIds.slice(0, 3);
-        const competitorRanking = prevSL.findIndex(
-          (x) => x.racer_id === row.racer_id,
-        );
-
-        const compSL = prevSL[competitorRanking];
-        raceIds.forEach((raceId) => {
-          if (
-            compSL[raceId] !== null &&
-            !Number.isNaN(compSL[raceId]) &&
-            (row[raceId] === null || Number.isNaN(row[raceId]))
-          ) {
-            row[raceId] = round(compSL[raceId]);
-            if(compSL[`${raceId}-penalty`]){
-              row[`${raceId}-penalty`] = true;
-            }
-            nonNullRaces.push(round(compSL[raceId]));
-          }
-        });
-
         if (
           row[mostRecentRace] === null ||
           isNaN(row[mostRecentRace]) ||
           row[mostRecentRace] === undefined
         ) {
-          //   In this case the racer has a result in the 4th race, but must be missing one of the previous races.
-          //   For this, we use the see lists from the first three, which will have two seed points.
-          // The racer doesn't have a result here, but has two others,
-          // give penalty points here
           const results = await getRaceResult(competitionId, mostRecentRace);
           const competitorResult = results.findIndex(
             (x) => x.racer_id === row.racer_id,
@@ -270,8 +270,8 @@ const calculateRacerSeedPoints = async (
             );
           });
           let sPoints;
-          if (finishedResults[competitorRanking]) {
-            sPoints = finishedResults[competitorRanking].seed_points;
+          if (finishedResults[competitorRanking4]) {
+            sPoints = finishedResults[competitorRanking4].seed_points;
           } else {
             sPoints = finishedResults[finishedResults.length - 1].seed_points;
           }
@@ -310,14 +310,15 @@ const calculateRacerSeedPoints = async (
       const compSL = prevSL[competitorRanking];
       raceIds.forEach((raceId) => {
         if (
+          compSL[raceId] !== undefined &&
           compSL[raceId] !== null &&
           !Number.isNaN(compSL[raceId]) &&
           (row[raceId] === null || Number.isNaN(row[raceId]))
         ) {
           const sp = round(compSL[raceId]);
-          if (sp){
-            row[raceId] = round(sp);
-            if(compSL[`${raceId}-penalty`]){
+          if (sp !== null) {
+            row[raceId] = sp;
+            if (compSL[`${raceId}-penalty`]) {
               row[`${raceId}-penalty`] = true;
             }
             nonNullRaces.push(sp);
