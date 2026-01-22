@@ -213,6 +213,7 @@ export default function ImportCompetitorsFromCompetitionPage() {
                     SET arrival_corps_seed = ?
                     WHERE competition_id = ? AND racer_id = ?`,
             [competitor.final_seed_points, competitionId, racerId])
+          successCount++;
           continue;
         }
 
@@ -282,7 +283,6 @@ export default function ImportCompetitorsFromCompetitionPage() {
           <Checkbox
             checked={selectedCompetitors.includes(row.original.racer_id)}
             onChange={() => handleToggleCompetitor(row.original.racer_id)}
-            disabled={isExisting}
           />
         );
       }
