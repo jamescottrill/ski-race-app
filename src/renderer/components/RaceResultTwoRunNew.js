@@ -1,6 +1,6 @@
 // eslint-disable no-nested-ternary
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, DataTable, Badge, Button } from '../design-system';
+import { Card, CardContent, DataTable, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent } from '../design-system';
 import OtherResultTable from './DnsTable';
 import { resultsTwoPdf } from '../utils/ResultsTwoPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
@@ -103,7 +103,8 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
   const [run2Dnf, setRun2Dnf] = useState([]);
   const [run2Dns, setRun2Dns] = useState([]);
   const [run2Dsq, setRun2Dsq] = useState([]);
-  const [raceDetails, setRaceDetails] = useState([]);
+  const [raceDetails, setRaceDetails] = useState({});
+  const [activeTab, setActiveTab] = useState('women');
 
   const initialData = async () => {
     const raceQueryValues = [raceId, raceId];
@@ -233,17 +234,44 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     // init().catch(console.error);
   }, [raceId, competitionId]);
 
-  const generatePDF = () => {
-    resultsTwoPdf(
-      raceDetails,
-      finished,
-      run1Dns,
-      run1Dnf,
-      run1Dsq,
-      run2Dns,
-      run2Dnf,
-      run2Dsq,
-    );
+  const generatePDF = (gender = null) => {
+    if (gender) {
+      const genderLabel = gender === 'F' ? 'Women' : 'Men';
+      const genderRaceDetails = {
+        ...raceDetails,
+        race_name: `${raceDetails.race_name} - ${genderLabel}`,
+      };
+      const genderFinished = finished
+        .filter((e) => e.gender === gender)
+        .map((e, i) => ({ ...e, position: i + 1 }));
+      const genderRun1Dns = run1Dns.filter((e) => e.gender === gender);
+      const genderRun1Dnf = run1Dnf.filter((e) => e.gender === gender);
+      const genderRun1Dsq = run1Dsq.filter((e) => e.gender === gender);
+      const genderRun2Dns = run2Dns.filter((e) => e.gender === gender);
+      const genderRun2Dnf = run2Dnf.filter((e) => e.gender === gender);
+      const genderRun2Dsq = run2Dsq.filter((e) => e.gender === gender);
+      resultsTwoPdf(
+        genderRaceDetails,
+        genderFinished,
+        genderRun1Dns,
+        genderRun1Dnf,
+        genderRun1Dsq,
+        genderRun2Dns,
+        genderRun2Dnf,
+        genderRun2Dsq,
+      );
+    } else {
+      resultsTwoPdf(
+        raceDetails,
+        finished,
+        run1Dns,
+        run1Dnf,
+        run1Dsq,
+        run2Dns,
+        run2Dnf,
+        run2Dsq,
+      );
+    }
   };
 
   // Define columns for main results DataTable
@@ -384,7 +412,176 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     },
   ];
 
-  return (
+  const renderResultsForGender = (gender, genderLabel) => {
+    const genderFinished = finished
+      .filter((e) => e.gender === gender)
+      .map((e, i) => ({ ...e, position: i + 1 }));
+    const genderRun1Dns = run1Dns.filter((e) => e.gender === gender);
+    const genderRun1Dnf = run1Dnf.filter((e) => e.gender === gender);
+    const genderRun1Dsq = run1Dsq.filter((e) => e.gender === gender);
+    const genderRun2Dns = run2Dns.filter((e) => e.gender === gender);
+    const genderRun2Dnf = run2Dnf.filter((e) => e.gender === gender);
+    const genderRun2Dsq = run2Dsq.filter((e) => e.gender === gender);
+
+    return (
+      <div className="space-y-6">
+        {genderFinished.length > 0 && (
+          <Card>
+            <CardContent>
+              <DataTable
+                columns={columns}
+                data={genderFinished}
+                showPagination
+                pageSize={50}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderFinished.length === 0 && (
+          <Card>
+            <CardContent>
+              <div className="text-center py-8 text-neutral-600">
+                No {genderLabel} competitors found.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dns.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dns}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dnf.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dnf}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dsq.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dsq}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun2Dns.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 2</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun2Dns}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun2Dnf.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 2</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun2Dnf}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun2Dsq.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 2</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun2Dsq}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderFinished.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Junior Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderFinished.filter((e) => e.is_junior).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderFinished.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Novice Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderFinished.filter((e) => e.is_novice).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderFinished.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Veteran Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderFinished.filter((e) => e.is_veteran).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderFinished.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Open Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderFinished.slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderMixedResults = () => (
     <div className="space-y-6">
       {finished.length > 0 && (
         <Card>
@@ -551,6 +748,41 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+
+  if (raceDetails?.women_separate) {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full justify-start border-b mb-4">
+            <TabsTrigger value="women">Women</TabsTrigger>
+            <TabsTrigger value="men">Men</TabsTrigger>
+          </TabsList>
+          <TabsContent value="women">
+            {renderResultsForGender('F', 'women')}
+            <div className="flex justify-center mt-6">
+              <Button onClick={() => generatePDF('F')}>
+                Download Women&apos;s Results PDF
+              </Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="men">
+            {renderResultsForGender('M', 'men')}
+            <div className="flex justify-center mt-6">
+              <Button onClick={() => generatePDF('M')}>
+                Download Men&apos;s Results PDF
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {renderMixedResults()}
       <div className="flex justify-center">
         <Button onClick={generatePDF}>
           Download PDF

@@ -315,7 +315,7 @@ const resultsTwoPdf = (
   // Save the PDF
   pdfDoc.getBuffer((buffer) => {
     const formattedDate = getFormattedDate();
-    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumeric characters with underscores
+    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g,'_'); // Replace non-alphanumeric characters with underscores
     const defaultFileName = `${formattedDate}_RESULTS_${raceName.toUpperCase()}.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
