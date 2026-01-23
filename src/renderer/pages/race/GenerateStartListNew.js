@@ -233,7 +233,7 @@ export default function GenerateStartListNew() {
     }));
   };
 
-  const handleBibChange = (list, setList, racerId, newBib) => {
+  const handleBibChange = (list, setList, racerId, newBib, womenSeparate) => {
     const bibNumber = parseInt(newBib, 10);
     if (isNaN(bibNumber) || bibNumber < 1) return;
 
@@ -241,7 +241,13 @@ export default function GenerateStartListNew() {
     const competitorIndex = newList.findIndex(c => c.racer_id === racerId);
     if (competitorIndex === -1) return;
 
-    newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber };
+
+    if (!womenSeparate){
+      newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber, start_order: bibNumber };
+      newList.sort((a, b) => a.bib_number - b.bib_number);
+    } else{
+      newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber};
+    }
 
     setList(newList);
     setHasChanges(true);
@@ -347,7 +353,7 @@ export default function GenerateStartListNew() {
               type="number"
               min="1"
               defaultValue={row.original.bib_number}
-              onBlur={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
+              onBlur={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value, womenSeparate)}
               className="w-16 font-mono text-center"
             />
           ) : (
@@ -593,7 +599,10 @@ export default function GenerateStartListNew() {
               {loading ? (
                 <div className="text-center py-8">Loading start list...</div>
               ) : startList && startList.length > 0 ? (
-                <DataTable columns={getColumns(startList, setStartList, editMode, raceDetails.women_separate)} data={startList} pageSize={150} />
+                <DataTable
+                  columns={getColumns(startList, setStartList, editMode, raceDetails.women_separate)}
+                  data={startList}
+                  pageSize={150} />
               ) : (
                 <div className="text-center py-8 text-neutral-500">
                   No start list generated yet
