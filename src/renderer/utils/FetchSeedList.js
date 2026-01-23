@@ -65,13 +65,13 @@ const getSeedingRace = async (competitionId) => {
     const results = await window.api.select(query, [competitionId]);
 
     if (!results || results.length === 0) {
-      throw new Error(`No seeding race found for competition ${competitionId}`);
+      return null;
     }
 
     return results[0].race_id;
   } catch (error) {
     console.error('Failed to get seeding race:', error);
-    throw new Error(`Failed to get seeding race: ${error.message}`);
+    return null;
   }
 };
 
@@ -137,8 +137,8 @@ const calculateRacerSeedPoints = async (
            LIMIT 1`,
           [competitionId],
         );
-        const sRId = sR[0].race_id;
-        if (!raceIds.includes(sRId)) {
+        const sRId = sR && sR.length > 0 ? sR[0].race_id : null;
+        if (sRId && !raceIds.includes(sRId)) {
           previousRaces.unshift(sRId);
         }
         let previousSeedList = await fetchSeedList(
@@ -155,7 +155,7 @@ const calculateRacerSeedPoints = async (
           // so that we have the competitors correct position in the seed list.
           mostRecentRace = raceIds[1];
           previousRaces = previousRaces.slice(0, 2);
-          if (!raceIds.includes(sRId)) {
+          if (sRId && !raceIds.includes(sRId)) {
             previousRaces.unshift(sRId);
           }
           previousSeedList = await fetchSeedList(competitionId, previousRaces);
@@ -428,6 +428,25 @@ const fetchSeedList = async (competitionId, raceIds) => {
     }
   const resultsPromise = [];
   const raceTypes = await Promise.all(raceTypePromises);
+
+  // Check if there's a seeding race among the races
+  const hasSeedingRace = raceTypes.some((raceType) => raceType[0]?.isSeeding);
+
+  // If no seeding race, add initial seed points as a virtual "initial" race
+  if (!hasSeedingRace) {
+    const initialSeedQuery = `
+      SELECT
+        'initial' AS race_id,
+        cc.racer_id,
+        cc.arrival_corps_seed AS seed_point
+      FROM competition_competitor cc
+      WHERE cc.competition_id = ?
+        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
+    `;
+    const initialSeedResults = window.api.select(initialSeedQuery, [competitionId]);
+    resultsPromise.push(initialSeedResults);
+  }
+
   raceTypes.forEach((raceType) => {
     let query;
     let values;
@@ -486,7 +505,7 @@ const fetchSeedList = async (competitionId, raceIds) => {
     const previousRaces2 = raceIds.slice(0, raceIds.length - 2);
     if (previousSeedList.length === 2) {
       const sRId = await getSeedingRace(competitionId);
-      if (!raceIds.includes(sRId)) {
+      if (sRId && !raceIds.includes(sRId)) {
         previousRaces2.unshift(sRId);
       }
     }

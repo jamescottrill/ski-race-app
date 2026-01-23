@@ -183,9 +183,13 @@ function GenerateSeedListNew() {
     }
 
     const selectedRaceData = races.filter(r => selectedRaces.includes(r.id));
-    generatePDF(seedList, selectedRaceData);
+    const hasInitial = seedList.length > 0 && seedList[0].initial !== undefined;
+    generatePDF(seedList, selectedRaceData, null, hasInitial);
     setGenerationStatus({ type: 'success', message: 'PDF export started' });
   };
+
+  // Check if seed list has 'initial' column (when no seeding race exists)
+  const hasInitialColumn = seedList.length > 0 && seedList[0].initial !== undefined;
 
   const columns = [
     {
@@ -218,6 +222,19 @@ function GenerateSeedListNew() {
         </div>
       ),
     },
+    // Add 'Initial' column if no seeding race exists
+    ...(hasInitialColumn ? [{
+      header: 'Initial',
+      accessorKey: 'initial',
+      cell: ({ row }) => {
+        const points = row.original.initial;
+        return (
+          <div className="font-mono text-center">
+            {points != null ? Math.round(points*100,2)/100 : '-'}
+          </div>
+        );
+      },
+    }] : []),
     ...races
       .filter(r => selectedRaces.includes(r.id))
       .map(race => ({

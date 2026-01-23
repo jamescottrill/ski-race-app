@@ -5,7 +5,7 @@ import { tableStyles } from '../utils/PdfStyles';
 import { showSuccess } from '../utils/ErrorHandler';
 
 
-const generatePDF = (seedList, races, title=null) => {
+const generatePDF = (seedList, races, title=null, hasInitialColumn=false) => {
   let pageTitle = title;
   if (!title) {
     pageTitle = 'Initial Seed List';
@@ -14,7 +14,7 @@ const generatePDF = (seedList, races, title=null) => {
     }
   }
 
-  const tableColumns = (r) => {
+  const tableColumns = (r, hasInitial) => {
     const base = [
       { text: 'Pos', style: 'tableHeader' },
       { text: 'Rank', style: 'tableHeader' },
@@ -22,6 +22,10 @@ const generatePDF = (seedList, races, title=null) => {
       { text: 'Team', style: 'tableHeader' },
       { text: 'Class', style: 'tableHeader' },
     ];
+    // Add Initial column if no seeding race exists
+    if (hasInitial) {
+      base.push({ text: 'Initial', style: 'tableHeader' });
+    }
     r.forEach((race) => {
       base.push({ text: race.text, style: 'tableHeader' });
     });
@@ -29,8 +33,12 @@ const generatePDF = (seedList, races, title=null) => {
     return base;
   };
 
-  const tableWidths = (r) => {
+  const tableWidths = (r, hasInitial) => {
     const base = [15, 20, 'auto', 50, 20];
+    // Add width for Initial column if present
+    if (hasInitial) {
+      base.push('auto');
+    }
     r.forEach(() => {
       base.push('auto');
     });
@@ -38,7 +46,7 @@ const generatePDF = (seedList, races, title=null) => {
     return base;
   };
 
-  const competitorRows = (competitors, r) => {
+  const competitorRows = (competitors, r, hasInitial) => {
     const results = [];
     competitors.forEach((competitor) => {
       const output = [
@@ -48,6 +56,14 @@ const generatePDF = (seedList, races, title=null) => {
         competitor.team_name,
         calculateCategory(competitor),
       ];
+      // Add Initial value if column is present
+      if (hasInitial) {
+        output.push(
+          competitor.initial != null
+            ? Math.round(competitor.initial * 100, 2) / 100
+            : '-',
+        );
+      }
       r.forEach((race) => {
         output.push(competitor[race.id]);
       });
@@ -66,8 +82,8 @@ const generatePDF = (seedList, races, title=null) => {
         columnGap: 0,
         table: {
           headerRows: 1,
-          widths: tableWidths(races),
-          body: [tableColumns(races), ...competitorRows(seedList, races)],
+          widths: tableWidths(races, hasInitialColumn),
+          body: [tableColumns(races, hasInitialColumn), ...competitorRows(seedList, races, hasInitialColumn)],
         },
       },
     ],
