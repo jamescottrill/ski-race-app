@@ -81,18 +81,14 @@ const calculateRacerSeedPoints = async (
   competitionId,
   prevSL,
 ) => {
-  // Extract all UUID keys (assuming UUIDs are non-standard alphanumeric)
-  const racePoints = Object.keys(row)
-    .filter(
-      (key) =>
-        key !== 'racer_id' &&
-        key !== 'seed_points' &&
-        !key.endsWith('-penalty'),
-    ) // Filter out racer_id and seed_points
-    .map((key) => row[key]);
+  // Use raceIds.length as the authoritative race count (not derived from row keys)
+  // This prevents mismatch when 'initial' is added as a virtual race
+  const numRaces = raceIds.length;
 
-  const numRaces = racePoints.length;
-  const nonNullRaces = racePoints.filter((x) => x !== null && !Number.isNaN(x));
+  // Extract race points from the row for the races we're tracking
+  const nonNullRaces = raceIds
+    .map((raceId) => row[raceId])
+    .filter((x) => x !== null && x !== undefined && !Number.isNaN(x));
   let finalSeedPoints;
   switch (numRaces) {
     case 1:
@@ -412,24 +408,51 @@ const getPeople = async (competitionId) => {
 const fetchSeedList = async (competitionId, raceIds) => {
   try {
     const peopleDf = await getPeople(competitionId);
+
+    // Check if 'initial' is already in raceIds (from a recursive call)
+    const hasInitial = raceIds.includes('initial');
+    // Filter out 'initial' for database queries - it's not a real race
+    const realRaceIds = raceIds.filter((r) => r !== 'initial');
+    //
+    if (raceIds.length > 3 && hasInitial) {
+      // Once we have more than 3 results, initial are dropped, so remove initial seed points
+      raceIds = raceIds.filter((r) => r !== 'initial');
+    }
+    if (realRaceIds.length === 0 && !hasInitial) {
+      const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL) ORDER BY seed_points`;
+      return window.api.select(query, [competitionId]);
+    }
+
     const raceTypePromises = [];
-    raceIds.forEach((race) => {
+    realRaceIds.forEach((race) => {
       const raceType = `SELECT race_id AS raceId, is_seeding AS isSeeding, number_runs AS numRuns FROM races WHERE race_id = ? AND competition_id = ?`;
       const results = window.api.select(raceType, [race, competitionId]);
       raceTypePromises.push(results);
     });
-    if (raceIds.length === 0) {
-      const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL) ORDER BY seed_points`;
-      return window.api.select(query, [competitionId]);
-    }
+
   const resultsPromise = [];
   const raceTypes = await Promise.all(raceTypePromises);
 
   // Check if there's a seeding race among the races
   const hasSeedingRace = raceTypes.some((raceType) => raceType[0]?.isSeeding);
 
-  // If no seeding race, add initial seed points as a virtual "initial" race
-  if (!hasSeedingRace) {
+  // If no seeding race and 'initial' not already included, add initial seed points as a virtual "initial" race
+  if (!hasSeedingRace && !hasInitial && raceIds.length <3) {
+    const initialSeedQuery = `
+      SELECT
+        'initial' AS race_id,
+        cc.racer_id,
+        cc.arrival_corps_seed AS seed_point
+      FROM competition_competitor cc
+      WHERE cc.competition_id = ?
+        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
+    `;
+    const initialSeedResults = window.api.select(initialSeedQuery, [competitionId]);
+    resultsPromise.push(initialSeedResults);
+    // Add 'initial' to raceIds so numRaces is correct
+    raceIds = ['initial', ...raceIds];
+  } else if (hasInitial) {
+    // 'initial' was passed in, so we need to fetch the initial seed data
     const initialSeedQuery = `
       SELECT
         'initial' AS race_id,
