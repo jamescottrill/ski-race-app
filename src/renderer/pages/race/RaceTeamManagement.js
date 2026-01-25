@@ -122,7 +122,6 @@ export default function RaceTeamManagement() {
       (competitor) => competitor.racer_id === name,
     );
     startList[comp].team_id = value;
-    console.log(startList);
     setStartList(startList);
     teamExists(name)
       .then((exists) => {
@@ -131,7 +130,6 @@ export default function RaceTeamManagement() {
           updateTeam(name, value);
         } else {
           newTeam(name, value);
-          console.log('new team');
         }
       })
       .catch((e) => {

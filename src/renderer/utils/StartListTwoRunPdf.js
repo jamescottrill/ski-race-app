@@ -9,8 +9,6 @@ import { showSuccess } from './ErrorHandler';
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
 const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
-  console.log('StartListTwoRunPdf', raceDetails);
-  console.log('StartListTwoRunPdf', startList);
   const runDetailsSection = [
     {
       columns: [

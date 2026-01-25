@@ -189,7 +189,6 @@ function EditCompetitorPageNew() {
         competitorId,
         competitionId,
       ];
-      console.log(competitorParams);
       const result = await window.api.insert(competitorQuery, competitorParams);
       if (!result.success) {
         throw new Error(result.error || 'Failed to update competitor');

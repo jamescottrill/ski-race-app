@@ -85,7 +85,6 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         : '';
       return obj;
     });
-    console.log(mapped);
 
     const r1Dnf = mapped
       .filter((e) => {

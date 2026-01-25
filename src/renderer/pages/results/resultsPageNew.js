@@ -89,8 +89,6 @@ function ResultsPageNew() {
             <Button
               variant="outline"
               onClick={() => {
-                console.log('Called');
-                console.log(`/competition/${competitionId}/results/team`);
                 navigate(`/competition/${competitionId}/results/team`);
               }
               }

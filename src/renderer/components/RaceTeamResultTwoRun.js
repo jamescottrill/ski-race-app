@@ -107,7 +107,6 @@ export default function RaceTeamResultTwoRun({
     let results = [];
     try {
       results = await window.api.select(raceQuery, raceQueryValues);
-      console.log(results);
     } catch (e) {
       console.error('Failed to fetch competitors:', e);
       return;

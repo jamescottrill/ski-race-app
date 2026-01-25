@@ -53,7 +53,6 @@ export default function GenerateStartList() {
         ORDER BY r.race_date ASC`,
       [competitionId],
     );
-    console.log(completedRaces);
     if (completedRaces.length > 3) {
       completedRaces = await window.api.select(
         `SELECT
@@ -198,7 +197,6 @@ export default function GenerateStartList() {
   }, [competitionId, raceId]);
 
   const saveStartList = async (list, gender) => {
-    console.log(list);
     const query = `
       INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
       VALUES (?, ?, ?, ?, ?);

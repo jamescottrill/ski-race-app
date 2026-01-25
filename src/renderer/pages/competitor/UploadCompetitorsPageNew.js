@@ -201,7 +201,6 @@ export default function UploadCompetitorsPageNew() {
             // Create new competitor
             const result = await createCompetitor(formData, competitionId);
             if (!result.success) {
-              console.log(formData);
               throw new Error(result.error);
             }
             successCount++;

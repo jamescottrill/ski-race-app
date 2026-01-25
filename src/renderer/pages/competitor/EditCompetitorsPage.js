@@ -48,7 +48,6 @@ function EditCompetitorPage() {
 
   useEffect(() => {
     if (selectedCompetitorId) {
-      console.log(`competitor Id Set to ${selectedCompetitorId}`);
     }
   }, [selectedCompetitorId]);
 

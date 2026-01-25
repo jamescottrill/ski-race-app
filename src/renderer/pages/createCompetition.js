@@ -22,7 +22,6 @@ function CreateCompetitionPage() {
     try {
       const result = await window.api.insert(query, params);
       if (result.success) {
-        console.log('Competition created with ID:', result.id);
         navigate('/');
       } else {
         console.error('Failed to create competition:', result.error);

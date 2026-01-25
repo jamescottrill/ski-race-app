@@ -178,7 +178,6 @@ export default function GenerateStartListNew() {
         }
 
         menList.sort((a, b) => a.bib_number - b.bib_number);
-        console.log(menList);
         let startOrder = 1;
         womenList = womenList.map((c) => ({ ...c, start_order: startOrder++ }));
         startOrder = 1;

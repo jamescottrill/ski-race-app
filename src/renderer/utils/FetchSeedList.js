@@ -225,13 +225,10 @@ const calculateRacerSeedPoints = async (
     case 4:
       // Seeding after the fourth Championship Race: sum of the best three divided by 3
       // ALWAYS copy over previous penalty points first
-      const log = row.racer_id === '51689919-32d5-40ac-92e3-869c035d4a28';
       const competitorRanking4 = prevSL.findIndex(
         (x) => x.racer_id === row.racer_id,
       );
       const compSL4 = prevSL[competitorRanking4];
-      if (log) console.log("row", row)
-      if (log) console.log("compSL4", compSL4)
       raceIds.forEach((raceId) => {
         if (
           compSL4[raceId] !== undefined &&
@@ -246,7 +243,6 @@ const calculateRacerSeedPoints = async (
           nonNullRaces.push(round(compSL4[raceId]));
         }
       });
-      if (log) console.log("nonNullRaces", nonNullRaces)
 
       // THEN check if new penalty points are needed for the current race
       if (nonNullRaces.length < 3) {
