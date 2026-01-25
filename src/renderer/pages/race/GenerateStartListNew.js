@@ -51,8 +51,15 @@ export default function GenerateStartListNew() {
   const [editMode, setEditMode] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  function refreshPage(){
-    navigate(`/competition/${competitionId}/race/${raceId}/start-list`);
+  async function refreshPage(){
+    const query = `DELETE FROM race_competitor WHERE race_id=? AND competition_id = ?`;
+    await window.api.delete(query, [raceId, competitionId]);
+    setStartList(null);
+    setWomenStartList(null);
+    setLoading(true);
+    const details = await fetchRaceDetails();
+    await getStartList(details?.women_separate ?? false);
+    await getFetchSeedList();
   }
 
   const getFetchSeedList = async () => {
