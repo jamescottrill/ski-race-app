@@ -5,7 +5,7 @@
   "license": "MIT",
   "author": {
     "name": "James Cottrill",
-    "email": "james@accessium.io",
+    "email": "james@slatedata.co.uk",
     "url": "https://github.com/jamescottrill"
   },
   "main": "./dist/main/main.js",

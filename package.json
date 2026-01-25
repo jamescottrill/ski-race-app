@@ -26,7 +26,7 @@
     "package": "tsx ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
     "package:mac": "tsx ./.erb/scripts/clean.js dist && npm run build && electron-builder build --mac --publish never && npm run build:dll",
     "package:win": "tsx ./.erb/scripts/clean.js dist && npm run build && electron-builder build --win --publish never && npm run build:dll",
-    "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
+    "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app -f -w better_sqlite3",
     "start": "tsx ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon -r tsx .",
     "start:preload": "cross-env NODE_ENV=development NODE_OPTIONS='--import tsx' webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
