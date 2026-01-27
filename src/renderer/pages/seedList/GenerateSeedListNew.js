@@ -151,6 +151,7 @@ function GenerateSeedListNew() {
     setGenerationStatus({ type: 'info', message: 'Generating seed list...' });
 
     try {
+      console.log(raceIds);
       const seeds = await fetchSeedList(competitionId, raceIds);
       setSeedList(seeds);
       setGenerationStatus({ type: 'success', message: `Generated seed list with ${seeds.length} competitors` });

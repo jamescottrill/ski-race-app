@@ -22,6 +22,14 @@ import {
   DataTable,
   Badge,
   TextField,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalTitle,
+  ModalDescription,
+  SimpleSelect,
+  Label,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
@@ -32,6 +40,10 @@ export default function ViewCompetitorsPageNew() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [withdrawCompetitor, setWithdrawCompetitor] = useState(null);
+  const [completedRaces, setCompletedRaces] = useState([]);
+  const [lastIncludedRaceId, setLastIncludedRaceId] = useState('');
   const { competitionId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
@@ -58,22 +70,45 @@ export default function ViewCompetitorsPageNew() {
     }
   };
 
+  const fetchCompletedRaces = async () => {
+    try {
+      const races = await window.api.select(`
+        SELECT DISTINCT r.race_id, r.race_name, r.race_date
+        FROM races r
+        INNER JOIN race_run rr ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
+        WHERE r.competition_id = ? AND rr.is_complete = 1
+        ORDER BY r.race_date DESC
+      `, [competitionId]);
+      setCompletedRaces(races);
+    } catch (error) {
+      console.error('Failed to fetch completed races:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCompetitors();
+    fetchCompletedRaces();
   }, [competitionId]);
 
-  const handleWithdraw = async (e, competitorId) => {
+  const openWithdrawModal = (e, competitor) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to withdraw this competitor? They will no longer appear in seed lists or future start lists.')) {
-      try {
-        await window.api.insert(
-          'UPDATE competition_competitor SET is_withdrawn = 1 WHERE racer_id = ? AND competition_id = ?',
-          [competitorId, competitionId]
-        );
-        fetchCompetitors();
-      } catch (error) {
-        console.error('Failed to withdraw competitor:', error);
-      }
+    setWithdrawCompetitor(competitor);
+    setLastIncludedRaceId('');
+    setWithdrawModalOpen(true);
+  };
+
+  const handleWithdrawConfirm = async () => {
+    if (!withdrawCompetitor) return;
+    try {
+      await window.api.insert(
+        'UPDATE competition_competitor SET is_withdrawn = 1, last_included_race_id = ? WHERE racer_id = ? AND competition_id = ?',
+        [lastIncludedRaceId || null, withdrawCompetitor.id, competitionId]
+      );
+      setWithdrawModalOpen(false);
+      setWithdrawCompetitor(null);
+      fetchCompetitors();
+    } catch (error) {
+      console.error('Failed to withdraw competitor:', error);
     }
   };
 
@@ -81,7 +116,7 @@ export default function ViewCompetitorsPageNew() {
     e.stopPropagation();
     try {
       await window.api.insert(
-        'UPDATE competition_competitor SET is_withdrawn = 0 WHERE racer_id = ? AND competition_id = ?',
+        'UPDATE competition_competitor SET is_withdrawn = 0, last_included_race_id = NULL WHERE racer_id = ? AND competition_id = ?',
         [competitorId, competitionId]
       );
       fetchCompetitors();
@@ -193,7 +228,7 @@ export default function ViewCompetitorsPageNew() {
               size="sm"
               variant="ghost"
               className="text-warning hover:text-warning hover:bg-warning/10"
-              onClick={(e) => handleWithdraw(e, row.original.id)}
+              onClick={(e) => openWithdrawModal(e, row.original)}
               leftIcon={<UserX className="w-3 h-3" />}
             >
               Withdraw
@@ -348,6 +383,63 @@ export default function ViewCompetitorsPageNew() {
           )}
         </CardContent>
       </Card>
+
+      {/* Withdraw Modal */}
+      <Modal open={withdrawModalOpen} onOpenChange={setWithdrawModalOpen}>
+        <ModalContent size="md">
+          <ModalHeader>
+            <ModalTitle>Withdraw Competitor</ModalTitle>
+            <ModalDescription>
+              {withdrawCompetitor && (
+                <>Withdrawing {withdrawCompetitor.first_name} {withdrawCompetitor.last_name}</>
+              )}
+            </ModalDescription>
+          </ModalHeader>
+
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-neutral-600">
+              This competitor will be removed from future seed lists and start lists.
+              Their past race results will be preserved.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastIncludedRace">Last race to include in seed lists</Label>
+              <SimpleSelect
+                id="lastIncludedRace"
+                value={lastIncludedRaceId}
+                onChange={(e) => setLastIncludedRaceId(e.target.value)}
+              >
+                <option value="">None (exclude from all seed list calculations)</option>
+                {completedRaces.map(race => (
+                  <option key={race.race_id} value={race.race_id}>
+                    {race.race_name} ({new Date(race.race_date).toLocaleDateString()})
+                  </option>
+                ))}
+              </SimpleSelect>
+              <p className="text-xs text-neutral-500">
+                The competitor will appear in seed list calculations up to and including this race.
+                This helps preserve accurate penalty point calculations for other competitors.
+              </p>
+            </div>
+          </div>
+
+          <ModalFooter>
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleWithdrawConfirm}
+              leftIcon={<UserX className="w-4 h-4" />}
+            >
+              Withdraw
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </PageContainer>
   );
 }

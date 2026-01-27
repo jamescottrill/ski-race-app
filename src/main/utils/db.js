@@ -114,6 +114,7 @@ class DatabaseWrapper {
           is_female: 'BOOLEAN',
           is_hc: 'BOOLEAN',
           is_withdrawn: 'BOOLEAN DEFAULT 0',
+          last_included_race_id: 'TEXT',
           regiment: 'TEXT',
         },
         constraints: [

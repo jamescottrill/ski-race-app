@@ -225,7 +225,16 @@ const calculateRacerSeedPoints = async (
         (x) => x.racer_id === row.racer_id,
       );
       const compSL4 = prevSL[competitorRanking4];
+      if(compSL4 === undefined) {
+      console.log(competitorRanking4);
+      console.log(prevSL);
+      console.log(row);
+      break;
+      }
       raceIds.forEach((raceId) => {
+        if (compSL4[raceId] === null || compSL4[raceId] === undefined) {
+          return
+        }
         if (
           compSL4[raceId] !== undefined &&
           compSL4[raceId] !== null &&
@@ -378,7 +387,37 @@ const calculateRacerSeedPoints = async (
   return row;
 };
 
-const getPeople = async (competitionId) => {
+const filterByWithdrawalStatus = async (people, competitionId, raceIds) => {
+  if (!raceIds || raceIds.length === 0) {
+    return people.filter(p => !p.is_withdrawn);
+  }
+
+  const realRaceIds = raceIds.filter(r => r !== 'initial');
+  if (realRaceIds.length === 0) {
+    return people.filter(p => !p.is_withdrawn);
+  }
+
+  const raceDates = await window.api.select(
+    `SELECT race_id, race_date FROM races WHERE race_id IN (${realRaceIds.map(() => '?').join(',')})`,
+    realRaceIds,
+  );
+  const maxRaceDate = Math.max(...raceDates.map(r => new Date(r.race_date).getTime()));
+
+  const allRaceDates = await window.api.select(
+    `SELECT race_id, race_date FROM races WHERE competition_id = ?`,
+    [competitionId],
+  );
+  const dateMap = Object.fromEntries(allRaceDates.map(r => [r.race_id, new Date(r.race_date).getTime()]));
+
+  return people.filter(p => {
+    if (!p.is_withdrawn) return true;
+    if (!p.last_included_race_id) return false;
+    const lastIncludedDate = dateMap[p.last_included_race_id];
+    return lastIncludedDate && lastIncludedDate >= maxRaceDate;
+  });
+};
+
+const getPeople = async (competitionId, raceIds = []) => {
   try {
     const people = await window.api.select(
       `SELECT cc.*
@@ -389,16 +428,12 @@ const getPeople = async (competitionId) => {
        , cc.regiment AS team_name
       FROM competition_competitor cc
         LEFT JOIN people p ON cc.racer_id = p.id
-  --     LEFT JOIN competition_team_members ctm ON cc.racer_id = ctm.racer_id AND cc.competition_id = ctm.competition_id
-  --     LEFT JOIN competition_team ct ON ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
       WHERE cc.competition_id = ?
-        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
-  --     AND NOT COALESCE(ct.is_hc, FALSE)
-  --     AND NOT COALESCE(ct.is_female, FALSE)
       `,
       [competitionId],
     );
-    return new dfd.DataFrame(people);
+    const filteredPeople = await filterByWithdrawalStatus(people, competitionId, raceIds);
+    return new dfd.DataFrame(filteredPeople);
   } catch (error) {
     console.error('Failed to get people for competition:', competitionId, error);
     throw new Error(`Failed to get people: ${error.message}`);
@@ -407,7 +442,7 @@ const getPeople = async (competitionId) => {
 
 const fetchSeedList = async (competitionId, raceIds) => {
   try {
-    const peopleDf = await getPeople(competitionId);
+    const peopleDf = await getPeople(competitionId, raceIds);
 
     // Check if 'initial' is already in raceIds (from a recursive call)
     const hasInitial = raceIds.includes('initial');
@@ -445,7 +480,6 @@ const fetchSeedList = async (competitionId, raceIds) => {
         cc.arrival_corps_seed AS seed_point
       FROM competition_competitor cc
       WHERE cc.competition_id = ?
-        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
     `;
     const initialSeedResults = window.api.select(initialSeedQuery, [competitionId]);
     resultsPromise.push(initialSeedResults);
@@ -460,7 +494,6 @@ const fetchSeedList = async (competitionId, raceIds) => {
         cc.arrival_corps_seed AS seed_point
       FROM competition_competitor cc
       WHERE cc.competition_id = ?
-        AND (cc.is_withdrawn = 0 OR cc.is_withdrawn IS NULL)
     `;
     const initialSeedResults = window.api.select(initialSeedQuery, [competitionId]);
     resultsPromise.push(initialSeedResults);
@@ -514,7 +547,12 @@ const fetchSeedList = async (competitionId, raceIds) => {
       row[race_id] = seed_point;
     }
   });
-  const pivotDf = new dfd.DataFrame(pivotData);
+
+  // Filter pivotData to only include racers that are in peopleDf (properly filtered for withdrawals)
+  const validRacerIds = new Set(peopleDf.racer_id.values);
+  const filteredPivotData = pivotData.filter(row => validRacerIds.has(row.racer_id));
+
+  const pivotDf = new dfd.DataFrame(filteredPivotData);
 
   async function processArray(array, pivDf) {
     const resultP = [];
@@ -535,18 +573,24 @@ const fetchSeedList = async (competitionId, raceIds) => {
 
 
     array.forEach((x) => {
-      const res = calculateRacerSeedPoints(
-        x,
-        raceIds,
-        competitionId,
-        previousSeedList,
-      );
-      resultP.push(res);
+        const res = calculateRacerSeedPoints(
+          x,
+          raceIds,
+          competitionId,
+          previousSeedList,
+        );
+        resultP.push(res);
     });
-    return Promise.all(resultP);
+    try {
+      const results = Promise.all(resultP);
+      return results;
+    } catch (error) {
+      console.error(error);
+
+    }
   }
 
-  const totalSeed = await processArray(pivotData, pivotDf);
+  const totalSeed = await processArray(filteredPivotData, pivotDf);
   const totalSeedDf = new dfd.DataFrame(totalSeed);
   const finalResults = dfd.merge({
     left: peopleDf,

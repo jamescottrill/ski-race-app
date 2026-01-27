@@ -22,6 +22,13 @@ import {
   TextField,
   SimpleSelect,
   Checkbox,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalTitle,
+  ModalDescription,
+  Label,
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
@@ -31,6 +38,9 @@ function EditCompetitorPageNew() {
   const navigate = useNavigate();
   const handleBack = useBackButton();
   const [loading, setLoading] = useState(true);
+  const [completedRaces, setCompletedRaces] = useState([]);
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [lastIncludedRaceId, setLastIncludedRaceId] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -47,6 +57,7 @@ function EditCompetitorPageNew() {
     isVeteran: false,
     isReserve: false,
     isWithdrawn: false,
+    lastIncludedRaceId: null,
     regiment: '',
   });
 
@@ -60,7 +71,7 @@ function EditCompetitorPageNew() {
       const personQuery = `
         SELECT p.first_name, p.last_name, p.birth_year, p.country, p.id AS service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
-               cc.is_veteran, cc.is_reserve, cc.is_withdrawn, cc.regiment, cc.title
+               cc.is_veteran, cc.is_reserve, cc.is_withdrawn, cc.last_included_race_id, cc.regiment, cc.title
         FROM people p
         INNER JOIN competition_competitor cc ON p.id = cc.racer_id
         WHERE p.id = ? AND cc.competition_id = ?
@@ -86,6 +97,7 @@ function EditCompetitorPageNew() {
           isVeteran: competitor.is_veteran === 1,
           isReserve: competitor.is_reserve === 1,
           isWithdrawn: competitor.is_withdrawn === 1,
+          lastIncludedRaceId: competitor.last_included_race_id || null,
           regiment: competitor.regiment || '',
         });
       }
@@ -96,8 +108,24 @@ function EditCompetitorPageNew() {
     }
   };
 
+  const fetchCompletedRaces = async () => {
+    try {
+      const races = await window.api.select(`
+        SELECT DISTINCT r.race_id, r.race_name, r.race_date
+        FROM races r
+        INNER JOIN race_run rr ON r.race_id = rr.race_id AND r.competition_id = rr.competition_id
+        WHERE r.competition_id = ? AND rr.is_complete = 1
+        ORDER BY r.race_date DESC
+      `, [competitionId]);
+      setCompletedRaces(races);
+    } catch (error) {
+      console.error('Failed to fetch completed races:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCompetitorDetails();
+    fetchCompletedRaces();
   }, [competitorId, competitionId]);
 
   const handleInputChange = (e) => {
@@ -217,29 +245,47 @@ function EditCompetitorPageNew() {
     }
   };
 
-  const handleWithdraw = async () => {
-    if (window.confirm('Are you sure you want to withdraw this competitor? They will no longer appear in seed lists or future start lists, but their race history will be preserved.')) {
-      try {
-        await window.api.insert(
-          'UPDATE competition_competitor SET is_withdrawn = 1 WHERE racer_id = ? AND competition_id = ?',
-          [competitorId, competitionId]
-        );
-        setFormData(prev => ({ ...prev, isWithdrawn: true }));
-      } catch (error) {
-        console.error('Failed to withdraw competitor:', error);
-      }
+  const openWithdrawModal = () => {
+    setLastIncludedRaceId('');
+    setWithdrawModalOpen(true);
+  };
+
+  const handleWithdrawConfirm = async () => {
+    try {
+      await window.api.insert(
+        'UPDATE competition_competitor SET is_withdrawn = 1, last_included_race_id = ? WHERE racer_id = ? AND competition_id = ?',
+        [lastIncludedRaceId || null, competitorId, competitionId]
+      );
+      setFormData(prev => ({ ...prev, isWithdrawn: true, lastIncludedRaceId: lastIncludedRaceId || null }));
+      setWithdrawModalOpen(false);
+    } catch (error) {
+      console.error('Failed to withdraw competitor:', error);
     }
   };
 
   const handleReinstate = async () => {
     try {
       await window.api.insert(
-        'UPDATE competition_competitor SET is_withdrawn = 0 WHERE racer_id = ? AND competition_id = ?',
+        'UPDATE competition_competitor SET is_withdrawn = 0, last_included_race_id = NULL WHERE racer_id = ? AND competition_id = ?',
         [competitorId, competitionId]
       );
-      setFormData(prev => ({ ...prev, isWithdrawn: false }));
+      setFormData(prev => ({ ...prev, isWithdrawn: false, lastIncludedRaceId: null }));
     } catch (error) {
       console.error('Failed to reinstate competitor:', error);
+    }
+  };
+
+  const handleLastIncludedRaceChange = async (newRaceId) => {
+    try {
+      await window.api.insert(
+        'UPDATE competition_competitor SET last_included_race_id = ? WHERE racer_id = ? AND competition_id = ?',
+        [newRaceId || null, competitorId, competitionId]
+      );
+      setFormData(prev => ({ ...prev, lastIncludedRaceId: newRaceId || null }));
+      toast.success('Withdrawal settings updated');
+    } catch (error) {
+      console.error('Failed to update last included race:', error);
+      toast.error('Failed to update withdrawal settings');
     }
   };
 
@@ -288,7 +334,7 @@ function EditCompetitorPageNew() {
             ) : (
               <Button
                 variant="warning"
-                onClick={handleWithdraw}
+                onClick={openWithdrawModal}
                 leftIcon={<UserX className="w-4 h-4" />}
               >
                 Withdraw
@@ -466,6 +512,35 @@ function EditCompetitorPageNew() {
                     </div>
                   </div>
 
+                  {/* Withdrawal Settings - shown only when withdrawn */}
+                  {formData.isWithdrawn && (
+                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                        <UserX className="w-4 h-4" />
+                        Withdrawal Settings
+                      </h4>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastIncludedRaceEdit">Last race included in seed lists</Label>
+                        <SimpleSelect
+                          id="lastIncludedRaceEdit"
+                          value={formData.lastIncludedRaceId || ''}
+                          onChange={(e) => handleLastIncludedRaceChange(e.target.value)}
+                        >
+                          <option value="">None (exclude from all seed list calculations)</option>
+                          {completedRaces.map(race => (
+                            <option key={race.race_id} value={race.race_id}>
+                              {race.race_name} ({new Date(race.race_date).toLocaleDateString()})
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        <p className="text-xs text-neutral-600 mt-1">
+                          This competitor will appear in seed list calculations up to and including this race.
+                          Changing this can affect penalty point calculations for other competitors.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex justify-end gap-3 pt-6 border-t">
                     <Button
@@ -533,6 +608,61 @@ function EditCompetitorPageNew() {
           </Card>
         </div>
       </div>
+
+      {/* Withdraw Modal */}
+      <Modal open={withdrawModalOpen} onOpenChange={setWithdrawModalOpen}>
+        <ModalContent size="md">
+          <ModalHeader>
+            <ModalTitle>Withdraw Competitor</ModalTitle>
+            <ModalDescription>
+              Withdrawing {formData.firstName} {formData.lastName}
+            </ModalDescription>
+          </ModalHeader>
+
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-neutral-600">
+              This competitor will be removed from future seed lists and start lists.
+              Their past race results will be preserved.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastIncludedRaceModal">Last race to include in seed lists</Label>
+              <SimpleSelect
+                id="lastIncludedRaceModal"
+                value={lastIncludedRaceId}
+                onChange={(e) => setLastIncludedRaceId(e.target.value)}
+              >
+                <option value="">None (exclude from all seed list calculations)</option>
+                {completedRaces.map(race => (
+                  <option key={race.race_id} value={race.race_id}>
+                    {race.race_name} ({new Date(race.race_date).toLocaleDateString()})
+                  </option>
+                ))}
+              </SimpleSelect>
+              <p className="text-xs text-neutral-500">
+                The competitor will appear in seed list calculations up to and including this race.
+                This helps preserve accurate penalty point calculations for other competitors.
+              </p>
+            </div>
+          </div>
+
+          <ModalFooter>
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleWithdrawConfirm}
+              leftIcon={<UserX className="w-4 h-4" />}
+            >
+              Withdraw
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </PageContainer>
   );
 }
