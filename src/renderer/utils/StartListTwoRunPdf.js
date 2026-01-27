@@ -2,13 +2,13 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { calculateCategory } from './CompetitorManagement';
 import { getFormattedDate } from './DateUtils';
 import { tableStyles } from './PdfStyles';
-import { showSuccess } from './ErrorHandler';
+import { showSuccess, handlePdfError } from './ErrorHandler';
 
 // const { vfsFonts } = require('pdfmake/build/vfs_fonts');
 
 // pdfMake.vfs = vfsFonts.pdfMake.vfs;
 
-const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
+const generateStartListTwoRunPdfDocument = (raceDetails, competitors, genderLabel = '') => {
   const runDetailsSection = [
     {
       columns: [
@@ -215,12 +215,14 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
     },
   ];
 
-  const docDefinition = {
+  const titleSuffix = genderLabel ? ` - ${genderLabel}` : '';
+
+  return {
     content: [
       { text: raceDetails.competition_name, style: 'header' },
       { text: raceDetails.competition_description, style: 'subheader' },
       { text: raceDetails.race_name, style: 'subheader' },
-      { text: 'Start List', style: 'subheader' },
+      { text: `Start List${titleSuffix}`, style: 'subheader' },
       ...runDetailsSection,
       {
         layout: 'lightHorizontalLines',
@@ -236,7 +238,7 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
               { text: 'Team', style: 'tableHeader' },
               { text: 'Class', style: 'tableHeader' },
             ],
-            ...(startList || []).map((competitor, index) => [
+            ...(competitors || []).map((competitor, index) => [
               index + 1,
               competitor.title,
               `${competitor.last_name.toUpperCase()} ${competitor.first_name}`,
@@ -249,27 +251,59 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
     ],
     styles: tableStyles,
   };
+};
 
-  const pdfDoc = pdfMake.createPdf(docDefinition);
-
-  // Use Electron's dialog to choose save location
-  pdfDoc.getBuffer((buffer) => {
-    const formattedDate = getFormattedDate();
-    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
-    const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}.pdf`;
-    window.electronAPI
-      .savePDF(buffer, defaultFileName)
-      .then((r) => {
-          if (r.success) {
-            showSuccess(`PDF saved successfully to: ${r.filePath}`);
-          } else {
-            alert('PDF save cancelled.');
-          }
-        })
-      .catch((err) => {
-        console.error('Error saving PDF:', err);
-      });
+const savePdf = (docDefinition, raceDetails, fileSuffix = '') => {
+  return new Promise((resolve, reject) => {
+    const pdfDoc = pdfMake.createPdf(docDefinition);
+    pdfDoc.getBuffer((buffer) => {
+      try {
+        const formattedDate = getFormattedDate();
+        const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
+        const defaultFileName = `${formattedDate}_START_LIST_${raceName.toUpperCase()}${fileSuffix}.pdf`;
+        window.electronAPI
+          .savePDF(buffer, defaultFileName)
+          .then((r) => {
+            if (r.success) {
+              resolve(r.filePath);
+            } else {
+              resolve(null);
+            }
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      } catch (error) {
+        reject(error);
+      }
+    });
   });
+};
+
+const startListTwoRunPdf = async (raceDetails, startList, womensStartList) => {
+  try {
+    const hasSeparateWomen = womensStartList && womensStartList.length > 0;
+
+    // Generate men's PDF
+    const mensLabel = hasSeparateWomen ? 'Men' : '';
+    const mensFileSuffix = hasSeparateWomen ? '_MEN' : '';
+    const mensDocDefinition = generateStartListTwoRunPdfDocument(raceDetails, startList, mensLabel);
+    const mensFilePath = await savePdf(mensDocDefinition, raceDetails, mensFileSuffix);
+    if (mensFilePath) {
+      showSuccess(`Men's PDF saved successfully to: ${mensFilePath}`);
+    }
+
+    // Generate women's PDF if there's a separate women's start list
+    if (hasSeparateWomen) {
+      const womensDocDefinition = generateStartListTwoRunPdfDocument(raceDetails, womensStartList, 'Women');
+      const womensFilePath = await savePdf(womensDocDefinition, raceDetails, '_WOMEN');
+      if (womensFilePath) {
+        showSuccess(`Women's PDF saved successfully to: ${womensFilePath}`);
+      }
+    }
+  } catch (error) {
+    handlePdfError('start list', error);
+  }
 };
 
 export { startListTwoRunPdf };
