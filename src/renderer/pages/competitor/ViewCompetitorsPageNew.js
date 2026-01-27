@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Users,
@@ -90,12 +90,12 @@ export default function ViewCompetitorsPageNew() {
     fetchCompletedRaces();
   }, [competitionId]);
 
-  const openWithdrawModal = (e, competitor) => {
+  const openWithdrawModal = useCallback((e, competitor) => {
     e.stopPropagation();
     setWithdrawCompetitor(competitor);
     setLastIncludedRaceId('');
     setWithdrawModalOpen(true);
-  };
+  }, []);
 
   const handleWithdrawConfirm = async () => {
     if (!withdrawCompetitor) return;
@@ -112,7 +112,7 @@ export default function ViewCompetitorsPageNew() {
     }
   };
 
-  const handleReinstate = async (e, competitorId) => {
+  const handleReinstate = useCallback(async (e, competitorId) => {
     e.stopPropagation();
     try {
       await window.api.insert(
@@ -123,12 +123,19 @@ export default function ViewCompetitorsPageNew() {
     } catch (error) {
       console.error('Failed to reinstate competitor:', error);
     }
-  };
+  }, [competitionId]);
 
-  const activeCompetitors = competitors.filter(c => !c.is_withdrawn);
-  const withdrawnCompetitors = competitors.filter(c => c.is_withdrawn);
+  const activeCompetitors = useMemo(() =>
+    competitors.filter(c => !c.is_withdrawn || c.is_withdrawn === 0),
+    [competitors]
+  );
 
-  const filteredCompetitors = useMemo(() => {
+  const withdrawnCompetitors = useMemo(() =>
+    competitors.filter(c => c.is_withdrawn && c.is_withdrawn !== 0),
+    [competitors]
+  );
+
+  const displayedCompetitors = useMemo(() => {
     const baseList = activeTab === 'active' ? activeCompetitors : withdrawnCompetitors;
     if (!searchTerm.trim()) return baseList;
     const term = searchTerm.toLowerCase();
@@ -140,9 +147,7 @@ export default function ViewCompetitorsPageNew() {
     );
   }, [activeTab, activeCompetitors, withdrawnCompetitors, searchTerm]);
 
-  const displayedCompetitors = filteredCompetitors;
-
-  const columns = [
+  const columns = useMemo(() => [
     {
       header: 'Name',
       accessorKey: 'full_name',
@@ -199,55 +204,58 @@ export default function ViewCompetitorsPageNew() {
       header: 'Actions',
       accessorKey: 'actions',
       enableSorting: false,
-      cell: ({ row }) => (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/competition/${competitionId}/competitor/${row.original.id}/profile`);
-            }}
-            leftIcon={<User className="w-3 h-3" />}
-          >
-            Profile
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/competition/${competitionId}/competitor/${row.original.id}/edit`);
-            }}
-            leftIcon={<Edit className="w-3 h-3" />}
-          >
-            Edit
-          </Button>
-          {activeTab === 'active' ? (
+      cell: ({ row }) => {
+        const isWithdrawn = row.original.is_withdrawn && row.original.is_withdrawn !== 0;
+        return (
+          <div className="flex gap-2">
             <Button
               size="sm"
               variant="ghost"
-              className="text-warning hover:text-warning hover:bg-warning/10"
-              onClick={(e) => openWithdrawModal(e, row.original)}
-              leftIcon={<UserX className="w-3 h-3" />}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/competition/${competitionId}/competitor/${row.original.id}/profile`);
+              }}
+              leftIcon={<User className="w-3 h-3" />}
             >
-              Withdraw
+              Profile
             </Button>
-          ) : (
             <Button
               size="sm"
-              variant="ghost"
-              className="text-success hover:text-success hover:bg-success/10"
-              onClick={(e) => handleReinstate(e, row.original.id)}
-              leftIcon={<RotateCcw className="w-3 h-3" />}
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/competition/${competitionId}/competitor/${row.original.id}/edit`);
+              }}
+              leftIcon={<Edit className="w-3 h-3" />}
             >
-              Reinstate
+              Edit
             </Button>
-          )}
-        </div>
-      ),
+            {!isWithdrawn ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-warning hover:text-warning hover:bg-warning/10"
+                onClick={(e) => openWithdrawModal(e, row.original)}
+                leftIcon={<UserX className="w-3 h-3" />}
+              >
+                Withdraw
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-success hover:text-success hover:bg-success/10"
+                onClick={(e) => handleReinstate(e, row.original.id)}
+                leftIcon={<RotateCcw className="w-3 h-3" />}
+              >
+                Reinstate
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
-  ];
+  ], [competitionId, navigate, openWithdrawModal, handleReinstate]);
 
   // Calculate stats (based on active competitors only)
   const stats = {
