@@ -214,7 +214,7 @@ export default function TeamListPageNew() {
             category = 'Corps Women';
             variant = 'warning';
           } else {
-            category = 'Corps Men';
+            category = 'Corps Open';
             variant = 'info';
           }
         } else {

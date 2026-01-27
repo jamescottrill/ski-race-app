@@ -15,7 +15,7 @@ import { fetchSeedList } from '../../utils/FetchSeedList';
 
 const TEAM_CATEGORIES = {
   REGIMENTAL: 'regimental',
-  CORPS_MEN: 'corps_men',
+  CORPS_OPEN: 'corps_open',
   CORPS_WOMEN: 'corps_women',
 };
 
@@ -23,8 +23,8 @@ const getCategoryLabel = (category) => {
   switch (category) {
     case TEAM_CATEGORIES.REGIMENTAL:
       return 'Regimental';
-    case TEAM_CATEGORIES.CORPS_MEN:
-      return 'Corps Men';
+    case TEAM_CATEGORIES.CORPS_OPEN:
+      return 'Corps Open';
     case TEAM_CATEGORIES.CORPS_WOMEN:
       return 'Corps Women';
     default:
@@ -37,7 +37,7 @@ const getTeamCategory = (team) => {
     if (team.is_female === 1 || team.is_female === true) {
       return TEAM_CATEGORIES.CORPS_WOMEN;
     }
-    return TEAM_CATEGORIES.CORPS_MEN;
+    return TEAM_CATEGORIES.CORPS_OPEN;
   }
   return TEAM_CATEGORIES.REGIMENTAL;
 };
@@ -244,7 +244,7 @@ function TeamResultsNew() {
 
   const categoryCounts = useMemo(() => ({
     [TEAM_CATEGORIES.REGIMENTAL]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.REGIMENTAL).length,
-    [TEAM_CATEGORIES.CORPS_MEN]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.CORPS_MEN).length,
+    [TEAM_CATEGORIES.CORPS_OPEN]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.CORPS_OPEN).length,
     [TEAM_CATEGORIES.CORPS_WOMEN]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.CORPS_WOMEN).length,
   }), [allTeamResults]);
 
@@ -446,10 +446,10 @@ function TeamResultsNew() {
           Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
         </Button>
         <Button
-          variant={activeCategory === TEAM_CATEGORIES.CORPS_MEN ? 'primary' : 'outline'}
-          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_MEN)}
+          variant={activeCategory === TEAM_CATEGORIES.CORPS_OPEN ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_OPEN)}
         >
-          Corps Men ({categoryCounts[TEAM_CATEGORIES.CORPS_MEN]})
+          Corps Men ({categoryCounts[TEAM_CATEGORIES.CORPS_OPEN]})
         </Button>
         <Button
           variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
