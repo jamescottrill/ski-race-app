@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   List,
@@ -232,12 +232,12 @@ export default function GenerateStartListNew() {
     }
   };
 
-  const handleStrikeOut = (racerId) => {
+  const handleStrikeOut = useCallback((racerId) => {
     setStruckOutCompetitors((prev) => ({
       ...prev,
       [racerId]: !prev[racerId],
     }));
-  };
+  }, []);
 
   const handleBibChange = (list, setList, racerId, newBib, womenSeparate) => {
     const bibNumber = parseInt(newBib, 10);
@@ -414,14 +414,14 @@ export default function GenerateStartListNew() {
     return columns;
   };
 
-  const seedListColumns = [
+  const seedListColumns = useMemo(() => [
     {
       header: 'Strike Out',
       id: 'strikeout',
       cell: ({ row }) => (
         <Checkbox
           checked={struckOutCompetitors[row.original.racer_id] || false}
-          onCheckedChange={() => handleStrikeOut(row.original.racer_id)}
+          onChange={() => handleStrikeOut(row.original.racer_id)}
         />
       )
     },
@@ -446,7 +446,7 @@ export default function GenerateStartListNew() {
         </span>
       )
     }
-  ];
+  ], [struckOutCompetitors, handleStrikeOut]);
 
   return (
     <PageContainer>
