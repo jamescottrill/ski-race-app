@@ -1,18 +1,48 @@
 // eslint-disable no-nested-ternary
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, DataTable, Badge, Button } from '../design-system';
 import OtherResultTable from './DnsTable';
 import { convertRaceTime } from '../utils/TimeUtils';
 import { resultsTeamPdf } from '../utils/ResultsTeamPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 
+const TEAM_CATEGORIES = {
+  REGIMENTAL: 'regimental',
+  CORPS_OPEN: 'corps_open',
+  CORPS_WOMEN: 'corps_women',
+};
+
+const getCategoryLabel = (category) => {
+  switch (category) {
+    case TEAM_CATEGORIES.REGIMENTAL:
+      return 'Regimental';
+    case TEAM_CATEGORIES.CORPS_OPEN:
+      return 'Corps Open';
+    case TEAM_CATEGORIES.CORPS_WOMEN:
+      return 'Corps Women';
+    default:
+      return 'All';
+  }
+};
+
+const getTeamCategory = (team) => {
+  if (team.is_corps === 1 || team.is_corps === true) {
+    if (team.is_female === 1 || team.is_female === true) {
+      return TEAM_CATEGORIES.CORPS_WOMEN;
+    }
+    return TEAM_CATEGORIES.CORPS_OPEN;
+  }
+  return TEAM_CATEGORIES.REGIMENTAL;
+};
+
 export default function RaceTeamResultTwoRunNew({
   raceId,
   competitionId,
 }) {
-  const [data, setData] = useState([]);
-  const [dnfTeams, setDnfTeams] = useState([]);
+  const [allData, setAllData] = useState([]);
+  const [allDnfTeams, setAllDnfTeams] = useState([]);
   const [raceDetails, setRaceDetails] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(TEAM_CATEGORIES.REGIMENTAL);
 
   const initRaceDetails = async () => {
     const details = await getRaceDetails(raceId, competitionId);
@@ -73,6 +103,9 @@ export default function RaceTeamResultTwoRunNew({
                           cc.title,
                           rc.bib_number,
                           ct.team_name,
+                          ct.team_id,
+                          COALESCE(ct.is_corps, 0) AS is_corps,
+                          COALESCE(ct.is_female, 0) AS is_female,
                           f.factor                                                                  AS factor,
                           MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                               OVER (ORDER BY run1.race_id)                                          AS mintime
@@ -85,7 +118,6 @@ export default function RaceTeamResultTwoRunNew({
                           JOIN factors f ON f.race = r.race_type
                           LEFT JOIN competition_team_members ctm on p.id = ctm.racer_id AND ctm.competition_id = run1.competition_id AND ctm.race_id = run1.race_id
                           LEFT JOIN competition_team ct on ctm.team_id = ct.team_id AND ctm.competition_id = ct.competition_id
-                       WHERE NOT COALESCE(ct.is_corps, FALSE) AND NOT COALESCE(ct.is_female, FALSE)
           )
      SELECT
        *,
@@ -133,6 +165,9 @@ export default function RaceTeamResultTwoRunNew({
         lastName: result.last_name,
         title: result.title,
         teamName: result.team_name,
+        teamId: result.team_id,
+        is_corps: result.is_corps,
+        is_female: result.is_female,
         seedPoints: result.seed_points,
         bibNumber: result.bib_number,
         position: result.position,
@@ -153,35 +188,61 @@ export default function RaceTeamResultTwoRunNew({
 
     const teamResults = [];
     const dnfTeams = [];
-    const teamNames = mapped.map(r => r.teamName).filter((teamName, index, self) => {
-      return self.indexOf(teamName) === index && teamName !== null;
+
+    // Group by team_id to handle teams properly
+    const uniqueTeams = [];
+    const seenTeamIds = new Set();
+    mapped.forEach((r) => {
+      if (r.teamId && !seenTeamIds.has(r.teamId)) {
+        seenTeamIds.add(r.teamId);
+        uniqueTeams.push({
+          teamId: r.teamId,
+          teamName: r.teamName,
+          is_corps: r.is_corps,
+          is_female: r.is_female,
+        });
+      }
     });
-    teamNames.forEach((teamName) => {
-      const sortedRacers = finished.filter((r) => r.teamName === teamName).sort((a, b) => a.points - b.points);
-      const topNRacers = sortedRacers.slice(0, 3);
-      if (sortedRacers.length < 3) {
-        dnfTeams.push({ teamName });
+
+    uniqueTeams.forEach((team) => {
+      const sortedRacers = finished.filter((r) => r.teamId === team.teamId).sort((a, b) => a.seedPoints - b.seedPoints);
+
+      // Determine required team size based on category
+      const category = getTeamCategory(team);
+      let requiredMembers = 3; // Regimental default
+      if (category === TEAM_CATEGORIES.CORPS_OPEN) {
+        requiredMembers = 4;
+      } else if (category === TEAM_CATEGORIES.CORPS_WOMEN) {
+        requiredMembers = 2;
+      }
+
+      const topNRacers = sortedRacers.slice(0, requiredMembers);
+      if (sortedRacers.length < requiredMembers) {
+        dnfTeams.push({ teamName: team.teamName, category });
         return;
       }
       const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
       const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.totalTimeSecs, 0);
       const topNTimes = convertRaceTime(topNTimesSecs);
       const isHc = topNRacers.length > 0 && topNRacers[0].isHc;
-      const teamResult = { teamName, racers: topNRacers, points: topNPoints, time: topNTimes, isHc };
+      const teamResult = {
+        teamName: team.teamName,
+        teamId: team.teamId,
+        category,
+        racers: topNRacers,
+        points: topNPoints,
+        time: topNTimes,
+        isHc,
+      };
       teamResults.push(teamResult);
     });
+
+    // Sort by points (positions will be calculated per category when filtering)
     teamResults.sort((a, b) => a.points - b.points);
-    let position = 1;
-    teamResults.forEach((result) => {
-      if (result.isHc) {
-        result.position = '';
-      } else {
-        result.position = position;
-        position += 1;
-      }
-    });
-    setData(teamResults);
-    setDnfTeams(dnfTeams);
+    dnfTeams.sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
+
+    setAllData(teamResults);
+    setAllDnfTeams(dnfTeams);
   };
 
   useEffect(() => {
@@ -189,11 +250,40 @@ export default function RaceTeamResultTwoRunNew({
     initRaceDetails().catch(console.error);
   }, [raceId, competitionId]);
 
+  // Filter and calculate positions per category
+  const { data, dnfTeams } = useMemo(() => {
+    const filtered = allData.filter((team) => team.category === activeCategory);
+
+    // Calculate positions for this category
+    let position = 1;
+    const withPositions = filtered.map((team) => {
+      const teamCopy = { ...team };
+      if (teamCopy.isHc) {
+        teamCopy.position = '';
+      } else {
+        teamCopy.position = position;
+        position += 1;
+      }
+      return teamCopy;
+    });
+
+    const filteredDnf = allDnfTeams.filter((team) => team.category === activeCategory);
+
+    return { data: withPositions, dnfTeams: filteredDnf };
+  }, [allData, allDnfTeams, activeCategory]);
+
+  const categoryCounts = useMemo(() => ({
+    [TEAM_CATEGORIES.REGIMENTAL]: allData.filter((t) => t.category === TEAM_CATEGORIES.REGIMENTAL).length,
+    [TEAM_CATEGORIES.CORPS_OPEN]: allData.filter((t) => t.category === TEAM_CATEGORIES.CORPS_OPEN).length,
+    [TEAM_CATEGORIES.CORPS_WOMEN]: allData.filter((t) => t.category === TEAM_CATEGORIES.CORPS_WOMEN).length,
+  }), [allData]);
+
   const generatePDF = () => {
     resultsTeamPdf(
       raceDetails,
       data,
-      dnfTeams
+      dnfTeams,
+      getCategoryLabel(activeCategory)
     );
   };
 
@@ -254,6 +344,28 @@ export default function RaceTeamResultTwoRunNew({
 
   return (
     <div className="space-y-6">
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.REGIMENTAL ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.REGIMENTAL)}
+        >
+          Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
+        </Button>
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.CORPS_OPEN ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_OPEN)}
+        >
+          Corps Open ({categoryCounts[TEAM_CATEGORIES.CORPS_OPEN]})
+        </Button>
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_WOMEN)}
+        >
+          Corps Women ({categoryCounts[TEAM_CATEGORIES.CORPS_WOMEN]})
+        </Button>
+      </div>
+
       {data.length > 0 && (
         <Card>
           <CardContent>
@@ -270,7 +382,7 @@ export default function RaceTeamResultTwoRunNew({
       {dnfTeams.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Disqualified Teams</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">Incomplete Teams</h2>
             <div className="space-y-2">
               {dnfTeams.map((row, index) => (
                 <div key={index} className="text-center py-2 border-b last:border-b-0">
@@ -281,12 +393,11 @@ export default function RaceTeamResultTwoRunNew({
           </CardContent>
         </Card>
       )}
-      {data.length === 0 && (
+      {data.length === 0 && dnfTeams.length === 0 && (
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No {getCategoryLabel(activeCategory).toLowerCase()} teams found.
             </div>
           </CardContent>
         </Card>
@@ -294,7 +405,7 @@ export default function RaceTeamResultTwoRunNew({
 
       <div className="flex justify-center">
         <Button onClick={generatePDF}>
-          Download PDF
+          Download {getCategoryLabel(activeCategory)} PDF
         </Button>
       </div>
     </div>

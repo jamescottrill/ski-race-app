@@ -10,7 +10,7 @@ pdfMake.tableLayouts = {
   teamLayout: teamTableLayout
 };
 
-const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
+const resultsTeamPdf = (raceDetails, finished, dsqTeams, categoryLabel = '') => {
   const agg = [];
   finished.forEach((row, index) => {
     row.racers.forEach((racer, idx) => {
@@ -35,12 +35,15 @@ const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
       agg.push(result);
     });
   });
+
+  const titleSuffix = categoryLabel ? ` - ${categoryLabel}` : '';
+
   const docDefinition = {
     content: [
       { text: raceDetails.competition_name, style: 'header' },
       { text: raceDetails.competition_description, style: 'subheader' },
       { text: raceDetails.race_name, style: 'subheader' },
-      { text: 'Official Results', style: 'subheader' },
+      { text: `Official Team Results${titleSuffix}`, style: 'subheader' },
       {
         layout: 'teamLayout',
         style: 'table',
@@ -61,7 +64,7 @@ const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
           ],
         },
       },
-      { text: 'Disqualified Teams', style: 'subheader' },
+      { text: 'Incomplete Teams', style: 'subheader' },
     ],
     styles: tableStyles,
     pageMargins: [40, 50, 40, 50],
@@ -75,8 +78,9 @@ const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
   // Use Electron's dialog to choose save location
   pdfDoc.getBuffer((buffer) => {
     const formattedDate = getFormattedDate();
-    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumeric characters with underscores
-    const defaultFileName = `${formattedDate}_TEAM_RESULTS_${raceName.toUpperCase()}.pdf`;
+    const raceName = raceDetails.race_name.replace(/[^a-zA-Z0-9]/g, '_');
+    const categorySlug = categoryLabel ? `_${categoryLabel.toUpperCase().replace(/\s+/g, '_')}` : '';
+    const defaultFileName = `${formattedDate}_TEAM_RESULTS_${raceName.toUpperCase()}${categorySlug}.pdf`;
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((r) => {
