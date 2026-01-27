@@ -33,10 +33,13 @@ const getCategoryLabel = (category) => {
 };
 
 const getTeamCategory = (team) => {
-  if (!team.is_corps) {
-    return TEAM_CATEGORIES.REGIMENTAL;
+  if (team.is_corps === 1 || team.is_corps === true) {
+    if (team.is_female === 1 || team.is_female === true) {
+      return TEAM_CATEGORIES.CORPS_WOMEN;
+    }
+    return TEAM_CATEGORIES.CORPS_MEN;
   }
-  return team.is_female ? TEAM_CATEGORIES.CORPS_WOMEN : TEAM_CATEGORIES.CORPS_MEN;
+  return TEAM_CATEGORIES.REGIMENTAL;
 };
 
 function TeamResultsNew() {

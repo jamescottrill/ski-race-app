@@ -121,7 +121,7 @@ export default function TeamMembersPageNew() {
   const handleAddMember = async (racerId) => {
     try {
       // Check if this racer is already in a team of the same category (corps or regimental)
-      const isCorpsTeam = team?.is_corps;
+      const isCorpsTeam = team?.is_corps === 1 || team?.is_corps === true;
 
       const existingTeamQuery = `
         SELECT ct.team_name, ct.is_corps
@@ -185,7 +185,7 @@ export default function TeamMembersPageNew() {
       return;
     }
 
-    const isCorpsTeam = team?.is_corps;
+    const isCorpsTeam = team?.is_corps === 1 || team?.is_corps === true;
 
     setCopying(true);
     try {

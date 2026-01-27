@@ -105,7 +105,7 @@ export default function TeamListPageNew() {
                  AND ctm.race_id = ?
                  AND ctm.racer_id = ?
                  AND ct.is_corps = ?`,
-              [competitionId, race.race_id, member.racer_id, member.is_corps ? 1 : 0]
+              [competitionId, race.race_id, member.racer_id, (member.is_corps === 1 || member.is_corps === true) ? 1 : 0]
             );
 
             if (existingInCategory.length > 0) {
@@ -144,11 +144,14 @@ export default function TeamListPageNew() {
         SELECT
           ct.team_id,
           ct.team_name,
+          ct.is_corps,
+          ct.is_female,
+          ct.is_hc,
           COUNT(DISTINCT ctm.racer_id) as member_count
         FROM competition_team ct
         LEFT JOIN competition_team_members ctm ON ct.team_id = ctm.team_id
         WHERE ct.competition_id = ?
-        GROUP BY ct.team_id, ct.team_name
+        GROUP BY ct.team_id, ct.team_name, ct.is_corps, ct.is_female, ct.is_hc
         ORDER BY ct.team_name
       `;
       const result = await window.api.select(query, [competitionId]);
@@ -199,12 +202,32 @@ export default function TeamListPageNew() {
       )
     },
     {
-      header: 'Type',
-      accessorKey: 'team_type',
+      header: 'Category',
+      accessorKey: 'category',
       cell: ({ row }) => {
-        const type = row.original.team_type;
-        const variant = type === 'Alpine' ? 'primary' : type === 'Nordic' ? 'info' : 'default';
-        return <Badge variant={variant}>{type || 'General'}</Badge>;
+        const { is_corps, is_female, is_hc } = row.original;
+        let category;
+        let variant;
+
+        if (is_corps === 1 || is_corps === true) {
+          if (is_female === 1 || is_female === true) {
+            category = 'Corps Women';
+            variant = 'warning';
+          } else {
+            category = 'Corps Men';
+            variant = 'info';
+          }
+        } else {
+          category = 'Regimental';
+          variant = 'primary';
+        }
+
+        return (
+          <div className="flex gap-1">
+            <Badge variant={variant}>{category}</Badge>
+            {(is_hc === 1 || is_hc === true) && <Badge variant="default">HC</Badge>}
+          </div>
+        );
       }
     },
     {
