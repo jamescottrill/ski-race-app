@@ -60,9 +60,12 @@ export default function TeamListPageNew() {
 
     setCopying(true);
     try {
+      // Get source members with team info
       const sourceMembers = await window.api.select(
-        `SELECT team_id, racer_id FROM competition_team_members
-         WHERE competition_id = ? AND race_id = ?`,
+        `SELECT ctm.team_id, ctm.racer_id, ct.is_corps
+         FROM competition_team_members ctm
+         JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+         WHERE ctm.competition_id = ? AND ctm.race_id = ?`,
         [competitionId, sourceRaceId]
       );
 
@@ -74,35 +77,58 @@ export default function TeamListPageNew() {
 
       let copiedCount = 0;
       let skippedCount = 0;
+      let conflictCount = 0;
 
       for (const race of races) {
         if (race.race_id === sourceRaceId) continue;
 
         for (const member of sourceMembers) {
           try {
+            // Check if already in this exact team for this race
             const existing = await window.api.select(
               `SELECT 1 FROM competition_team_members
                WHERE competition_id = ? AND team_id = ? AND race_id = ? AND racer_id = ?`,
               [competitionId, member.team_id, race.race_id, member.racer_id]
             );
 
-            if (existing.length === 0) {
-              await window.api.insert(
-                `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id)
-                 VALUES (?, ?, ?, ?)`,
-                [competitionId, member.team_id, race.race_id, member.racer_id]
-              );
-              copiedCount++;
-            } else {
+            if (existing.length > 0) {
               skippedCount++;
+              continue;
             }
+
+            // Check if already in another team of the same category for this race
+            const existingInCategory = await window.api.select(
+              `SELECT ct.team_name
+               FROM competition_team_members ctm
+               JOIN competition_team ct ON ct.team_id = ctm.team_id AND ct.competition_id = ctm.competition_id
+               WHERE ctm.competition_id = ?
+                 AND ctm.race_id = ?
+                 AND ctm.racer_id = ?
+                 AND ct.is_corps = ?`,
+              [competitionId, race.race_id, member.racer_id, member.is_corps ? 1 : 0]
+            );
+
+            if (existingInCategory.length > 0) {
+              conflictCount++;
+              continue;
+            }
+
+            await window.api.insert(
+              `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id)
+               VALUES (?, ?, ?, ?)`,
+              [competitionId, member.team_id, race.race_id, member.racer_id]
+            );
+            copiedCount++;
           } catch (err) {
             console.error('Failed to copy member:', err);
           }
         }
       }
 
-      toast.success(`Copied ${copiedCount} assignments to ${races.length - 1} race(s). ${skippedCount} already existed.`);
+      let message = `Copied ${copiedCount} assignments to ${races.length - 1} race(s).`;
+      if (skippedCount > 0) message += ` ${skippedCount} already existed.`;
+      if (conflictCount > 0) message += ` ${conflictCount} skipped due to conflicts.`;
+      toast.success(message);
       await fetchTeams();
     } catch (error) {
       console.error('Failed to copy teams:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Trophy, Users, Medal, ArrowLeft, Star, Download } from 'lucide-react';
 import {
@@ -10,20 +10,57 @@ import {
   DataTable,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { generatePDF } from '../../pdfs/SeedList';
+import { generateTeamResultsPDF } from '../../pdfs/TeamResultsPdf';
 import { fetchSeedList } from '../../utils/FetchSeedList';
+
+const TEAM_CATEGORIES = {
+  REGIMENTAL: 'regimental',
+  CORPS_MEN: 'corps_men',
+  CORPS_WOMEN: 'corps_women',
+};
+
+const getCategoryLabel = (category) => {
+  switch (category) {
+    case TEAM_CATEGORIES.REGIMENTAL:
+      return 'Regimental';
+    case TEAM_CATEGORIES.CORPS_MEN:
+      return 'Corps Men';
+    case TEAM_CATEGORIES.CORPS_WOMEN:
+      return 'Corps Women';
+    default:
+      return 'All';
+  }
+};
+
+const getTeamCategory = (team) => {
+  if (!team.is_corps) {
+    return TEAM_CATEGORIES.REGIMENTAL;
+  }
+  return team.is_female ? TEAM_CATEGORIES.CORPS_WOMEN : TEAM_CATEGORIES.CORPS_MEN;
+};
 
 function TeamResultsNew() {
   const { competitionId } = useParams();
-  const [teamResults, setTeamResults] = useState([]);
+  const [allTeamResults, setAllTeamResults] = useState([]);
   const [races, setRaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState(TEAM_CATEGORIES.REGIMENTAL);
+  const [competitionName, setCompetitionName] = useState('');
   const handleBack = useBackButton();
 
   useEffect(() => {
     const fetchTeamResults = async () => {
       setLoading(true);
       try {
+        // Fetch competition name
+        const compResult = await window.api.select(
+          'SELECT competition_name FROM competitions WHERE id = ?',
+          [competitionId]
+        );
+        if (compResult.length > 0) {
+          setCompetitionName(compResult[0].competition_name);
+        }
+
         // Get completed team races
         const racesQuery = `
           SELECT DISTINCT rr.race_id AS id, r.race_name AS text, r.race_date AS raceDate, r.is_seeding AS isSeeding
@@ -40,7 +77,7 @@ function TeamResultsNew() {
         setRaces(raceList);
 
         if (raceList.length === 0) {
-          setTeamResults([]);
+          setAllTeamResults([]);
           setLoading(false);
           return;
         }
@@ -70,6 +107,7 @@ function TeamResultsNew() {
             is_reserve: team.is_reserve,
             is_female: team.is_female,
             is_hc: team.is_hc,
+            category: getTeamCategory(team),
             member_count: 0,
           };
 
@@ -165,10 +203,10 @@ function TeamResultsNew() {
           }
         });
 
-        setTeamResults(teamStandings);
+        setAllTeamResults(teamStandings);
       } catch (error) {
         console.error('Failed to fetch team results:', error);
-        setTeamResults([]);
+        setAllTeamResults([]);
       } finally {
         setLoading(false);
       }
@@ -177,8 +215,77 @@ function TeamResultsNew() {
     fetchTeamResults();
   }, [competitionId]);
 
-  const seedListPdf = () => {
-    generatePDF(teamResults, races);
+  const filteredTeamResults = useMemo(() => {
+    const filtered = allTeamResults.filter(team => team.category === activeCategory);
+
+    // Re-calculate positions for filtered results (excluding HC teams)
+    let position = 1;
+    let previousTotal = null;
+    let previousIndex = 0;
+
+    return filtered.map((team, index) => {
+      const teamCopy = { ...team };
+      if (teamCopy.is_hc) {
+        teamCopy.position = 'HC';
+      } else {
+        if (previousTotal !== null && teamCopy.total_points !== previousTotal) {
+          position = previousIndex + 1;
+        }
+        teamCopy.position = position;
+        previousTotal = teamCopy.total_points;
+        previousIndex += 1;
+      }
+      return teamCopy;
+    });
+  }, [allTeamResults, activeCategory]);
+
+  const categoryCounts = useMemo(() => ({
+    [TEAM_CATEGORIES.REGIMENTAL]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.REGIMENTAL).length,
+    [TEAM_CATEGORIES.CORPS_MEN]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.CORPS_MEN).length,
+    [TEAM_CATEGORIES.CORPS_WOMEN]: allTeamResults.filter(t => t.category === TEAM_CATEGORIES.CORPS_WOMEN).length,
+  }), [allTeamResults]);
+
+  const handleExportPdf = () => {
+    generateTeamResultsPDF(
+      filteredTeamResults,
+      races,
+      getCategoryLabel(activeCategory),
+      competitionName
+    );
+  };
+
+  const handleExportAllPdfs = async () => {
+    for (const category of Object.values(TEAM_CATEGORIES)) {
+      const categoryResults = allTeamResults.filter(team => team.category === category);
+      if (categoryResults.length === 0) continue;
+
+      // Re-calculate positions for this category
+      let position = 1;
+      let previousTotal = null;
+      let previousIndex = 0;
+
+      const resultsWithPositions = categoryResults.map((team) => {
+        const teamCopy = { ...team };
+        if (teamCopy.is_hc) {
+          teamCopy.position = 'HC';
+        } else {
+          if (previousTotal !== null && teamCopy.total_points !== previousTotal) {
+            position = previousIndex + 1;
+          }
+          teamCopy.position = position;
+          previousTotal = teamCopy.total_points;
+          previousIndex += 1;
+        }
+        return teamCopy;
+      });
+
+      await generateTeamResultsPDF(
+        resultsWithPositions,
+        races,
+        getCategoryLabel(category),
+        competitionName
+      );
+    }
   };
 
   const createColumns = (raceList) => {
@@ -283,28 +390,37 @@ function TeamResultsNew() {
     return [...baseColumns, ...raceColumns, totalColumn];
   };
 
-  // Calculate stats
+  // Calculate stats based on filtered results
   const stats = {
-    totalTeams: teamResults.length,
+    totalTeams: filteredTeamResults.length,
     completedRaces: races.length,
     leadingScore:
-      teamResults.length > 0 ? teamResults[0]?.total_points?.toFixed(2) || 0 : 0,
+      filteredTeamResults.length > 0 ? filteredTeamResults[0]?.total_points?.toFixed(2) || 0 : 0,
   };
 
   return (
     <PageContainer>
       <PageHeader
         title="Team Results"
-        subtitle="Competition team standings and scores"
+        subtitle={`${getCategoryLabel(activeCategory)} standings and scores`}
         actions={
           <div className="flex gap-3">
-            {teamResults.length > 0 && (
+            {filteredTeamResults.length > 0 && (
               <Button
                 variant="primary"
-                onClick={seedListPdf}
+                onClick={handleExportPdf}
                 leftIcon={<Download className="w-4 h-4" />}
               >
-                Download PDF
+                Download {getCategoryLabel(activeCategory)} PDF
+              </Button>
+            )}
+            {allTeamResults.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleExportAllPdfs}
+                leftIcon={<Download className="w-4 h-4" />}
+              >
+                Download All PDFs
               </Button>
             )}
             <Button
@@ -318,13 +434,35 @@ function TeamResultsNew() {
         }
       />
 
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.REGIMENTAL ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.REGIMENTAL)}
+        >
+          Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
+        </Button>
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.CORPS_MEN ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_MEN)}
+        >
+          Corps Men ({categoryCounts[TEAM_CATEGORIES.CORPS_MEN]})
+        </Button>
+        <Button
+          variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
+          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_WOMEN)}
+        >
+          Corps Women ({categoryCounts[TEAM_CATEGORIES.CORPS_WOMEN]})
+        </Button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-primary-700">{stats.totalTeams}</p>
-              <p className="text-sm text-neutral-600">Total Teams</p>
+              <p className="text-sm text-neutral-600">{getCategoryLabel(activeCategory)} Teams</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
           </div>
@@ -356,17 +494,17 @@ function TeamResultsNew() {
             <div className="flex items-center justify-center h-64">
               <div className="text-neutral-500">Loading team results...</div>
             </div>
-          ) : teamResults.length === 0 ? (
+          ) : filteredTeamResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <Trophy className="w-12 h-12 text-neutral-300" />
               <p className="text-neutral-500">
-                No team standings available. Teams need at least 3 members who have completed all individual races.
+                No {getCategoryLabel(activeCategory).toLowerCase()} team standings available. Teams need sufficient members who have completed all individual races.
               </p>
             </div>
           ) : (
             <DataTable
               columns={createColumns(races)}
-              data={teamResults}
+              data={filteredTeamResults}
               pageSize={50}
               enableSorting={false}
             />
