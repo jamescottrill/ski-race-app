@@ -391,6 +391,11 @@ function RecordRaceResultsPageNew() {
   useEffect(() => {
     if (activeTab && !loading) {
       const runNumber = parseInt(activeTab, 10);
+      // Reset to run 1 if current tab exceeds number of runs
+      if (raceDetails && runNumber > raceDetails.number_runs) {
+        setActiveTab('1');
+        return;
+      }
       if (!competitors[activeTab]) {
         fetchCompetitorsForRun(runNumber);
       }
@@ -398,7 +403,7 @@ function RecordRaceResultsPageNew() {
         fetchRunDetails(runNumber);
       }
     }
-  }, [activeTab]);
+  }, [activeTab, raceDetails?.number_runs]);
 
   const handleTimeBlur = async (runNumber, competitorId, value) => {
     const cleanValue = (value || '').trim();
@@ -846,7 +851,13 @@ function RecordRaceResultsPageNew() {
   }
 
   const currentRunCompetitors = competitors[activeTab] || [];
-  const currentRun = raceRuns.find((r) => String(r.run_number) === activeTab);
+  // Filter runs to only show up to the configured number_runs
+  const visibleRuns = raceRuns.filter(
+    (r) => r.run_number <= (raceDetails?.number_runs || 1),
+  );
+  const currentRun = visibleRuns.find(
+    (r) => String(r.run_number) === activeTab,
+  );
 
   return (
     <PageContainer>
@@ -949,10 +960,10 @@ function RecordRaceResultsPageNew() {
 
       <Card>
         <CardContent noPadding>
-          {raceRuns.length > 0 ? (
+          {visibleRuns.length > 0 ? (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start border-b">
-                {raceRuns.map((run) => (
+                {visibleRuns.map((run) => (
                   <TabsTrigger
                     key={run.run_number}
                     value={String(run.run_number)}
@@ -964,7 +975,7 @@ function RecordRaceResultsPageNew() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {raceRuns.map((run) => (
+              {visibleRuns.map((run) => (
                 <TabsContent
                   key={run.run_number}
                   value={String(run.run_number)}
