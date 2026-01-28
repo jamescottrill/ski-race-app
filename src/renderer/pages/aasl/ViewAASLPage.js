@@ -19,6 +19,7 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { getAllAASLEntries, getAASLSeasons, deleteAASLBySeason } from '../../utils/AASLManagement';
+import {hashServiceNumber} from '../../utils/hashUtils';
 import toast from 'react-hot-toast';
 
 export default function ViewAASLPage() {
@@ -29,6 +30,7 @@ export default function ViewAASLPage() {
   const [selectedSeason, setSelectedSeason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [filteredEntries, setFilteredEntries] = useState([]);
 
   useEffect(() => {
     const fetchSeasons = async () => {
@@ -52,6 +54,24 @@ export default function ViewAASLPage() {
     fetchEntries();
   }, [selectedSeason]);
 
+  useEffect(() => {
+    const filterEntries = async () => {
+      if (!searchTerm) {
+        setFilteredEntries(entries);
+        return;
+      }
+      const search = searchTerm.toLowerCase();
+      const hashedSearch = await hashServiceNumber(search);
+      const filtered = entries.filter(entry => (
+        entry.first_name?.toLowerCase().includes(search) ||
+        entry.last_name?.toLowerCase().includes(search) ||
+        entry.service_number === hashedSearch
+      ));
+      setFilteredEntries(filtered);
+    };
+    filterEntries();
+  }, [entries, searchTerm]);
+
   const handleDeleteSeason = async () => {
     if (!selectedSeason) return;
 
@@ -73,25 +93,11 @@ export default function ViewAASLPage() {
     }
   };
 
-  const filteredEntries = entries.filter(entry => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      entry.first_name?.toLowerCase().includes(search) ||
-      entry.last_name?.toLowerCase().includes(search) ||
-      entry.service_number?.toLowerCase().includes(search)
-    );
-  });
-
   const columns = [
     {
       header: 'Pos',
       accessorKey: 'position',
       cell: ({ row }) => row.index + 1
-    },
-    {
-      header: 'Service Number',
-      accessorKey: 'service_number'
     },
     {
       header: 'Name',

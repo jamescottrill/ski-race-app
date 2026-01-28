@@ -60,8 +60,16 @@ export const getAASLPointsByName = async (firstName, lastName, season = null) =>
  */
 export const getAllAASLEntries = async (season = null) => {
   const query = season
-    ? `SELECT * FROM aasl WHERE season = ? ORDER BY seed_points ASC`
-    : `SELECT * FROM aasl ORDER BY season DESC, seed_points ASC`;
+    ? `SELECT a.category, a.seed_points, a.season,
+       p.first_name, p.last_name, p.gender, p.title
+        FROM aasl a
+        LEFT JOIN people p ON a.service_number = p.id
+         WHERE season = ? ORDER BY seed_points ASC`
+    : `SELECT a.category, a.seed_points, a.season,
+       p.first_name, p.last_name, p.gender, p.title
+        FROM aasl a
+        LEFT JOIN people p ON a.service_number = p.id
+         ORDER BY season DESC, seed_points ASC`;
   const params = season ? [season] : [];
 
   try {
@@ -230,12 +238,13 @@ export const getAASLStats = async (season) => {
   const query = `
     SELECT
       COUNT(*) as total,
-      COUNT(CASE WHEN gender = 'M' THEN 1 END) as male,
-      COUNT(CASE WHEN gender = 'F' THEN 1 END) as female,
+      COUNT(CASE WHEN p.gender = 'M' THEN 1 END) as male,
+      COUNT(CASE WHEN p.gender = 'F' THEN 1 END) as female,
       MIN(seed_points) as best_points,
       MAX(seed_points) as worst_points,
       AVG(seed_points) as avg_points
-    FROM aasl
+    FROM aasl a
+    LEFT JOIN people p ON p.id = a.service_number
     WHERE season = ?
   `;
 
