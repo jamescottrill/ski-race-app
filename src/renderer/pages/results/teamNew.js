@@ -91,6 +91,15 @@ function TeamResultsNew() {
             raceList.map((e) => e.id)
           );
 
+        // Calculate last place seed points for each race (for penalty calculation)
+        const lastPlaceSeedPoints = {};
+        for (const race of raceList) {
+          const racePoints = seedListData
+            .map((s) => s[race.id])
+            .filter((p) => p !== null && p !== undefined && !isNaN(p));
+          lastPlaceSeedPoints[race.id] = racePoints.length > 0 ? Math.max(...racePoints) : 0;
+        }
+
         // Get teams from competition_team
         const teamsQuery = `
           SELECT team_id, team_name, is_corps, is_reserve, is_female, is_hc
@@ -103,6 +112,7 @@ function TeamResultsNew() {
         const teamStandings = [];
 
         for (const team of teams) {
+          const log = team.team_id === "c3fe1bdf-b78d-4117-b84b-57f4be005393";
           const teamResult = {
             team_id: team.team_id,
             team_name: team.team_name,
@@ -112,8 +122,8 @@ function TeamResultsNew() {
             is_hc: team.is_hc,
             category: getTeamCategory(team),
             member_count: 0,
+            hasPenalty: false,
           };
-
           let totalPoints = 0;
           let validRaceCount = 0;
 
@@ -131,31 +141,37 @@ function TeamResultsNew() {
               team.team_id,
               race.id,
             ]);
+            if(log) console.log(members);
 
             // Update member count (use max across all races)
+            if(log) console.log(teamResult);
             if (members.length > teamResult.member_count) {
               teamResult.member_count = members.length;
             }
+
             // Get seed points for each team member from the seed list
-            // Only include actual finishing seed points, not artificial/penalty points
-            const memberSeedPoints = members
-              .map((member) => {
-                const seedData = seedListData.find(
-                  (s) => s.racer_id === member.racer_id
-                );
-                // Check if this racer has actual (non-penalty) seed points for this race
-                if (
-                  seedData &&
-                  seedData[race.id] !== null &&
-                  seedData[race.id] !== undefined &&
-                  !seedData[`${race.id}-penalty`]
-                ) {
-                  return parseFloat(seedData[race.id]);
-                }
-                return null;
-              })
-              .filter((p) => p !== null && !isNaN(p))
-              .sort((a, b) => a - b);
+            // Separate finished racers from DNF racers
+            const finishedMemberPoints = [];
+            const dnfMemberCount = { count: 0 };
+
+            members.forEach((member) => {
+              const seedData = seedListData.find(
+                (s) => s.racer_id === member.racer_id
+              );
+              if (
+                seedData &&
+                seedData[race.id] !== null &&
+                seedData[race.id] !== undefined &&
+                !seedData[`${race.id}-penalty`]
+              ) {
+                finishedMemberPoints.push(parseFloat(seedData[race.id]));
+              } else {
+                // This is a DNF racer eligible for penalty points
+                dnfMemberCount.count += 1;
+              }
+            });
+
+            finishedMemberPoints.sort((a, b) => a - b);
 
             // Determine how many members count based on team type
             // Corps women: 2, Corps men: 4, Regular: 3
@@ -164,11 +180,27 @@ function TeamResultsNew() {
               countingMembers = team.is_female ? 2 : 4;
             }
 
-            // Sum the top N members' seed points
-            const topPoints = memberSeedPoints.slice(0, countingMembers);
+            // Check if team has enough eligible racers (finished + DNF)
+            const totalEligible = finishedMemberPoints.length + dnfMemberCount.count;
+            if(log) console.log("totalEligible", totalEligible);
+            if(log) console.log("finishedMemberPoints", finishedMemberPoints);
+            if(log) console.log("dnfMemberCount", dnfMemberCount);
 
-            if (topPoints.length >= countingMembers) {
-              const raceTotal = topPoints.reduce((sum, p) => sum + p, 0);
+            if (totalEligible >= countingMembers) {
+              // Take finished racers first, then fill with penalty points
+              const topFinished = finishedMemberPoints.slice(0, countingMembers);
+              const neededFromDnf = countingMembers - topFinished.length;
+
+              let raceTotal = topFinished.reduce((sum, p) => sum + p, 0);
+
+              if (neededFromDnf > 0) {
+                // Add penalty points (last place + 2) for each DNF racer needed
+                const penaltyPoints = lastPlaceSeedPoints[race.id] + 2;
+                raceTotal += neededFromDnf * penaltyPoints;
+                teamResult.hasPenalty = true;
+                teamResult[`${race.id}-penalty`] = true;
+              }
+
               teamResult[race.id] = raceTotal;
               totalPoints += raceTotal;
               validRaceCount += 1;
@@ -181,6 +213,9 @@ function TeamResultsNew() {
           if (validRaceCount === raceList.length) {
             teamResult.total_points = totalPoints;
             teamStandings.push(teamResult);
+          } else{
+            if(log) console.log(teamResult);
+            if(log) console.log(validRaceCount);
           }
         }
 
@@ -369,9 +404,11 @@ function TeamResultsNew() {
       accessorKey: race.id.toString(),
       cell: ({ row }) => {
         const value = row.original[race.id];
+        const hasPenalty = row.original[`${race.id}-penalty`];
         return (
-          <div className="text-center font-mono">
+          <div className={`text-center font-mono ${hasPenalty ? 'text-warning' : ''}`} title={hasPenalty ? 'Includes AWSA Rule 215.6.1b.(2) penalty' : ''}>
             {value !== null && value !== undefined ? value.toFixed(2) : '-'}
+            {hasPenalty && ' *'}
           </div>
         );
       }
