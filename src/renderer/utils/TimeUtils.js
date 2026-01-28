@@ -1,10 +1,12 @@
 const convertRaceTime = (time) => {
   if (!time) return '';
-  const minutes = Math.floor(time / 60)
+  // Round to 2 decimal places to avoid floating point precision errors
+  const roundedTime = Math.round(time * 100) / 100;
+  const minutes = Math.floor(roundedTime / 60)
     .toString()
     .padStart(2, '0');
-  const seconds = (time % 60).toString().split('.')[0].padStart(2, '0');
-  const milliseconds = (time.toString().split('.')[1] ?? '00').padEnd(2, '0');
+  const seconds = Math.floor(roundedTime % 60).toString().padStart(2, '0');
+  const milliseconds = (roundedTime.toFixed(2).split('.')[1] ?? '00');
   return `${minutes}:${seconds}.${milliseconds}`;
 };
 

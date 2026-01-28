@@ -198,7 +198,7 @@ function RaceResultOneRun({ raceId, competitionId }) {
                   </TableCell>
                   <TableCell align="center">{row.team}</TableCell>
                   <TableCell align="center">{row.run1Time}</TableCell>
-                  <TableCell align="center">{row.seedPoints}</TableCell>
+                  <TableCell align="center">{row.seedPoints?.toFixed(2) ?? '-'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

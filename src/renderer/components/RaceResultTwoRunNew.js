@@ -353,7 +353,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       accessorKey: 'seedPoints',
       header: 'Race Points',
       cell: ({ row }) => (
-        <div className="text-center">{row.original.seedPoints}</div>
+        <div className="text-center">{row.original.seedPoints?.toFixed(2) ?? '-'}</div>
       ),
     },
   ];

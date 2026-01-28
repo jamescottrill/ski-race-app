@@ -284,7 +284,7 @@ const RaceResultTwoRun = ({ raceId, competitionId }) => {
                   <TableCell align="center">{row.run1Time}</TableCell>
                   <TableCell align="center">{row.run2Time}</TableCell>
                   <TableCell align="center">{row.totalTime}</TableCell>
-                  <TableCell align="center">{row.seedPoints}</TableCell>
+                  <TableCell align="center">{row.seedPoints?.toFixed(2) ?? '-'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

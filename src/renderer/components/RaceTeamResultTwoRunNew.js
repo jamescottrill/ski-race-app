@@ -392,7 +392,7 @@ export default function RaceTeamResultTwoRunNew({
       accessorKey: 'points',
       header: 'Race Points',
       cell: ({ row }) => (
-        <div className="text-center font-medium">{row.original.points}</div>
+        <div className="text-center font-medium">{row.original.points?.toFixed(2) ?? '-'}</div>
       ),
     },
   ];

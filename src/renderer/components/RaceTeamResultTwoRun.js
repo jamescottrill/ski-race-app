@@ -225,7 +225,7 @@ export default function RaceTeamResultTwoRun({
                       <TableCell>{racer.lastName.toUpperCase()} {racer.firstName}</TableCell>
                       <TableCell>{racer.totalTime}</TableCell>
                       {idx === 0 && (
-                        <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.points}</TableCell>
+                        <TableCell align="center" className="align-top" rowSpan={row.racers.length}>{row.points?.toFixed(2) ?? '-'}</TableCell>
                       )}
                     </TableRow>
                   ))}
