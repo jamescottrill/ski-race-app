@@ -1,6 +1,6 @@
 // eslint-disable no-nested-ternary
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, DataTable, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent } from '../design-system';
+import { Card, CardContent, DataTable, Badge, Button } from '../design-system';
 import OtherResultTable from './DnsTable';
 import { resultsTwoPdf } from '../utils/ResultsTwoPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
@@ -272,6 +272,11 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
         run2Dsq,
       );
     }
+  };
+
+  const generateAllGenderPDFs = () => {
+    generatePDF('F');
+    generatePDF('M');
   };
 
   // Define columns for main results DataTable
@@ -754,40 +759,44 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
   if (raceDetails?.women_separate) {
     return (
       <div className="space-y-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start border-b mb-4">
-            <TabsTrigger value="women">Women</TabsTrigger>
-            <TabsTrigger value="men">Men</TabsTrigger>
-          </TabsList>
-          <TabsContent value="women">
-            {renderResultsForGender('F', 'women')}
-            <div className="flex justify-center mt-6">
-              <Button onClick={() => generatePDF('F')}>
-                Download Women&apos;s Results PDF
-              </Button>
-            </div>
-          </TabsContent>
-          <TabsContent value="men">
-            {renderResultsForGender('M', 'men')}
-            <div className="flex justify-center mt-6">
-              <Button onClick={() => generatePDF('M')}>
-                Download Men&apos;s Results PDF
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              variant={activeTab === 'women' ? 'primary' : 'outline'}
+              onClick={() => setActiveTab('women')}
+            >
+              Women
+            </Button>
+            <Button
+              variant={activeTab === 'men' ? 'primary' : 'outline'}
+              onClick={() => setActiveTab('men')}
+            >
+              Men
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => generatePDF(activeTab === 'women' ? 'F' : 'M')}>
+              Download {activeTab === 'women' ? "Women's" : "Men's"} Results PDF
+            </Button>
+            <Button variant="outline" onClick={generateAllGenderPDFs}>
+              Download All Individual PDFs
+            </Button>
+          </div>
+        </div>
+        {activeTab === 'women' && renderResultsForGender('F', 'women')}
+        {activeTab === 'men' && renderResultsForGender('M', 'men')}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {renderMixedResults()}
-      <div className="flex justify-center">
-        <Button onClick={generatePDF}>
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => generatePDF()}>
           Download PDF
         </Button>
       </div>
+      {renderMixedResults()}
     </div>
   );
 };

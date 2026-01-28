@@ -278,6 +278,23 @@ export default function RaceTeamResultTwoRunNew({
     [TEAM_CATEGORIES.CORPS_WOMEN]: allData.filter((t) => t.category === TEAM_CATEGORIES.CORPS_WOMEN).length,
   }), [allData]);
 
+  const getDataForCategory = (category) => {
+    const filtered = allData.filter((team) => team.category === category);
+    let position = 1;
+    const withPositions = filtered.map((team) => {
+      const teamCopy = { ...team };
+      if (teamCopy.isHc) {
+        teamCopy.position = '';
+      } else {
+        teamCopy.position = position;
+        position += 1;
+      }
+      return teamCopy;
+    });
+    const filteredDnf = allDnfTeams.filter((team) => team.category === category);
+    return { data: withPositions, dnfTeams: filteredDnf };
+  };
+
   const generatePDF = () => {
     resultsTeamPdf(
       raceDetails,
@@ -285,6 +302,16 @@ export default function RaceTeamResultTwoRunNew({
       dnfTeams,
       getCategoryLabel(activeCategory)
     );
+  };
+
+  const generateAllPDFs = () => {
+    const categories = [TEAM_CATEGORIES.REGIMENTAL, TEAM_CATEGORIES.CORPS_OPEN, TEAM_CATEGORIES.CORPS_WOMEN];
+    categories.forEach((category) => {
+      const { data: categoryData, dnfTeams: categoryDnfTeams } = getDataForCategory(category);
+      if (categoryData.length > 0 || categoryDnfTeams.length > 0) {
+        resultsTeamPdf(raceDetails, categoryData, categoryDnfTeams, getCategoryLabel(category));
+      }
+    });
   };
 
   // Define columns for team results DataTable
@@ -344,26 +371,36 @@ export default function RaceTeamResultTwoRunNew({
 
   return (
     <div className="space-y-6">
-      {/* Category Tabs */}
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant={activeCategory === TEAM_CATEGORIES.REGIMENTAL ? 'primary' : 'outline'}
-          onClick={() => setActiveCategory(TEAM_CATEGORIES.REGIMENTAL)}
-        >
-          Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
-        </Button>
-        <Button
-          variant={activeCategory === TEAM_CATEGORIES.CORPS_OPEN ? 'primary' : 'outline'}
-          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_OPEN)}
-        >
-          Corps Open ({categoryCounts[TEAM_CATEGORIES.CORPS_OPEN]})
-        </Button>
-        <Button
-          variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
-          onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_WOMEN)}
-        >
-          Corps Women ({categoryCounts[TEAM_CATEGORIES.CORPS_WOMEN]})
-        </Button>
+      {/* Action Bar */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <Button
+            variant={activeCategory === TEAM_CATEGORIES.REGIMENTAL ? 'primary' : 'outline'}
+            onClick={() => setActiveCategory(TEAM_CATEGORIES.REGIMENTAL)}
+          >
+            Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
+          </Button>
+          <Button
+            variant={activeCategory === TEAM_CATEGORIES.CORPS_OPEN ? 'primary' : 'outline'}
+            onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_OPEN)}
+          >
+            Corps Open ({categoryCounts[TEAM_CATEGORIES.CORPS_OPEN]})
+          </Button>
+          <Button
+            variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
+            onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_WOMEN)}
+          >
+            Corps Women ({categoryCounts[TEAM_CATEGORIES.CORPS_WOMEN]})
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={generatePDF}>
+            Download {getCategoryLabel(activeCategory)} PDF
+          </Button>
+          <Button variant="outline" onClick={generateAllPDFs}>
+            Download All Team PDFs
+          </Button>
+        </div>
       </div>
 
       {data.length > 0 && (
@@ -402,12 +439,6 @@ export default function RaceTeamResultTwoRunNew({
           </CardContent>
         </Card>
       )}
-
-      <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download {getCategoryLabel(activeCategory)} PDF
-        </Button>
-      </div>
     </div>
   );
 }

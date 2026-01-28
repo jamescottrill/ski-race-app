@@ -113,7 +113,7 @@ export default function RaceResultsPageNew() {
     <PageContainer>
       <PageHeader
         title="Results"
-        subtitle={`${raceDetails.race_name || ''} • ${raceDetails.venue || ''}`}
+        subtitle={`${raceDetails.race_name || ''}${raceDetails.venue ? ' • ':''}${raceDetails.venue || ''}`}
         actions={
           <Button
             variant="outline"
