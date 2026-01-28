@@ -140,13 +140,13 @@ class BasePdfGenerator {
             style: 'text',
           },
           { width: 120, text: 'Vertical Difference (m): ', style: 'key' },
-          { 
-            width: '*', 
-            text: raceDetails.altitude_difference || 
-                  (raceDetails.start_altitude && raceDetails.finish_altitude 
-                    ? raceDetails.start_altitude - raceDetails.finish_altitude 
-                    : 'N/A'), 
-            style: 'text' 
+          {
+            width: '*',
+            text: raceDetails.altitude_difference ||
+                  (raceDetails.start_altitude && raceDetails.finish_altitude
+                    ? raceDetails.start_altitude - raceDetails.finish_altitude
+                    : 'N/A'),
+            style: 'text'
           },
         ],
         columnGap: 5,
@@ -173,7 +173,7 @@ class BasePdfGenerator {
    */
   createRunSection(runNumber, runDetails) {
     const runTitle = runNumber === 1 ? 'First Run' : runNumber === 2 ? 'Second Run' : `Run ${runNumber}`;
-    
+
     const sections = [
       {
         columns: [{ width: '*', text: runTitle, style: 'subheader' }],
@@ -248,7 +248,7 @@ class BasePdfGenerator {
           ...rows,
         ],
       },
-      layout: 'lightHorizontalLines',
+      layout: 'headerLineOnly',
       margin: [0, 10, 0, 10],
     };
   }

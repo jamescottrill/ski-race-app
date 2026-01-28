@@ -67,7 +67,11 @@ const generatePDF = (seedList, races, title=null, hasInitialColumn=false) => {
       r.forEach((race) => {
         output.push(competitor[race.id]);
       });
-      output.push(competitor.seed_points);
+      // Use total_points if available (for championship results), otherwise use seed_points (for seed lists)
+      const overallPoints = competitor.total_points !== undefined
+        ? competitor.total_points.toFixed(2)
+        : competitor.seed_points;
+      output.push(overallPoints);
       results.push(output);
     });
     return results;
@@ -78,7 +82,7 @@ const generatePDF = (seedList, races, title=null, hasInitialColumn=false) => {
       { text: pageTitle, style: 'header' },
       {
         style: 'table',
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         columnGap: 0,
         table: {
           headerRows: 1,
