@@ -263,7 +263,7 @@ const resultsTwoPdf = (
     content.push(
       { text: 'Disqualified 1st Run', style: 'subheaderLeft' },
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,

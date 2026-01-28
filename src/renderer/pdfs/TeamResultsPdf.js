@@ -50,7 +50,7 @@ const generateTeamResultsPDF = (teamResults, races, categoryLabel, competitionNa
         { text: pageTitle, style: 'header' },
         {
           style: 'table',
-          layout: 'lightHorizontalLines',
+          layout: 'headerLineOnly',
           columnGap: 0,
           table: {
             headerRows: 1,

@@ -32,7 +32,7 @@ const secondRunStartListPdf = (raceDetails, startList) => {
         columnGap: 10,
       },
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,

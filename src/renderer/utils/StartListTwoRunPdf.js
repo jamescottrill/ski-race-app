@@ -225,7 +225,7 @@ const generateStartListTwoRunPdfDocument = (raceDetails, competitors, genderLabe
       { text: `Start List${titleSuffix}`, style: 'subheader' },
       ...runDetailsSection,
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,

@@ -202,7 +202,7 @@ const generateStartListPdfDocument = (raceDetails, competitors, genderLabel = ''
       { text: `Start List${titleSuffix}`, style: 'subheader' },
       ...runDetailsSection,
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,
