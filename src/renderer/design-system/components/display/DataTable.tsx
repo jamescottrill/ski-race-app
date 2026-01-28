@@ -22,26 +22,35 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number;
   className?: string;
   onRowClick?: (row: TData) => void;
+  enablePageSizeSelector?: boolean;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   showPagination = true,
-  pageSize = 10,
+  pageSize = 25,
   className,
   onRowClick,
+  enablePageSizeSelector = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: pageSize,
+  });
 
   const table = useReactTable({
     data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -54,13 +63,22 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
-    },
-    initialState: {
-      pagination: {
-        pageSize,
-      },
+      pagination,
     },
   });
+
+  const handlePageSizeChange = (newSize: number | 'all') => {
+    const size = newSize === 'all' ? data.length || 1000 : newSize;
+    setPagination({ pageIndex: 0, pageSize: size });
+  };
+
+  // Update page size when data changes (for "All" option)
+  React.useEffect(() => {
+    if (pagination.pageSize > PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1]) {
+      // Currently showing "All", update to new data length
+      setPagination(prev => ({ ...prev, pageSize: data.length || 1000 }));
+    }
+  }, [data.length]);
 
   return (
     <div className={cn('w-full space-y-4', className)}>
@@ -152,15 +170,38 @@ export function DataTable<TData, TValue>({
       {/* Pagination */}
       {showPagination && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-neutral-600">
-            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
-            )}{' '}
-            of {table.getFilteredRowModel().rows.length} results
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-neutral-600">
+              Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+              {Math.min(
+                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                table.getFilteredRowModel().rows.length
+              )}{' '}
+              of {table.getFilteredRowModel().rows.length} results
+            </div>
+
+            {enablePageSizeSelector && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-neutral-600">Rows per page:</span>
+                <select
+                  value={pagination.pageSize > PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1] ? 'all' : pagination.pageSize}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handlePageSizeChange(value === 'all' ? 'all' : Number(value));
+                  }}
+                  className="h-8 rounded-md border border-neutral-300 bg-white px-2 text-sm text-neutral-700 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                  <option value="all">All</option>
+                </select>
+              </div>
+            )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -171,7 +212,7 @@ export function DataTable<TData, TValue>({
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
-            
+
             <div className="flex items-center gap-1">
               {Array.from({ length: table.getPageCount() }, (_, i) => i + 1)
                 .slice(
@@ -193,7 +234,7 @@ export function DataTable<TData, TValue>({
                   </button>
                 ))}
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
