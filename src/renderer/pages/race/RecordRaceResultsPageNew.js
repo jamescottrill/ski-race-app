@@ -28,8 +28,8 @@ import {
   TabsContent,
   DataTable,
   Badge,
-  SearchableSelect,
 } from '../../design-system';
+import PersonSelect from '../../components/PersonSelect';
 import { useBackButton } from '../../utils/navigation';
 import {
   convertRaceTime,
@@ -166,6 +166,11 @@ function RecordRaceResultsPageNew() {
         [field]: value,
       },
     }));
+
+    // Refresh people list in case a new person was added via the modal
+    if (field === 'courseSetter' || field.startsWith('forerunner')) {
+      fetchPeople();
+    }
   };
 
   const saveRunDetails = async (runNumber) => {
@@ -1016,28 +1021,18 @@ function RecordRaceResultsPageNew() {
                       runDetails[run.run_number] && (
                         <div className="p-4 bg-neutral-50 border-t">
                           <div className="grid grid-cols-4 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                Course Setter
-                              </label>
-                              <SearchableSelect
-                                value={runDetails[run.run_number].courseSetter}
-                                onChange={(value) =>
-                                  handleRunDetailChange(
-                                    run.run_number,
-                                    'courseSetter',
-                                    value,
-                                  )
-                                }
-                                options={people.map((p) => ({
-                                  value: p.id.toString(),
-                                  label: `${p.last_name}, ${p.first_name}`,
-                                }))}
-                                placeholder="Select Course Setter"
-                                searchPlaceholder="Search people..."
-                                emptyText="No person found"
-                              />
-                            </div>
+                            <PersonSelect
+                              label="Course Setter"
+                              value={runDetails[run.run_number].courseSetter}
+                              onChange={(value) =>
+                                handleRunDetailChange(
+                                  run.run_number,
+                                  'courseSetter',
+                                  value,
+                                )
+                              }
+                              placeholder="Select Course Setter..."
+                            />
                             <div>
                               <label className="block text-sm font-medium text-neutral-700 mb-1">
                                 Number of Gates
@@ -1092,30 +1087,21 @@ function RecordRaceResultsPageNew() {
 
                           <div className="grid grid-cols-4 gap-4 mb-4">
                             {[1, 2, 3, 4].map((i) => (
-                              <div key={i}>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                  Forerunner {i}
-                                </label>
-                                <SearchableSelect
-                                  value={
-                                    runDetails[run.run_number][`forerunner${i}`]
-                                  }
-                                  onChange={(value) =>
-                                    handleRunDetailChange(
-                                      run.run_number,
-                                      `forerunner${i}`,
-                                      value,
-                                    )
-                                  }
-                                  options={people.map((p) => ({
-                                    value: p.id.toString(),
-                                    label: `${p.last_name}, ${p.first_name}`,
-                                  }))}
-                                  placeholder={`Select Forerunner ${i}`}
-                                  searchPlaceholder="Search people..."
-                                  emptyText="No person found"
-                                />
-                              </div>
+                              <PersonSelect
+                                key={i}
+                                label={`Forerunner ${i}`}
+                                value={
+                                  runDetails[run.run_number][`forerunner${i}`]
+                                }
+                                onChange={(value) =>
+                                  handleRunDetailChange(
+                                    run.run_number,
+                                    `forerunner${i}`,
+                                    value,
+                                  )
+                                }
+                                placeholder={`Select Forerunner ${i}...`}
+                              />
                             ))}
                           </div>
 

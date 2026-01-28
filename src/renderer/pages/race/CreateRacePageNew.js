@@ -23,6 +23,7 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { v4 as uuid4 } from 'uuid';
+import PersonSelect from '../../components/PersonSelect';
 
 export default function CreateRacePageNew() {
   const { competitionId } = useParams();
@@ -279,29 +280,29 @@ export default function CreateRacePageNew() {
                   Race Officials
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <TextField
+                  <PersonSelect
                     label="Chief of Race"
-                    name="chiefOfRace"
                     value={formData.chiefOfRace}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData({ ...formData, chiefOfRace: value })}
+                    placeholder="Select Chief of Race..."
                   />
-                  <TextField
+                  <PersonSelect
                     label="Technical Delegate"
-                    name="techDelegate"
                     value={formData.techDelegate}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData({ ...formData, techDelegate: value })}
+                    placeholder="Select Technical Delegate..."
                   />
-                  <TextField
+                  <PersonSelect
                     label="Referee"
-                    name="referee"
                     value={formData.referee}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData({ ...formData, referee: value })}
+                    placeholder="Select Referee..."
                   />
-                  <TextField
+                  <PersonSelect
                     label="Assistant Referee"
-                    name="asstReferee"
                     value={formData.asstReferee}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData({ ...formData, asstReferee: value })}
+                    placeholder="Select Assistant Referee..."
                   />
                 </div>
               </CardContent>

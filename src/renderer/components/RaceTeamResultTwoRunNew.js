@@ -375,19 +375,31 @@ export default function RaceTeamResultTwoRunNew({
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
           <Button
-            variant={activeCategory === TEAM_CATEGORIES.REGIMENTAL ? 'primary' : 'outline'}
+            variant={
+              activeCategory === TEAM_CATEGORIES.REGIMENTAL
+                ? 'primary'
+                : 'outline'
+            }
             onClick={() => setActiveCategory(TEAM_CATEGORIES.REGIMENTAL)}
           >
             Regimental ({categoryCounts[TEAM_CATEGORIES.REGIMENTAL]})
           </Button>
           <Button
-            variant={activeCategory === TEAM_CATEGORIES.CORPS_OPEN ? 'primary' : 'outline'}
+            variant={
+              activeCategory === TEAM_CATEGORIES.CORPS_OPEN
+                ? 'primary'
+                : 'outline'
+            }
             onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_OPEN)}
           >
             Corps Open ({categoryCounts[TEAM_CATEGORIES.CORPS_OPEN]})
           </Button>
           <Button
-            variant={activeCategory === TEAM_CATEGORIES.CORPS_WOMEN ? 'primary' : 'outline'}
+            variant={
+              activeCategory === TEAM_CATEGORIES.CORPS_WOMEN
+                ? 'primary'
+                : 'outline'
+            }
             onClick={() => setActiveCategory(TEAM_CATEGORIES.CORPS_WOMEN)}
           >
             Corps Women ({categoryCounts[TEAM_CATEGORIES.CORPS_WOMEN]})

@@ -10,13 +10,13 @@ import {
   Input,
   Label,
   SimpleSelect,
-  SearchableSelect,
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import PersonSelect from '../../components/PersonSelect';
 
 export default function EditRacePageNew() {
   const navigate = useNavigate();
@@ -24,7 +24,6 @@ export default function EditRacePageNew() {
   const handleBack = useBackButton();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
-  const [people, setPeople] = useState([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -56,23 +55,8 @@ export default function EditRacePageNew() {
   });
 
   useEffect(() => {
-    fetchPeople();
     fetchRaceData();
   }, [raceId]);
-
-  const fetchPeople = async () => {
-    try {
-      const query = `
-        SELECT id, first_name, last_name
-        FROM people
-        ORDER BY last_name, first_name
-      `;
-      const result = await window.api.select(query, []);
-      setPeople(result);
-    } catch (error) {
-      console.error('Failed to fetch people:', error);
-    }
-  };
 
   const fetchRaceData = async () => {
     try {
@@ -396,73 +380,30 @@ export default function EditRacePageNew() {
             <Card>
               <CardContent>
                 <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="chief_of_race">Chief of Race</Label>
-                    <SearchableSelect
-                      id="chief_of_race"
-                      name="chief_of_race"
-                      value={formData.chief_of_race}
-                      onChange={(value) => handleInputChange({ target: { name: 'chief_of_race', value } })}
-                      options={people.map(person => ({
-                        value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
-                      }))}
-                      placeholder="Select Chief of Race"
-                      searchPlaceholder="Search people..."
-                      emptyText="No person found"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tech_delegate">Tech Delegate</Label>
-                    <SearchableSelect
-                      id="tech_delegate"
-                      name="tech_delegate"
-                      value={formData.tech_delegate}
-                      onChange={(value) => handleInputChange({ target: { name: 'tech_delegate', value } })}
-                      options={people.map(person => ({
-                        value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
-                      }))}
-                      placeholder="Select Tech Delegate"
-                      searchPlaceholder="Search people..."
-                      emptyText="No person found"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="referee">Referee</Label>
-                    <SearchableSelect
-                      id="referee"
-                      name="referee"
-                      value={formData.referee}
-                      onChange={(value) => handleInputChange({ target: { name: 'referee', value } })}
-                      options={people.map(person => ({
-                        value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
-                      }))}
-                      placeholder="Select Referee"
-                      searchPlaceholder="Search people..."
-                      emptyText="No person found"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="asst_referee">Assistant Referee</Label>
-                    <SearchableSelect
-                      id="asst_referee"
-                      name="asst_referee"
-                      value={formData.asst_referee}
-                      onChange={(value) => handleInputChange({ target: { name: 'asst_referee', value } })}
-                      options={people.map(person => ({
-                        value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
-                      }))}
-                      placeholder="Select Assistant Referee"
-                      searchPlaceholder="Search people..."
-                      emptyText="No person found"
-                    />
-                  </div>
+                  <PersonSelect
+                    label="Chief of Race"
+                    value={formData.chief_of_race}
+                    onChange={(value) => handleInputChange({ target: { name: 'chief_of_race', value } })}
+                    placeholder="Select Chief of Race..."
+                  />
+                  <PersonSelect
+                    label="Technical Delegate"
+                    value={formData.tech_delegate}
+                    onChange={(value) => handleInputChange({ target: { name: 'tech_delegate', value } })}
+                    placeholder="Select Technical Delegate..."
+                  />
+                  <PersonSelect
+                    label="Referee"
+                    value={formData.referee}
+                    onChange={(value) => handleInputChange({ target: { name: 'referee', value } })}
+                    placeholder="Select Referee..."
+                  />
+                  <PersonSelect
+                    label="Assistant Referee"
+                    value={formData.asst_referee}
+                    onChange={(value) => handleInputChange({ target: { name: 'asst_referee', value } })}
+                    placeholder="Select Assistant Referee..."
+                  />
                 </div>
               </CardContent>
             </Card>
