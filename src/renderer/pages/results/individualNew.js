@@ -21,12 +21,14 @@ export default function IndividualResultsNew() {
   const [veteran, setVeteran] = useState([]);
   const [novice, setNovice] = useState([]);
   const [female, setFemale] = useState([]);
+  const [male, setMale] = useState([]);
   const [loading, setLoading] = useState(true);
   const { competitionId } = useParams();
   const handleBack = useBackButton();
 
   const seedListPdf = () => {
-    generatePDF(seedList, races, 'Individual Championship Results');
+    generatePDF(male, races, 'Individual Championship Results - Men');
+    generatePDF(female, races, 'Individual Championship Results - Women');
   };
 
   const completedRaces = async () => {
@@ -106,6 +108,7 @@ export default function IndividualResultsNew() {
         setJunior(data.filter((e) => e.is_junior));
         setVeteran(data.filter((e) => e.is_veteran));
         setFemale(data.filter((e) => e.gender === 'F'));
+        setMale(data.filter((e) => e.gender === 'M'));
         setSeedList(data);
       } catch (error) {
         console.error('Failed to fetch individual results:', error);
