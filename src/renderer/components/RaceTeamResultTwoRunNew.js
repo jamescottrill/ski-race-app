@@ -184,7 +184,12 @@ export default function RaceTeamResultTwoRunNew({
       .filter((e) => {
         return e.completed;
       });
-    console.log(mapped);
+
+    // Calculate last place seed points for penalty calculation
+    const lastPlaceSeedPoints = finished.length > 0
+      ? Math.max(...finished.map((r) => r.seedPoints))
+      : 0;
+    const penaltySeedPoints = lastPlaceSeedPoints + 2;
 
     const teamResults = [];
     const dnfTeams = [];
@@ -205,7 +210,10 @@ export default function RaceTeamResultTwoRunNew({
     });
 
     uniqueTeams.forEach((team) => {
-      const sortedRacers = finished.filter((r) => r.teamId === team.teamId).sort((a, b) => a.seedPoints - b.seedPoints);
+      const teamRacers = mapped.filter((r) => r.teamId === team.teamId);
+      const finishedRacers = teamRacers.filter((r) => r.completed).sort((a, b) => a.seedPoints - b.seedPoints);
+      // DNF racers eligible for penalty: those who DNF'd (not DNS or NS)
+      const dnfRacers = teamRacers.filter((r) => !r.completed && !r.run1Dns && !r.run2Dns && !r.run1Ns);
 
       // Determine required team size based on category
       const category = getTeamCategory(team);
@@ -216,14 +224,33 @@ export default function RaceTeamResultTwoRunNew({
         requiredMembers = 2;
       }
 
-      const topNRacers = sortedRacers.slice(0, requiredMembers);
-      if (sortedRacers.length < requiredMembers) {
+      // Check if team has enough racers (finished + DNF eligible for penalty)
+      const totalEligible = finishedRacers.length + dnfRacers.length;
+      if (totalEligible < requiredMembers) {
         dnfTeams.push({ teamName: team.teamName, category });
         return;
       }
+
+      // Build the team: take finished racers first, then fill with DNF racers at penalty points
+      const topNRacers = [];
+      let neededFromFinished = Math.min(finishedRacers.length, requiredMembers);
+      topNRacers.push(...finishedRacers.slice(0, neededFromFinished));
+
+      // If we still need more racers, add DNF racers with penalty points
+      const neededFromDnf = requiredMembers - topNRacers.length;
+      if (neededFromDnf > 0) {
+        const penaltyRacers = dnfRacers.slice(0, neededFromDnf).map((r) => ({
+          ...r,
+          seedPoints: penaltySeedPoints,
+          hasPenalty: true,
+        }));
+        topNRacers.push(...penaltyRacers);
+      }
+
       const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
-      const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.totalTimeSecs, 0);
-      const topNTimes = convertRaceTime(topNTimesSecs);
+      const hasPenaltyRacer = topNRacers.some((r) => r.hasPenalty);
+      const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + (curr.totalTimeSecs || 0), 0);
+      const topNTimes = hasPenaltyRacer ? 'AWSA Rule 215.6.1b.(2)' : convertRaceTime(topNTimesSecs);
       const isHc = topNRacers.length > 0 && topNRacers[0].isHc;
       const teamResult = {
         teamName: team.teamName,
@@ -233,6 +260,7 @@ export default function RaceTeamResultTwoRunNew({
         points: topNPoints,
         time: topNTimes,
         isHc,
+        hasPenalty: hasPenaltyRacer,
       };
       teamResults.push(teamResult);
     });
@@ -353,7 +381,9 @@ export default function RaceTeamResultTwoRunNew({
               <div className="flex justify-between items-center">
                 <span className="font-medium">{racer.title}</span>
                 <span>{racer.lastName.toUpperCase()} {racer.firstName}</span>
-                <span className="text-neutral-600">{racer.totalTime}</span>
+                <span className="text-neutral-600">
+                  {racer.hasPenalty ? <Badge variant="warning">DNF</Badge> : racer.totalTime}
+                </span>
               </div>
             </div>
           ))}
