@@ -17,6 +17,13 @@ const raceQuery = `
                            SELECT 1250 AS factor, 'DH' AS race
                            UNION ALL
                            SELECT 1360 AS factor, 'AC' AS race),
+               regimental_teams AS (
+                   SELECT ctm.racer_id, ctm.race_id, ctm.competition_id, ct.team_name
+                   FROM competition_team_members ctm
+                   JOIN competition_team ct ON ctm.team_id = ct.team_id
+                       AND ctm.competition_id = ct.competition_id
+                   WHERE ct.is_corps = 0 OR ct.is_corps IS NULL
+               ),
                run1 AS (SELECT race_id,
                                racer_id,
                                ROUND(race_time, 2) AS race_time,
@@ -68,7 +75,7 @@ const raceQuery = `
                                p.last_name,
                                cc.title,
                                rc.bib_number,
-                               cc.regiment AS team,
+                               COALESCE(rt.team_name, cc.regiment) AS team,
                                f.factor                                                                  AS factor,
                                MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                                    OVER (ORDER BY run1.race_id)                                          AS mintime,
@@ -86,6 +93,9 @@ const raceQuery = `
                                JOIN competition_competitor cc ON cc.racer_id = p.id AND cc.competition_id = run1.competition_id
                                JOIN races r ON r.race_id = run1.race_id
                                JOIN factors f ON f.race = r.race_type
+                               LEFT JOIN regimental_teams rt ON p.id = rt.racer_id
+                                   AND rt.competition_id = run1.competition_id
+                                   AND rt.race_id = run1.race_id
                )
           SELECT
             *,
