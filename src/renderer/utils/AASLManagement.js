@@ -10,12 +10,17 @@
  */
 
 import { v4 } from 'uuid';
+import { hashServiceNumber } from './hashUtils';
 
 export const getAASLPoints = async (serviceNumber, season = null) => {
+  // Hash the service number to match the stored hashed id
+  const hashedId = await hashServiceNumber(serviceNumber);
+  if (!hashedId) return null;
+
   const query = season
     ? `SELECT * FROM aasl WHERE service_number = ? AND season = ? ORDER BY import_date DESC LIMIT 1`
     : `SELECT * FROM aasl WHERE service_number = ? ORDER BY season DESC, import_date DESC LIMIT 1`;
-  const params = season ? [serviceNumber, season] : [serviceNumber];
+  const params = season ? [hashedId, season] : [hashedId];
 
   try {
     const result = await window.api.select(query, params);
@@ -96,28 +101,29 @@ export const importAASLEntries = async (entries, season) => {
   let updateCount = 0;
   const errors = [];
   const importDate = new Date().toISOString();
-  console.log(entries)
+
   for (const entry of entries) {
     try {
       let existing = null;
-      let matchedBy = null;
+      let hashedServiceNumber = null;
 
       // First try to match by service number if provided
       if (entry.serviceNumber) {
-        try{
-        const byServiceNumber = await window.api.select(
-          `SELECT service_number FROM aasl WHERE service_number = ? AND season = ?`,
-          [entry.serviceNumber, season]
-        );
-        if (byServiceNumber.length > 0) {
-          existing = byServiceNumber[0];
-          matchedBy = 'serviceNumber';
-        }
-          } catch(err) {
+        hashedServiceNumber = await hashServiceNumber(entry.serviceNumber);
+        try {
+          const byServiceNumber = await window.api.select(
+            `SELECT service_number FROM aasl WHERE service_number = ? AND season = ?`,
+            [hashedServiceNumber, season]
+          );
+          if (byServiceNumber.length > 0) {
+            existing = byServiceNumber[0];
+          }
+        } catch(err) {
           console.log(err);
         }
       }
-      if (existing && existing.length > 0) {
+
+      if (existing && existing.service_number) {
         // Update existing entry
         const updateQuery = `
           UPDATE aasl
@@ -135,27 +141,42 @@ export const importAASLEntries = async (entries, season) => {
         ]);
         updateCount++;
       } else {
-        // Insert new entry
-        console.log(entry);
+        // Insert new entry - look up existing person by name or create new
         const sn = await window.api.select(
           `SELECT id AS service_number FROM people WHERE UPPER(first_name) = UPPER(?) AND UPPER(last_name) = UPPER(?)`,
           [entry.firstName, entry.lastName]
         );
-        const serviceNumber = sn.length > 0 ? sn[0].service_number : v4();
-        if (!sn.length > 0) {
+
+        let serviceNumberToUse;
+        if (sn.length > 0) {
+          // Use existing person's hashed id
+          serviceNumberToUse = sn[0].service_number;
+        } else if (hashedServiceNumber) {
+          // Use the hashed service number from the import
+          serviceNumberToUse = hashedServiceNumber;
           await window.api.insert(`INSERT INTO PEOPLE(id, first_name, last_name) VALUES(?,?,?)`,
             [
-              serviceNumber,
+              serviceNumberToUse,
               entry.firstName,
               entry.lastName
-        ]);
+            ]);
+        } else {
+          // Generate a UUID for new person without service number
+          serviceNumberToUse = v4();
+          await window.api.insert(`INSERT INTO PEOPLE(id, first_name, last_name) VALUES(?,?,?)`,
+            [
+              serviceNumberToUse,
+              entry.firstName,
+              entry.lastName
+            ]);
         }
+
         const insertQuery = `
           INSERT INTO aasl (service_number, first_name, last_name, seed_points, season, import_date)
           VALUES (?, ?, ?, ?, ?, ?)
         `;
         await window.api.insert(insertQuery, [
-          serviceNumber,
+          serviceNumberToUse,
           entry.firstName,
           entry.lastName,
           entry.seedPoints,
@@ -169,7 +190,11 @@ export const importAASLEntries = async (entries, season) => {
       errors.push({ entry, error: error.message });
     }
   }
-  console.error(errors);
+
+  if (errors.length > 0) {
+    console.error('AASL import errors:', errors);
+  }
+
   return {
     success: errorCount === 0,
     successCount,

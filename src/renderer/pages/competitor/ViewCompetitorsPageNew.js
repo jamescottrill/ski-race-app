@@ -34,12 +34,14 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { calculateCategory } from '../../utils/CompetitorManagement';
+import { hashServiceNumber } from '../../utils/hashUtils';
 
 export default function ViewCompetitorsPageNew() {
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [hashedSearchTerm, setHashedSearchTerm] = useState('');
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [withdrawCompetitor, setWithdrawCompetitor] = useState(null);
   const [completedRaces, setCompletedRaces] = useState([]);
@@ -47,6 +49,19 @@ export default function ViewCompetitorsPageNew() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
   const handleBack = useBackButton();
+
+  // Hash the search term for service number comparison
+  useEffect(() => {
+    const updateHashedSearchTerm = async () => {
+      if (searchTerm.trim()) {
+        const hashed = await hashServiceNumber(searchTerm);
+        setHashedSearchTerm(hashed || '');
+      } else {
+        setHashedSearchTerm('');
+      }
+    };
+    updateHashedSearchTerm();
+  }, [searchTerm]);
 
   const fetchCompetitors = async () => {
     setLoading(true);
@@ -143,9 +158,9 @@ export default function ViewCompetitorsPageNew() {
       c.first_name?.toLowerCase().includes(term) ||
       c.last_name?.toLowerCase().includes(term) ||
       c.regiment?.toLowerCase().includes(term) ||
-      c.service_number?.toString().toLowerCase().includes(term)
+      (hashedSearchTerm && c.service_number === hashedSearchTerm)
     );
-  }, [activeTab, activeCompetitors, withdrawnCompetitors, searchTerm]);
+  }, [activeTab, activeCompetitors, withdrawnCompetitors, searchTerm, hashedSearchTerm]);
 
   const columns = useMemo(() => [
     {

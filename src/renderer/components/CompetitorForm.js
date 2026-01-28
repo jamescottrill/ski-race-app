@@ -14,6 +14,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import TeamModal from './TeamModal';
+import { hashServiceNumber } from '../utils/hashUtils';
 
 function CompetitorForm({
   editMode= true,
@@ -200,9 +201,15 @@ function CompetitorForm({
     if (formData.birthYear) {
       ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
     }
-    const id = formData.serviceNumber;
 
-    // Check if service number already exists
+    // Hash the service number to use as the id
+    const id = await hashServiceNumber(formData.serviceNumber);
+    if (!id) {
+      alert('Service number is required');
+      return;
+    }
+
+    // Check if service number already exists (using hashed id)
     const existingPerson = await window.api.select(
       'SELECT id, first_name, last_name FROM people WHERE id = ?',
       [id]
@@ -210,7 +217,7 @@ function CompetitorForm({
     if (existingPerson.length > 0) {
       const person = existingPerson[0];
       alert(
-        `A person with service number ${id} already exists: ${person.first_name} ${person.last_name}`
+        `A person with this service number already exists: ${person.first_name} ${person.last_name}`
       );
       return;
     }

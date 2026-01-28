@@ -32,6 +32,7 @@ import {
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { hashServiceNumber } from '../../utils/hashUtils';
 
 function EditCompetitorPageNew() {
   const { competitionId, competitorId } = useParams();
@@ -87,7 +88,7 @@ function EditCompetitorPageNew() {
           title: competitor.title || '',
           birthYear: competitor.birth_year || '',
           country: competitor.country || 'GBR',
-          serviceNumber: competitor.service_number || '',
+          serviceNumber: '', // Don't show the hash - leave empty for user to enter new value if needed
           gender: competitor.gender || 'M',
           arrivalSeed: competitor.arrival_corps_seed || 2000,
           armySeed: competitor.army_seed || '',
@@ -151,6 +152,58 @@ function EditCompetitorPageNew() {
     e.preventDefault();
 
     try {
+      let currentId = competitorId;
+
+      // If a new service number was entered, hash it and update the ID
+      if (formData.serviceNumber && formData.serviceNumber.trim() !== '') {
+        const newHashedId = await hashServiceNumber(formData.serviceNumber);
+
+        if (newHashedId !== competitorId) {
+          // Check if new service number already exists
+          const existingPerson = await window.api.select(
+            'SELECT id, first_name, last_name FROM people WHERE id = ?',
+            [newHashedId],
+          );
+          if (existingPerson.length > 0) {
+            const person = existingPerson[0];
+            toast.error(
+              `A person with this service number already exists: ${person.first_name} ${person.last_name}`,
+            );
+            return;
+          }
+
+          // Update all foreign key references and the primary key in a transaction
+          const tablesToUpdate = [
+            { table: 'competition_team_members', column: 'racer_id' },
+            { table: 'race_results', column: 'racer_id' },
+            { table: 'race_competitor', column: 'racer_id' },
+            { table: 'competition_competitor', column: 'racer_id' },
+            { table: 'competition_final_seed_list', column: 'racer_id' },
+            { table: 'aasl', column: 'service_number' },
+          ];
+
+          const operations = tablesToUpdate.map(({ table, column }) => ({
+            type: 'insert',
+            query: `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+            params: [newHashedId, competitorId],
+          }));
+
+          // Add the people.id update last
+          operations.push({
+            type: 'insert',
+            query: 'UPDATE people SET id = ? WHERE id = ?',
+            params: [newHashedId, competitorId],
+          });
+
+          const txResult = await window.api.transaction(operations);
+          if (!txResult.success) {
+            throw new Error('Failed to update service number');
+          }
+
+          currentId = newHashedId;
+        }
+      }
+
       const personQuery = `
         UPDATE people
         SET first_name = ?, last_name = ?, birth_year = ?, country = ?, gender = ?
@@ -162,38 +215,8 @@ function EditCompetitorPageNew() {
         formData.birthYear,
         formData.country,
         formData.gender,
-        competitorId,
+        currentId,
       ];
-
-      if (formData.serviceNumber !== competitorId) {
-        // Check if new service number already exists
-        const existingPerson = await window.api.select(
-          'SELECT id, first_name, last_name FROM people WHERE id = ?',
-          [formData.serviceNumber]
-        );
-        if (existingPerson.length > 0) {
-          const person = existingPerson[0];
-          alert(
-            `A person with service number ${formData.serviceNumber} already exists: ${person.first_name} ${person.last_name}`
-          );
-          return;
-        }
-
-        const peopleQuery = `UPDATE people SET id = ? WHERE id = ?`;
-        await window.api.insert(peopleQuery, [formData.serviceNumber, competitorId]);
-        const queries = [];
-        for (const table of [
-          'competition_team_members',
-          'race_results',
-          'race_competitor',
-          'competition_competitor',
-          'competition_final_seed_list',
-        ]) {
-          const query = `UPDATE ${table} SET racer_id = ? WHERE racer_id = ?`;
-          queries.push(window.api.insert(query, [formData.serviceNumber, competitorId]));
-        }
-        await Promise.all(queries);
-      }
 
       await window.api.insert(personQuery, personParams);
 
@@ -214,7 +237,7 @@ function EditCompetitorPageNew() {
         formData.isReserve ? 1 : 0,
         formData.regiment,
         formData.title,
-        competitorId,
+        currentId,
         competitionId,
       ];
       const result = await window.api.insert(competitorQuery, competitorParams);
@@ -417,6 +440,7 @@ function EditCompetitorPageNew() {
                         name="serviceNumber"
                         value={formData.serviceNumber}
                         onChange={handleInputChange}
+                        placeholder="Enter to update (leave blank to keep current)"
                       />
                     </div>
                   </div>

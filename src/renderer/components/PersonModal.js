@@ -11,6 +11,9 @@ import {
   MenuItem,
   FormControl,
 } from '@mui/material';
+
+import { hashServiceNumber } from '../utils/hashUtils';
+
 export default function PersonModal({ open, onClose, onSave }) {
   const initialFormValues = {
     firstName: '',
@@ -33,17 +36,23 @@ export default function PersonModal({ open, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const id = formData.serviceNumber;
 
-    // Check if service number already exists
+    // Hash the service number to use as the id
+    const id = await hashServiceNumber(formData.serviceNumber);
+    if (!id) {
+      alert('Service number is required');
+      return;
+    }
+
+    // Check if service number already exists (using hashed id)
     const existingPerson = await window.api.select(
       'SELECT id, first_name, last_name FROM people WHERE id = ?',
-      [id]
+      [id],
     );
     if (existingPerson.length > 0) {
       const person = existingPerson[0];
       alert(
-        `A person with service number ${id} already exists: ${person.first_name} ${person.last_name}`
+        `A person with this service number already exists: ${person.first_name} ${person.last_name}`,
       );
       return;
     }

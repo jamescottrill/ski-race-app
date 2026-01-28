@@ -1,3 +1,5 @@
+import { hashServiceNumber } from './hashUtils';
+
 const calculateAgeCategory = (birthYear) => {
   const currentYear = new Date().getFullYear();
   const age = currentYear - parseInt(birthYear);
@@ -10,9 +12,11 @@ const calculateAgeCategory = (birthYear) => {
 };
 
 const competitorExists = async (serviceNumber, competitionId) => {
+  // Hash the service number to match the stored hashed id
+  const hashedId = await hashServiceNumber(serviceNumber);
   const query = `SELECT cc.racer_id AS id FROM competition_competitor cc
           WHERE cc.racer_id = ? AND cc.competition_id = ?`;
-  const params = [serviceNumber, competitionId];
+  const params = [hashedId, competitionId];
   try {
     const result = await window.api.select(query, params);
     if (result.length > 0) return [true, result[0].id];
@@ -24,8 +28,10 @@ const competitorExists = async (serviceNumber, competitionId) => {
 };
 
 const personExists = async (serviceNumber) => {
+  // Hash the service number to match the stored hashed id
+  const hashedId = await hashServiceNumber(serviceNumber);
   const query = `SELECT id FROM people WHERE id = ?`;
-  const params = [serviceNumber];
+  const params = [hashedId];
   try {
     const result = await window.api.select(query, params);
     if (result.length > 0) return [true, result[0].id];
@@ -148,9 +154,17 @@ const createCompetitor = async (formData, competitionId) => {
   if (formData.birthYear) {
     ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
   }
-  const id = formData.serviceNumber;
 
-  // Check if service number already exists
+  // Hash the service number to use as the id
+  const id = await hashServiceNumber(formData.serviceNumber);
+  if (!id) {
+    return {
+      success: false,
+      error: 'Service number is required',
+    };
+  }
+
+  // Check if service number already exists (using hashed id)
   const existingPerson = await window.api.select(
     'SELECT id, first_name, last_name FROM people WHERE id = ?',
     [id],
@@ -159,7 +173,7 @@ const createCompetitor = async (formData, competitionId) => {
     const person = existingPerson[0];
     return {
       success: false,
-      error: `A person with service number ${id} already exists: ${person.first_name} ${person.last_name}`,
+      error: `A person with this service number already exists: ${person.first_name} ${person.last_name}`,
     };
   }
 

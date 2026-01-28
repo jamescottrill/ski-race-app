@@ -343,6 +343,7 @@ class DatabaseWrapper {
         resolve({ id: result.lastInsertRowid, changes: result.changes });
       } catch (err) {
         console.error('Error running query:', err.message);
+        console.error('Error running query:', query);
         reject(err);
       }
     });

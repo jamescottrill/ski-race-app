@@ -23,6 +23,7 @@ import {
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { hashServiceNumber } from '../../utils/hashUtils';
 
 function RegisterCompetitorPageNew() {
   const handleBack = useBackButton();
@@ -133,18 +134,22 @@ function RegisterCompetitorPageNew() {
     if (selectedCompetitorId) {
       racerId = selectedCompetitorId;
     } else {
-      // Create new person - use serviceNumber as the id
-      racerId = formData.serviceNumber;
+      // Hash the service number to use as the id
+      racerId = await hashServiceNumber(formData.serviceNumber);
+      if (!racerId) {
+        alert('Service number is required');
+        return;
+      }
 
-      // Check if service number already exists
+      // Check if service number already exists (using hashed id)
       const existingPerson = await window.api.select(
         'SELECT id, first_name, last_name FROM people WHERE id = ?',
-        [racerId]
+        [racerId],
       );
       if (existingPerson.length > 0) {
         const person = existingPerson[0];
         alert(
-          `A person with service number ${racerId} already exists: ${person.first_name} ${person.last_name}`
+          `A person with this service number already exists: ${person.first_name} ${person.last_name}`,
         );
         return;
       }
