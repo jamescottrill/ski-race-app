@@ -1,6 +1,6 @@
 // eslint-disable no-nested-ternary
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, DataTable, Badge, Button } from '../design-system';
+import { Card, CardContent, DataTable, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent } from '../design-system';
 import OtherResultTable from './DnsTable';
 import { convertRaceTime } from '../utils/TimeUtils';
 import { resultsPdf } from '../utils/ResultsPdf';
@@ -80,6 +80,7 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
   const [run1Dnf, setRun1Dnf] = useState([]);
   const [run1Dns, setRun1Dns] = useState([]);
   const [run1Dsq, setRun1Dsq] = useState([]);
+  const [activeTab, setActiveTab] = useState('women');
 
   const initialData = async () => {
     const rd = await getRaceDetails(raceId, competitionId);
@@ -157,9 +158,25 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
 
   useEffect(() => {
     initialData();
-  });
-  const generatePDF = () => {
-    resultsPdf(raceDetails, data, run1Dns, run1Dnf, run1Dsq);
+  }, [raceId, competitionId]);
+
+  const generatePDF = (gender = null) => {
+    if (gender) {
+      const genderLabel = gender === 'F' ? 'Women' : 'Men';
+      const genderRaceDetails = {
+        ...raceDetails,
+        race_name: `${raceDetails.race_name} - ${genderLabel}`,
+      };
+      const genderData = data
+        .filter((e) => e.gender === gender)
+        .map((e, i) => ({ ...e, position: i + 1 }));
+      const genderRun1Dns = run1Dns.filter((e) => e.gender === gender);
+      const genderRun1Dnf = run1Dnf.filter((e) => e.gender === gender);
+      const genderRun1Dsq = run1Dsq.filter((e) => e.gender === gender);
+      resultsPdf(genderRaceDetails, genderData, genderRun1Dns, genderRun1Dnf, genderRun1Dsq);
+    } else {
+      resultsPdf(raceDetails, data, run1Dns, run1Dnf, run1Dsq);
+    }
   };
 
   // Define columns for main results DataTable
@@ -286,7 +303,134 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
     },
   ];
 
-  return (
+  const renderResultsForGender = (gender, genderLabel) => {
+    const genderData = data
+      .filter((e) => e.gender === gender)
+      .map((e, i) => ({ ...e, position: i + 1 }));
+    const genderRun1Dns = run1Dns.filter((e) => e.gender === gender);
+    const genderRun1Dnf = run1Dnf.filter((e) => e.gender === gender);
+    const genderRun1Dsq = run1Dsq.filter((e) => e.gender === gender);
+
+    return (
+      <div className="space-y-6">
+        {genderData.length > 0 && (
+          <Card>
+            <CardContent>
+              <DataTable
+                columns={columns}
+                data={genderData}
+                showPagination
+                pageSize={50}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderData.length === 0 && (
+          <Card>
+            <CardContent>
+              <div className="text-center py-8 text-neutral-600">
+                No {genderLabel} competitors found.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dns.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dns}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dnf.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dnf}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderRun1Dsq.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 1</h2>
+              <DataTable
+                columns={otherResultsColumns}
+                data={genderRun1Dsq}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderData.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Junior Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderData.filter((e) => e.is_junior).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderData.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Novice Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderData.filter((e) => e.is_novice).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderData.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Veteran Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderData.filter((e) => e.is_veteran).slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+        {genderData.length > 0 && (
+          <Card>
+            <CardContent>
+              <h2 className="text-lg font-semibold mb-4 text-center">Open Results</h2>
+              <DataTable
+                columns={categoryColumns}
+                data={genderData.slice(0, 3)}
+                showPagination={false}
+                className="w-full"
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderMixedResults = () => (
     <div className="space-y-6">
       {data.length > 0 && (
         <Card>
@@ -415,8 +559,43 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+
+  if (raceDetails?.women_separate) {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full justify-start border-b mb-4">
+            <TabsTrigger value="women">Women</TabsTrigger>
+            <TabsTrigger value="men">Men</TabsTrigger>
+          </TabsList>
+          <TabsContent value="women">
+            {renderResultsForGender('F', 'women')}
+            <div className="flex justify-center mt-6">
+              <Button onClick={() => generatePDF('F')}>
+                Download Women&apos;s Results PDF
+              </Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="men">
+            {renderResultsForGender('M', 'men')}
+            <div className="flex justify-center mt-6">
+              <Button onClick={() => generatePDF('M')}>
+                Download Men&apos;s Results PDF
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {renderMixedResults()}
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
+        <Button onClick={() => generatePDF()}>
           Download PDF
         </Button>
       </div>
