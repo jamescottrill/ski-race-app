@@ -106,6 +106,7 @@ export default function RaceTeamResultTwoRunNew({
                           ct.team_id,
                           COALESCE(ct.is_corps, 0) AS is_corps,
                           COALESCE(ct.is_female, 0) AS is_female,
+                          COALESCE(ct.is_hc, 0) AS is_hc,
                           f.factor                                                                  AS factor,
                           MIN(COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999))
                               OVER (ORDER BY run1.race_id)                                          AS mintime
@@ -122,10 +123,7 @@ export default function RaceTeamResultTwoRunNew({
      SELECT
        *,
        ROUND((total_time - mintime) / mintime * factor, 2) AS seed_points,
-       RANK() OVER (ORDER BY total_time) AS position,
-       (SELECT COALESCE(ct2.is_hc, 0) FROM competition_team ct2
-        JOIN competition_team_members ctm2 ON ct2.team_id = ctm2.team_id AND ct2.competition_id = ctm2.competition_id
-        WHERE ctm2.racer_id = data.racer_id AND ctm2.race_id = data.race_id LIMIT 1) AS is_hc
+       RANK() OVER (ORDER BY total_time) AS position
      FROM data
      ORDER BY total_time
    `;
@@ -205,6 +203,7 @@ export default function RaceTeamResultTwoRunNew({
           teamName: r.teamName,
           is_corps: r.is_corps,
           is_female: r.is_female,
+          isHc: r.isHc,
         });
       }
     });
@@ -251,7 +250,6 @@ export default function RaceTeamResultTwoRunNew({
       const hasPenaltyRacer = topNRacers.some((r) => r.hasPenalty);
       const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + (curr.totalTimeSecs || 0), 0);
       const topNTimes = hasPenaltyRacer ? 'AWSA Rule 215.6.1b.(2)' : convertRaceTime(topNTimesSecs);
-      const isHc = topNRacers.length > 0 && topNRacers[0].isHc;
       const teamResult = {
         teamName: team.teamName,
         teamId: team.teamId,
@@ -259,7 +257,7 @@ export default function RaceTeamResultTwoRunNew({
         racers: topNRacers,
         points: topNPoints,
         time: topNTimes,
-        isHc,
+        isHc: team.isHc || false,
         hasPenalty: hasPenaltyRacer,
       };
       teamResults.push(teamResult);

@@ -91,6 +91,7 @@ export default function RaceTeamResultOneRunNew({
                                ct.team_id,
                                COALESCE(ct.is_corps, 0) AS is_corps,
                                COALESCE(ct.is_female, 0) AS is_female,
+                               COALESCE(ct.is_hc, 0) AS is_hc,
                                f.factor AS factor,
                                MIN(COALESCE(run1.race_time, 9999))
                                    OVER (ORDER BY run1.race_id) AS mintime
@@ -140,6 +141,7 @@ export default function RaceTeamResultOneRunNew({
         teamId: result.team_id,
         is_corps: result.is_corps,
         is_female: result.is_female,
+        isHc: Boolean(result.is_hc),
         seedPoints: result.seed_points,
         bibNumber: result.bib_number,
         position: result.position,
@@ -170,6 +172,7 @@ export default function RaceTeamResultOneRunNew({
           teamName: r.teamName,
           is_corps: r.is_corps,
           is_female: r.is_female,
+          isHc: r.isHc,
         });
       }
     });
@@ -222,6 +225,7 @@ export default function RaceTeamResultOneRunNew({
         racers: topNRacers,
         points: topNPoints,
         time: topNTimes,
+        isHc: team.isHc || false,
         hasPenalty: hasPenaltyRacer,
       };
       teamResults.push(teamResult);
@@ -248,8 +252,12 @@ export default function RaceTeamResultOneRunNew({
     let position = 1;
     const withPositions = filtered.map((team) => {
       const teamCopy = { ...team };
-      teamCopy.position = position;
-      position += 1;
+      if (teamCopy.isHc) {
+        teamCopy.position = '';
+      } else {
+        teamCopy.position = position;
+        position += 1;
+      }
       return teamCopy;
     });
 
@@ -269,8 +277,12 @@ export default function RaceTeamResultOneRunNew({
     let position = 1;
     const withPositions = filtered.map((team) => {
       const teamCopy = { ...team };
-      teamCopy.position = position;
-      position += 1;
+      if (teamCopy.isHc) {
+        teamCopy.position = '';
+      } else {
+        teamCopy.position = position;
+        position += 1;
+      }
       return teamCopy;
     });
     const filteredDnf = allDnfTeams.filter((team) => team.category === category);
