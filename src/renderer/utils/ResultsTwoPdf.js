@@ -47,7 +47,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100,  text: 'TD: ', style: 'key' },
-        { width: '*', text: raceDetails.tech_delegate.trim() || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.tech_delegate.trim() || '',
+          style: 'text',
+        },
         { width: 120, text: 'Start Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.start_altitude, style: 'text' },
       ],
@@ -56,7 +60,7 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Referee: ', style: 'key' },
-        { width: '*', text: raceDetails.referee.trim() || 'N/A', style: 'text' },
+        { width: '*', text: raceDetails.referee.trim() || '', style: 'text' },
         { width: 120, text: 'Finish Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.finish_altitude, style: 'text' },
       ],
@@ -65,7 +69,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Assistant Referee: ', style: 'key' },
-        { width: '*', text: raceDetails.asst_referee.trim() || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.asst_referee.trim() || '',
+          style: 'text',
+        },
         { width: 120, text: 'Vertical Difference (m): ', style: 'key' },
         { width: '*', text: raceDetails.altitude_difference, style: 'text' },
       ],
@@ -74,7 +82,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Chief of Race: ', style: 'key' },
-        { width: '*', text: raceDetails.chief_of_race.trim()  || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.chief_of_race.trim() || '',
+          style: 'text',
+        },
         { width: 120, text: 'Homologation: ', style: 'key' },
         { width: '*', text: raceDetails.homologation, style: 'text' },
       ],
@@ -107,7 +119,7 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Turning Gates: ', style: 'key' },
-        { width: '*', text: raceDetails.run1_turning_gates , style: 'text' },
+        { width: '*', text: raceDetails.run1_turning_gates, style: 'text' },
         { width: '*', text: raceDetails.run2_turning_gates, style: 'text' },
       ],
       columnGap: 5,
@@ -184,7 +196,7 @@ const resultsTwoPdf = (
     ...runDetailsSection,
     // Results
     {
-      layout: 'lightHorizontalLines',
+      layout: 'headerLineOnly',
       style: 'table',
       table: {
         headerRows: 1,

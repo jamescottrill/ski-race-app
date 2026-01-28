@@ -62,7 +62,7 @@ const teamTableLayout = {
 
 const dnfTable = (data) => {
   return {
-    layout: 'lightHorizontalLines',
+    layout: 'headerLineOnly',
     style: 'table',
     table: {
       headerRows: 1,
@@ -87,7 +87,7 @@ const dnfTable = (data) => {
 
 const dsqTable = (data) => {
   return {
-    layout: 'lightHorizontalLines',
+    layout: 'headerLineOnly',
     style: 'table',
     table: {
       headerRows: 1,

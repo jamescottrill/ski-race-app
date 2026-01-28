@@ -46,7 +46,7 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
         { width: 100, text: 'TD: ', style: 'key' },
         {
           width: '*',
-          text: raceDetails.tech_delegate.trim() || 'N/A',
+          text: raceDetails.tech_delegate.trim() || '',
           style: 'text',
         },
         { width: 120, text: 'Start Height (m): ', style: 'key' },
@@ -199,7 +199,7 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
       { text: 'Official Results', style: 'subheader' },
       ...runDetailsSection,
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,
@@ -240,7 +240,7 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
       // DNS 1
       { text: 'Did not start 1st run', style: 'subheader' },
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,
@@ -264,7 +264,7 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
       // DNF 1
       { text: 'Did not finish 1st run', style: 'subheader' },
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,
@@ -288,7 +288,7 @@ const resultsPdf = (raceDetails, finished, dns1, dnf1, dsq1) => {
       // DSQ 1
       { text: 'Disqualified 1st run', style: 'subheader' },
       {
-        layout: 'lightHorizontalLines',
+        layout: 'headerLineOnly',
         style: 'table',
         table: {
           headerRows: 1,
