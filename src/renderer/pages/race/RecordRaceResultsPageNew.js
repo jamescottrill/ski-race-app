@@ -31,6 +31,7 @@ import {
   SearchableSelect,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { handleDatabaseError } from '../../utils/ErrorHandler';
 import {
   convertRaceTime,
   convertHumanTime,
@@ -54,7 +55,9 @@ function RecordRaceResultsPageNew() {
   const fetchRaceDetails = async () => {
     try {
       const query = `
-        SELECT race_name, race_type, number_runs, is_team, is_seeding
+        SELECT race_name, race_type, number_runs, is_team, is_seeding,
+               COALESCE(flip_count, 15) AS flip_count,
+               COALESCE(flip_count_women, 5) AS flip_count_women
         FROM races
         WHERE race_id = ? AND competition_id = ?
       `;
@@ -362,50 +365,55 @@ function RecordRaceResultsPageNew() {
   const handleTimeBlur = async (runNumber, competitorId, value) => {
     const cleanValue = (value || '').trim();
 
-    // Handle empty value - clear the time
-    if (!cleanValue) {
-      setCompetitors((prev) => ({
-        ...prev,
-        [runNumber]: prev[runNumber].map((c) =>
-          c.competitor_id === competitorId
-            ? { ...c, raceTime: '', status: '' }
-            : c,
-        ),
-      }));
-      await updateField(competitorId, runNumber, 'race_time', null);
+    try {
+      if (!cleanValue) {
+        // Empty value - clear the time
+        setCompetitors((prev) => ({
+          ...prev,
+          [runNumber]: prev[runNumber].map((c) =>
+            c.competitor_id === competitorId
+              ? { ...c, raceTime: '', status: '' }
+              : c,
+          ),
+        }));
+        await saveResultFields(runNumber, competitorId, { race_time: null });
+      } else {
+        const formattedValue = formatTime(
+          cleanValue.replace(/[:.]/g, '').padStart(6, '0'),
+        );
 
-      // Refresh next run's start order if it exists
-      const nextRun = runNumber + 1;
-      if (nextRun <= (raceDetails?.number_runs || 1) && competitors[nextRun]) {
-        await fetchCompetitorsForRun(nextRun);
+        if (!formattedValue) return;
+
+        const timeInSeconds = convertHumanTime(formattedValue);
+
+        setCompetitors((prev) => ({
+          ...prev,
+          [runNumber]: prev[runNumber].map((c) =>
+            c.competitor_id === competitorId
+              ? {
+                  ...c,
+                  raceTime: formattedValue,
+                  status: 'Finished',
+                }
+              : c,
+          ),
+        }));
+
+        await saveResultFields(runNumber, competitorId, {
+          race_time: timeInSeconds,
+          is_dnf: 0,
+          is_dsq: 0,
+          is_dns: 0,
+          is_ns: 0,
+        });
       }
+    } catch (error) {
+      handleDatabaseError('save race time', error);
+      // Reload from the database so the grid doesn't show a time that
+      // was never persisted
+      await fetchCompetitorsForRun(runNumber);
       return;
     }
-
-    const formattedValue = formatTime(cleanValue.replace(/[:.]/g, '').padStart(6, '0'));
-
-    if (!formattedValue) return;
-
-    const timeInSeconds = convertHumanTime(formattedValue);
-
-    setCompetitors((prev) => ({
-      ...prev,
-      [runNumber]: prev[runNumber].map((c) =>
-        c.competitor_id === competitorId
-          ? {
-              ...c,
-              raceTime: formattedValue,
-              status: 'Finished',
-            }
-          : c,
-      ),
-    }));
-
-    await updateField(competitorId, runNumber, 'race_time', timeInSeconds);
-    await updateField(competitorId, runNumber, 'is_dnf', 0);
-    await updateField(competitorId, runNumber, 'is_dsq', 0);
-    await updateField(competitorId, runNumber, 'is_dns', 0);
-    await updateField(competitorId, runNumber, 'is_ns', 0);
 
     // Refresh next run's start order if it exists
     const nextRun = runNumber + 1;
@@ -429,30 +437,23 @@ function RecordRaceResultsPageNew() {
       ),
     }));
 
-    await updateField(
-      competitorId,
-      runNumber,
-      'is_dns',
-      newStatus === 'DNS' ? 1 : 0,
-    );
-    await updateField(
-      competitorId,
-      runNumber,
-      'is_dnf',
-      newStatus === 'DNF' ? 1 : 0,
-    );
-    await updateField(
-      competitorId,
-      runNumber,
-      'is_dsq',
-      newStatus === 'DSQ' ? 1 : 0,
-    );
-    await updateField(
-      competitorId,
-      runNumber,
-      'is_ns',
-      newStatus === 'NS' ? 1 : 0,
-    );
+    try {
+      const fields = {
+        is_dns: newStatus === 'DNS' ? 1 : 0,
+        is_dnf: newStatus === 'DNF' ? 1 : 0,
+        is_dsq: newStatus === 'DSQ' ? 1 : 0,
+        is_ns: newStatus === 'NS' ? 1 : 0,
+      };
+      if (newStatus !== 'DSQ') {
+        fields.dsq_gate = null;
+        fields.dsq_reason = null;
+      }
+      await saveResultFields(runNumber, competitorId, fields);
+    } catch (error) {
+      handleDatabaseError('save result status', error);
+      await fetchCompetitorsForRun(runNumber);
+      return;
+    }
 
     // Refresh next run's start order if it exists
     const nextRun = runNumber + 1;
@@ -476,52 +477,32 @@ function RecordRaceResultsPageNew() {
       ),
     }));
 
-    await updateField(competitorId, runNumber, dbField, value);
+    try {
+      await saveResultFields(runNumber, competitorId, { [dbField]: value });
+    } catch (error) {
+      handleDatabaseError('save DSQ details', error);
+      await fetchCompetitorsForRun(runNumber);
+    }
   };
 
-  const updateField = async (competitorId, runNumber, field, value) => {
-    try {
-      const checkQuery = `
-        SELECT COUNT(*) as count
-        FROM race_results
-        WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
-      `;
-      const exists = await window.api.select(checkQuery, [
-        competitionId,
-        raceId,
-        runNumber,
-        competitorId,
-      ]);
-
-      if (exists[0].count > 0) {
-        const updateQuery = `
-          UPDATE race_results
-          SET ${field} = ?
-          WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
-        `;
-        await window.api.insert(updateQuery, [
-          value,
-          competitionId,
-          raceId,
-          runNumber,
-          competitorId,
-        ]);
-      } else {
-        const insertQuery = `
-          INSERT INTO race_results (competition_id, race_id, run_number, racer_id, ${field})
-          VALUES (?, ?, ?, ?, ?)
-        `;
-        await window.api.insert(insertQuery, [
-          competitionId,
-          raceId,
-          runNumber,
-          competitorId,
-          value,
-        ]);
-      }
-    } catch (error) {
-      console.error('Failed to update field:', error);
-    }
+  // Persists one or more race_results columns for a competitor in a single
+  // atomic statement, creating the row if it doesn't exist yet. Throws on
+  // failure so callers can surface the error and revert optimistic state.
+  const saveResultFields = async (runNumber, competitorId, fields) => {
+    const columns = Object.keys(fields);
+    const query = `
+      INSERT INTO race_results (competition_id, race_id, run_number, racer_id, ${columns.join(', ')})
+      VALUES (?, ?, ?, ?, ${columns.map(() => '?').join(', ')})
+      ON CONFLICT(competition_id, race_id, run_number, racer_id)
+      DO UPDATE SET ${columns.map((c) => `${c} = excluded.${c}`).join(', ')}
+    `;
+    await window.api.insert(query, [
+      competitionId,
+      raceId,
+      runNumber,
+      competitorId,
+      ...Object.values(fields),
+    ]);
   };
 
   const markRunComplete = async (runNumber) => {
@@ -578,85 +559,63 @@ function RecordRaceResultsPageNew() {
     }
   };
 
+  // Rebuilds the next run's result rows as a single atomic transaction, so
+  // a crash or error can never leave the run half-deleted. Throws on
+  // failure; markRunComplete/unlockRun surface the error to the user.
   const createNextRunResults = async (
     currentRun,
     nextRun,
     preserveExisting = false,
   ) => {
-    try {
-      const isSeedingRace =
-        raceDetails?.is_seeding === 1 || raceDetails?.is_seeding === true;
-      const allCompetitors = competitors[currentRun] || [];
+    const isSeedingRace =
+      raceDetails?.is_seeding === 1 || raceDetails?.is_seeding === true;
+    const allCompetitors = competitors[currentRun] || [];
 
-      let competitorsForNextRun;
-      if (isSeedingRace) {
-        competitorsForNextRun = allCompetitors;
-      } else {
-        competitorsForNextRun = allCompetitors.filter(
-          (c) => c.status === 'Finished',
-        );
-      }
+    const competitorsForNextRun = isSeedingRace
+      ? allCompetitors
+      : allCompetitors.filter((c) => c.status === 'Finished');
 
-      if (!preserveExisting) {
-        const deleteQuery = `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
-        await window.api.delete(deleteQuery, [competitionId, raceId, nextRun]);
-      } else if (!isSeedingRace) {
-        // For non-seeding races, remove competitors who no longer qualify
-        const nonFinishers = allCompetitors
-          .filter((c) => c.status !== 'Finished')
-          .map((c) => c.competitor_id);
+    const operations = [];
 
-        if (nonFinishers.length > 0) {
-          const placeholders = nonFinishers.map(() => '?').join(',');
-          const removeQuery = `
+    if (!preserveExisting) {
+      operations.push({
+        type: 'delete',
+        query: `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`,
+        params: [competitionId, raceId, nextRun],
+      });
+    } else if (!isSeedingRace) {
+      // For non-seeding races, remove competitors who no longer qualify
+      const nonFinishers = allCompetitors
+        .filter((c) => c.status !== 'Finished')
+        .map((c) => c.competitor_id);
+
+      if (nonFinishers.length > 0) {
+        const placeholders = nonFinishers.map(() => '?').join(',');
+        operations.push({
+          type: 'delete',
+          query: `
             DELETE FROM race_results
             WHERE competition_id = ? AND race_id = ? AND run_number = ?
             AND racer_id IN (${placeholders})
-          `;
-          await window.api.delete(removeQuery, [
-            competitionId,
-            raceId,
-            nextRun,
-            ...nonFinishers,
-          ]);
-        }
+          `,
+          params: [competitionId, raceId, nextRun, ...nonFinishers],
+        });
       }
-
-      await Promise.all(
-        competitorsForNextRun.map(async (comp) => {
-          if (preserveExisting) {
-            const existsQuery = `
-              SELECT COUNT(*) as count FROM race_results
-              WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
-            `;
-            const exists = await window.api.select(existsQuery, [
-              competitionId,
-              raceId,
-              nextRun,
-              comp.competitor_id,
-            ]);
-            if (exists[0].count > 0) {
-              return;
-            }
-          }
-
-          const insertQuery = `
-            INSERT INTO race_results (competition_id, race_id, run_number, racer_id)
-            VALUES (?, ?, ?, ?)
-          `;
-          await window.api.insert(insertQuery, [
-            competitionId,
-            raceId,
-            nextRun,
-            comp.competitor_id,
-          ]);
-        }),
-      );
-
-      await fetchCompetitorsForRun(nextRun);
-    } catch (error) {
-      console.error('Failed to create next run results:', error);
     }
+
+    for (const comp of competitorsForNextRun) {
+      operations.push({
+        type: 'insert',
+        query: `
+          INSERT OR IGNORE INTO race_results (competition_id, race_id, run_number, racer_id)
+          VALUES (?, ?, ?, ?)
+        `,
+        params: [competitionId, raceId, nextRun, comp.competitor_id],
+      });
+    }
+
+    await window.api.transaction(operations);
+    await fetchCompetitorsForRun(nextRun);
   };
 
   const getColumns = (runNumber, isLocked) => [
