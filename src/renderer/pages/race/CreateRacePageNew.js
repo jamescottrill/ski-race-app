@@ -22,6 +22,7 @@ import {
   cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { handleDatabaseError } from '../../utils/ErrorHandler';
 import { v4 as uuid4 } from 'uuid';
 
 export default function CreateRacePageNew() {
@@ -104,22 +105,25 @@ export default function CreateRacePageNew() {
     ];
 
     try {
-      await window.api.insert(query, params);
-
-      // Create race_run entries for each run
+      // Create the race and its runs atomically so a failure can't leave a
+      // race behind with missing runs
       const numRuns = parseInt(formData.numberRuns, 10) || 1;
+      const operations = [{ type: 'insert', query, params }];
       for (let runNumber = 1; runNumber <= numRuns; runNumber++) {
-        const runId = `${raceId}-run-${runNumber}`;
-        const runQuery = `
-          INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
-          VALUES (?, ?, ?, ?, 0)
-        `;
-        await window.api.insert(runQuery, [competitionId, raceId, runId, runNumber]);
+        operations.push({
+          type: 'insert',
+          query: `
+            INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
+            VALUES (?, ?, ?, ?, 0)
+          `,
+          params: [competitionId, raceId, `${raceId}-run-${runNumber}`, runNumber],
+        });
       }
+      await window.api.transaction(operations);
 
       navigate(`/competition/${competitionId}/race/${raceId}`);
     } catch (error) {
-      console.error('Failed to create race:', error);
+      handleDatabaseError('create race', error);
     }
   };
 
@@ -243,16 +247,16 @@ export default function CreateRacePageNew() {
                   />
                   <TextField
                     label="Start Altitude (m)"
-                    name="altStart"
+                    name="startAltitude"
                     type="number"
-                    value={formData.altStart}
+                    value={formData.startAltitude}
                     onChange={handleChange}
                   />
                   <TextField
                     label="Finish Altitude (m)"
-                    name="altFinish"
+                    name="finishAltitude"
                     type="number"
-                    value={formData.altFinish}
+                    value={formData.finishAltitude}
                     onChange={handleChange}
                   />
                   <TextField

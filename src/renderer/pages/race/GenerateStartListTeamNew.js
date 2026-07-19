@@ -26,6 +26,7 @@ import { fetchSeedList } from '../../utils/FetchSeedList';
 import { startListPdf } from '../../utils/StartListPdf';
 import { getRaceDetails } from '../../utils/RaceDetails';
 import { shuffleArray } from '../../utils/GenericUtils';
+import { handleDatabaseError, showSuccess } from '../../utils/ErrorHandler';
 
 export default function GenerateStartListTeamNew() {
   const { competitionId, raceId } = useParams();
@@ -155,7 +156,9 @@ export default function GenerateStartListTeamNew() {
     await startListPdf(raceDetails, startList, womenStartList);
   };
 
-  const saveStartList = async (list, gender) => {
+  // Builds the insert operations for one list; the caller runs all lists in
+  // a single transaction so a failure can't leave a half-saved start list
+  const buildSaveOperations = (list) => {
     const query = `
       INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
       VALUES (?, ?, ?, ?, ?);
@@ -164,63 +167,57 @@ export default function GenerateStartListTeamNew() {
       INSERT INTO race_results (competition_id, race_id, racer_id, run_number)
       VALUES (?, ?, ?, 1);
     `;
-    try {
-      const promises = [];
-      let res;
-      for (let i = 0; i < list.length; i += 1) {
-        res = window.api.insert(query, [
+    return list.flatMap((competitor, i) => [
+      {
+        type: 'insert',
+        query,
+        params: [
           competitionId,
           raceId,
-          list[i].racer_id,
+          competitor.racer_id,
           i + 1,
-          list[i].seed_points,
-        ]);
-        promises.push(res);
-        res = window.api.insert(raceQuery, [
-          competitionId,
-          raceId,
-          list[i].racer_id,
-        ]);
-        promises.push(res);
-      }
-      await Promise.all(promises);
-      alert(`${gender} start list saved successfully.`);
-    } catch (error) {
-      console.error(`Failed to save ${gender} start list:`, error);
-    }
+          competitor.seed_points,
+        ],
+      },
+      {
+        type: 'insert',
+        query: raceQuery,
+        params: [competitionId, raceId, competitor.racer_id],
+      },
+    ]);
   };
 
   const deleteStartList = async () => {
-    const query = `
-      DELETE FROM race_competitor
-      WHERE competition_id = ? AND race_id = ?;
-    `;
-    const raceQuery = `
-      DELETE FROM race_results
-      WHERE competition_id = ? AND race_id = ?;
-    `;
     try {
-      const promises = [];
-      const res1 = window.api.delete(query, [competitionId, raceId]);
-      const res2 = window.api.delete(raceQuery, [competitionId, raceId]);
-      promises.push(res1);
-      promises.push(res2);
-      await Promise.all(promises);
-      alert(`Start list deleted successfully.`);
+      await window.api.transaction([
+        {
+          type: 'delete',
+          query: `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
+          params: [competitionId, raceId],
+        },
+        {
+          type: 'delete',
+          query: `DELETE FROM race_results WHERE competition_id = ? AND race_id = ?`,
+          params: [competitionId, raceId],
+        },
+      ]);
+      showSuccess('Start list deleted successfully.');
       setStartListExists(false);
       await getFetchSeedList();
     } catch (error) {
-      alert(`Failed to delete start list. ${error}`);
-      console.error(`Failed to delete start list:`, error);
+      handleDatabaseError('delete start list', error);
     }
   };
 
-  const handleSaveStartList = () => {
-    if (womenStartList) {
-      saveStartList(startList, "Men's");
-      saveStartList(womenStartList, "Women's");
-    } else {
-      saveStartList(startList, 'Congratulations, ');
+  const handleSaveStartList = async () => {
+    try {
+      const operations = womenStartList
+        ? [...buildSaveOperations(startList), ...buildSaveOperations(womenStartList)]
+        : buildSaveOperations(startList);
+      await window.api.transaction(operations);
+      showSuccess('Start list saved successfully.');
+    } catch (error) {
+      handleDatabaseError('save start list', error);
     }
   };
 

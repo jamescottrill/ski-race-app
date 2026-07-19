@@ -157,61 +157,50 @@ export const storeCPPResult = async (competitionId, cppResult) => {
  * @returns {Promise<Object>} Storage result
  */
 export const storeFinalSeedList = async (competitionId, finalisedSeedList) => {
-  let successCount = 0;
-  let errorCount = 0;
   const finalisedDate = new Date().toISOString();
 
-  for (const entry of finalisedSeedList) {
-    // Check if entry already exists
-    const existing = await window.api.select(
-      `SELECT competition_id FROM competition_final_seed_list WHERE competition_id = ? AND racer_id = ?`,
-      [competitionId, entry.racer_id]
-    );
+  // Upsert every entry in one transaction: the finalised list is either
+  // stored completely or not at all, never partially
+  const operations = finalisedSeedList.map((entry) => ({
+    type: 'insert',
+    query: `
+      INSERT INTO competition_final_seed_list
+      (competition_id, racer_id, raw_seed_points, cpp_applied, final_seed_points, aasl_points, finalised_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(competition_id, racer_id)
+      DO UPDATE SET raw_seed_points = excluded.raw_seed_points,
+                    cpp_applied = excluded.cpp_applied,
+                    final_seed_points = excluded.final_seed_points,
+                    aasl_points = excluded.aasl_points,
+                    finalised_date = excluded.finalised_date
+    `,
+    params: [
+      competitionId,
+      entry.racer_id,
+      entry.original_seed_points || entry.seed_points,
+      entry.cpp_applied,
+      entry.final_seed_points,
+      entry.aasl_points || null,
+      finalisedDate,
+    ],
+  }));
 
-    try {
-      if (existing.length > 0) {
-        // Update existing
-        await window.api.insert(`
-          UPDATE competition_final_seed_list
-          SET raw_seed_points = ?, cpp_applied = ?, final_seed_points = ?, aasl_points = ?, finalised_date = ?
-          WHERE competition_id = ? AND racer_id = ?
-        `, [
-          entry.original_seed_points || entry.seed_points,
-          entry.cpp_applied,
-          entry.final_seed_points,
-          entry.aasl_points || null,
-          finalisedDate,
-          competitionId,
-          entry.racer_id
-        ]);
-      } else {
-        // Insert new
-        await window.api.insert(`
-          INSERT INTO competition_final_seed_list
-          (competition_id, racer_id, raw_seed_points, cpp_applied, final_seed_points, aasl_points, finalised_date)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [
-          competitionId,
-          entry.racer_id,
-          entry.original_seed_points || entry.seed_points,
-          entry.cpp_applied,
-          entry.final_seed_points,
-          entry.aasl_points || null,
-          finalisedDate
-        ]);
-      }
-      successCount++;
-    } catch (error) {
-      console.error('Failed to store seed list entry:', error);
-      errorCount++;
-    }
+  try {
+    await window.api.transaction(operations);
+    return {
+      success: true,
+      successCount: finalisedSeedList.length,
+      errorCount: 0,
+    };
+  } catch (error) {
+    console.error('Failed to store finalised seed list:', error);
+    return {
+      success: false,
+      successCount: 0,
+      errorCount: finalisedSeedList.length,
+      error: error.message,
+    };
   }
-
-  return {
-    success: errorCount === 0,
-    successCount,
-    errorCount
-  };
 };
 
 /**
