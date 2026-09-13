@@ -146,12 +146,6 @@ export default function GenerateStartListNew() {
     try {
       setLoading(true);
 
-      // Clear existing start list for this race
-      await window.api.delete(
-        `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
-        [competitionId, raceId],
-      );
-
       let filteredSeedList = seedList.filter(
         (competitor) => !struckOutCompetitors[competitor.racer_id],
       );
@@ -190,23 +184,30 @@ export default function GenerateStartListNew() {
         }
       }
 
-      // Insert into race_competitor table
-      const insertPromises = filteredSeedList.map((competitor, i) => {
-        const bibNumber = i + 1;
-        return window.api.insert(
-          `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
-           VALUES (?, ?, ?, ?, ?)`,
-          [
+      // Clear and rebuild the start list in one atomic transaction, so a
+      // failure part-way can never leave the race with a missing or
+      // partially-written start list
+      const operations = [
+        {
+          type: 'delete',
+          query: `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
+          params: [competitionId, raceId],
+        },
+        ...filteredSeedList.map((competitor, i) => ({
+          type: 'insert',
+          query: `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
+                  VALUES (?, ?, ?, ?, ?)`,
+          params: [
             competitionId,
             raceId,
             competitor.racer_id,
-            bibNumber,
+            i + 1,
             competitor.seed_points || 0,
           ],
-        );
-      });
+        })),
+      ];
 
-      await Promise.all(insertPromises);
+      await window.api.transaction(operations);
       await getStartList();
       showSuccess('Start list generated successfully!');
     } catch (error) {
@@ -246,12 +247,13 @@ export default function GenerateStartListNew() {
         ? [...(womenStartList || []), ...(startList || [])]
         : (startList || []);
 
-      for (const competitor of allCompetitors) {
-        await window.api.insert(
-          `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
-          [competitor.bib_number, competitionId, raceId, competitor.racer_id]
-        );
-      }
+      await window.api.transaction(
+        allCompetitors.map((competitor) => ({
+          type: 'update',
+          query: `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
+          params: [competitor.bib_number, competitionId, raceId, competitor.racer_id],
+        })),
+      );
 
       setHasChanges(false);
       setEditMode(false);

@@ -156,28 +156,10 @@ async function createWindow() {
 
   ipcMain.handle('db-transaction', async (event, operations) => {
     try {
-      const result = await db.transaction(async () => {
-        const results = [];
-        for (const op of operations) {
-          let opResult;
-          switch (op.type) {
-            case 'select':
-              opResult = await db.all(op.query, op.params);
-              break;
-            case 'insert':
-              opResult = await db.run(op.query, op.params);
-              break;
-            case 'delete':
-              opResult = await db.delete(op.query, op.params);
-              break;
-            default:
-              throw new Error(`Unknown operation type: ${op.type}`);
-          }
-          results.push(opResult);
-        }
-        return results;
-      });
-      return { success: true, results: result };
+      // Synchronous execution inside better-sqlite3's transaction() —
+      // the batch is atomic and no other IPC call can interleave with it
+      const results = db.transaction(operations);
+      return { success: true, results };
     } catch (error: any) {
       console.error('Transaction failed:', error);
       throw error;

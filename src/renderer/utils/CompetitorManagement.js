@@ -50,11 +50,6 @@ const updateCompetitor = async (
   const params1 = [formData.title, formData.country, competitorId];
 
   try {
-    const result1 = await window.api.insert(query1, params1);
-    if (!result1.success) {
-      throw new Error('Failed to update person: ' + result1.error);
-    }
-
     let query2;
     let params2;
     if (!existingCompetitor) {
@@ -86,7 +81,6 @@ const updateCompetitor = async (
         formData.arrivalSeed || 2000,
         formData.regiment,
       ];
-      console.log(params2);
     } else {
       query2 = `
           UPDATE competition_competitor
@@ -117,22 +111,23 @@ const updateCompetitor = async (
         competitorId,
       ];
     }
-    const result2 = await window.api.insert(query2, params2);
-    if (!result2.success) {
-      throw new Error('Failed to update competitor: ' + result2.error);
-    }
+    // Person, competition entry, and team membership are written as one
+    // transaction so a failure can't leave a partially-updated competitor
+    const operations = [
+      { type: 'update', query: query1, params: params1 },
+      { type: 'run', query: query2, params: params2 },
+    ];
 
     if (formData.teamId) {
-      const params3 = [competitionId, formData.teamId, competitorId];
-      const query3 = `INSERT INTO main.competition_team_members (competition_id, team_id, racer_id)
-                      VALUES (?, ?, ?)`;
-      const result3 = await window.api.insert(query3, params3);
-
-      if (!result3.success) {
-        console.warn('Failed to add to team:', result3.error);
-        // Don't fail the entire operation, just warn
-      }
+      operations.push({
+        type: 'insert',
+        query: `INSERT OR IGNORE INTO competition_team_members (competition_id, team_id, racer_id)
+                VALUES (?, ?, ?)`,
+        params: [competitionId, formData.teamId, competitorId],
+      });
     }
+
+    await window.api.transaction(operations);
 
     return { success: true };
   } catch (error) {
@@ -177,11 +172,6 @@ const createCompetitor = async (formData, competitionId) => {
   ];
 
   try {
-    const result1 = await window.api.insert(query1, params1);
-    if (!result1.success) {
-      throw new Error('Failed to create person: ' + result1.error);
-    }
-
     const query2 = `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
@@ -202,10 +192,13 @@ const createCompetitor = async (formData, competitionId) => {
       formData.arrivalSeed || 2000,
     ];
 
-    const result2 = await window.api.insert(query2, params2);
-    if (!result2.success) {
-      throw new Error('Failed to add to competition: ' + result2.error);
-    }
+    // Person and competition entry are created atomically: a failure can't
+    // leave a person on record with no competition entry, which previously
+    // blocked re-importing them
+    await window.api.transaction([
+      { type: 'insert', query: query1, params: params1 },
+      { type: 'insert', query: query2, params: params2 },
+    ]);
 
     return { success: true, id };
   } catch (error) {

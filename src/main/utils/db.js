@@ -3,6 +3,8 @@ const path = require('path');
 const { app, dialog } = require('electron');
 const fs = require('fs');
 
+const MAX_AUTOMATIC_BACKUPS = 10;
+
 class AppPreferences {
   static preferencesPath = path.join(app.getPath('userData'), 'config.json');
 
@@ -14,17 +16,26 @@ class AppPreferences {
       }
     } catch (error) {
       console.error('Failed to load preferences:', error);
+      // Keep the unreadable file for manual recovery rather than overwriting it
+      try {
+        fs.copyFileSync(
+          this.preferencesPath,
+          `${this.preferencesPath}.corrupt`,
+        );
+      } catch (backupError) {
+        console.error('Failed to back up corrupt preferences:', backupError);
+      }
     }
-    this.savePreferences({});
     return {};
   }
 
   static savePreferences(preferences) {
     try {
-      fs.writeFileSync(
-        this.preferencesPath,
-        JSON.stringify(preferences, null, 2),
-      );
+      // Write to a temp file then rename so a crash mid-write can't
+      // leave a truncated config.json behind
+      const tmpPath = `${this.preferencesPath}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(preferences, null, 2));
+      fs.renameSync(tmpPath, this.preferencesPath);
     } catch (error) {
       console.error('Failed to save preferences:', error);
       throw new Error('Could not save preferences: ' + error.message);
@@ -49,35 +60,14 @@ function selectDatabaseFile() {
   return undefined;
 }
 
-class DatabaseWrapper {
-  constructor(dbPath) {
-    const finalPath = dbPath || preferences.databasePath || selectDatabaseFile();
-
-    if (!finalPath) {
-      throw new Error('Database file must be selected to proceed.');
-    }
-
-    try {
-      // Ensure the directory exists
-      const dbDir = path.dirname(finalPath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-
-      this.db = new Database(finalPath);
-      this.db.pragma('journal_mode = WAL');
-      console.log('Connected to the SQLite database at:', finalPath);
-      this.initializeDatabase();
-    } catch (err) {
-      console.error('Failed to connect to database at path:', finalPath);
-      console.error('Error:', err.message);
-      throw err;
-    }
-  }
-
-  initializeDatabase() {
-    const tableCreationQueries = [
-      `
+// Canonical table definitions, used both to create tables in new databases
+// and to rebuild existing tables whose foreign key declarations are invalid
+// (see repairInvalidForeignKeys). Every foreign key must reference the
+// parent table's primary key or a unique index — SQLite treats anything
+// else as a "foreign key mismatch" and refuses to prepare statements
+// against the child table while enforcement is on.
+const TABLE_SCHEMAS = {
+  people: `
       CREATE TABLE IF NOT EXISTS people (
         id TEXT PRIMARY KEY,
         first_name TEXT,
@@ -90,14 +80,14 @@ class DatabaseWrapper {
         is_committee BOOLEAN
       )
       `,
-      `
+  competitions: `
       CREATE TABLE IF NOT EXISTS competitions (
         id TEXT PRIMARY KEY,
         competition_name TEXT,
         competition_description TEXT
       )
       `,
-      `
+  competition_competitor: `
       CREATE TABLE IF NOT EXISTS competition_competitor (
         competition_id TEXT,
         racer_id TEXT,
@@ -117,11 +107,12 @@ class DatabaseWrapper {
         FOREIGN KEY (racer_id) REFERENCES people(id)
       )
       `,
-      `
+  competition_team: `
       CREATE TABLE IF NOT EXISTS competition_team (
         competition_id TEXT,
         team_id TEXT,
         team_name TEXT,
+        team_type TEXT,
         is_corps BOOLEAN,
         is_reserve BOOLEAN,
         is_female BOOLEAN,
@@ -130,20 +121,7 @@ class DatabaseWrapper {
         FOREIGN KEY (competition_id) REFERENCES competitions(id)
       )
       `,
-      `
-        CREATE TABLE IF NOT EXISTS competition_team_members (
-          competition_id TEXT,
-          team_id TEXT,
-          race_id TEXT,
-          racer_id TEXT,
-          PRIMARY KEY (competition_id, team_id, race_id, racer_id),
-          FOREIGN KEY (competition_id) REFERENCES competitions(id),
-          FOREIGN KEY (racer_id) REFERENCES people(id),
-          FOREIGN KEY (team_id) REFERENCES competition_team(team_id),
-          FOREIGN KEY (race_id) REFERENCES races(race_id)
-          )
-      `,
-      `
+  races: `
       CREATE TABLE IF NOT EXISTS races (
         competition_id TEXT,
         race_id TEXT,
@@ -175,8 +153,21 @@ class DatabaseWrapper {
         FOREIGN KEY (competition_id) REFERENCES competitions(id)
       )
       `,
-      `
-      CREATE TABLE IF NOT EXISTS  race_run (
+  competition_team_members: `
+      CREATE TABLE IF NOT EXISTS competition_team_members (
+        competition_id TEXT,
+        team_id TEXT,
+        race_id TEXT,
+        racer_id TEXT,
+        PRIMARY KEY (competition_id, team_id, race_id, racer_id),
+        FOREIGN KEY (competition_id) REFERENCES competitions(id),
+        FOREIGN KEY (racer_id) REFERENCES people(id),
+        FOREIGN KEY (competition_id, team_id) REFERENCES competition_team(competition_id, team_id),
+        FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id)
+      )
+      `,
+  race_run: `
+      CREATE TABLE IF NOT EXISTS race_run (
         competition_id TEXT,
         race_id TEXT,
         run_id TEXT,
@@ -192,10 +183,10 @@ class DatabaseWrapper {
         is_complete BOOLEAN,
         PRIMARY KEY (competition_id, race_id, run_number),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id)
+        FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id)
       )
       `,
-      `
+  race_competitor: `
       CREATE TABLE IF NOT EXISTS race_competitor (
         competition_id TEXT,
         race_id TEXT,
@@ -204,12 +195,12 @@ class DatabaseWrapper {
         seed_points FLOAT,
         PRIMARY KEY (competition_id, race_id, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id),
+        FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id),
         FOREIGN KEY (racer_id) REFERENCES people(id)
       )
       `,
-      `
-      CREATE TABLE IF NOT EXISTS  race_results (
+  race_results: `
+      CREATE TABLE IF NOT EXISTS race_results (
         competition_id TEXT,
         race_id TEXT,
         run_id TEXT,
@@ -224,12 +215,12 @@ class DatabaseWrapper {
         dsq_reason TEXT,
         PRIMARY KEY (competition_id, race_id, run_number, racer_id),
         FOREIGN KEY (competition_id) REFERENCES competitions(id),
-        FOREIGN KEY (race_id) REFERENCES races(race_id),
+        FOREIGN KEY (competition_id, race_id) REFERENCES races(competition_id, race_id),
         FOREIGN KEY (racer_id) REFERENCES people(id),
-        FOREIGN KEY (run_number) REFERENCES race_run(run_number)
+        FOREIGN KEY (competition_id, race_id, run_number) REFERENCES race_run(competition_id, race_id, run_number)
       )
       `,
-      `
+  aasl: `
       CREATE TABLE IF NOT EXISTS aasl (
         service_number TEXT NOT NULL,
         first_name TEXT,
@@ -243,7 +234,7 @@ class DatabaseWrapper {
         FOREIGN KEY (service_number) REFERENCES people(id)
       )
       `,
-      `
+  competition_cpp: `
       CREATE TABLE IF NOT EXISTS competition_cpp (
         id TEXT PRIMARY KEY,
         competition_id TEXT NOT NULL,
@@ -256,7 +247,7 @@ class DatabaseWrapper {
         FOREIGN KEY (competition_id) REFERENCES competitions(id)
       )
       `,
-      `
+  competition_final_seed_list: `
       CREATE TABLE IF NOT EXISTS competition_final_seed_list (
         competition_id TEXT NOT NULL,
         racer_id TEXT NOT NULL,
@@ -270,15 +261,54 @@ class DatabaseWrapper {
         FOREIGN KEY (racer_id) REFERENCES people(id)
       )
       `,
-    ];
+};
 
+class DatabaseWrapper {
+  constructor(dbPath) {
+    const finalPath = dbPath || preferences.databasePath || selectDatabaseFile();
+
+    if (!finalPath) {
+      throw new Error('Database file must be selected to proceed.');
+    }
+
+    try {
+      // Ensure the directory exists
+      const dbDir = path.dirname(finalPath);
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
+      this.db = new Database(finalPath);
+      this.db.pragma('journal_mode = WAL');
+      // better-sqlite3 v12 turned foreign key enforcement ON by default.
+      // Existing databases carry FK declarations that SQLite considers
+      // malformed (references to non-unique parent columns), which makes
+      // every statement on those tables fail at prepare time under
+      // enforcement. Keep enforcement off (the behaviour the app was
+      // written against) until existing data has been cleaned up;
+      // repairInvalidForeignKeys() below fixes the declarations so
+      // enforcement can be switched on deliberately later.
+      this.db.pragma('foreign_keys = OFF');
+      console.log('Connected to the SQLite database at:', finalPath);
+      // Snapshot BEFORE any schema work so a bad migration is recoverable
+      this.createAutomaticBackup(finalPath);
+      this.initializeDatabase();
+      this.applyColumnMigrations();
+      this.repairInvalidForeignKeys();
+    } catch (err) {
+      console.error('Failed to connect to database at path:', finalPath);
+      console.error('Error:', err.message);
+      throw err;
+    }
+  }
+
+  initializeDatabase() {
     const errors = [];
-    for (const query of tableCreationQueries) {
+    for (const [table, query] of Object.entries(TABLE_SCHEMAS)) {
       try {
         this.db.exec(query);
-        console.log('Table created or already exists.');
       } catch (err) {
-        console.error('Error creating table:', err.message);
+        console.error(`Error creating table ${table}:`, err.message);
         errors.push(err.message);
       }
     }
@@ -288,104 +318,185 @@ class DatabaseWrapper {
     }
   }
 
-  run(query, params = []) {
-    return new Promise((resolve, reject) => {
+  // CREATE TABLE IF NOT EXISTS never alters tables that already exist, so
+  // columns added to the schema after a database was created have to be
+  // back-filled here.
+  applyColumnMigrations() {
+    const columnMigrations = [
+      { table: 'races', column: 'flip_count', ddl: 'INTEGER DEFAULT 15' },
+      { table: 'races', column: 'flip_count_women', ddl: 'INTEGER DEFAULT 5' },
+      { table: 'competition_team', column: 'team_type', ddl: 'TEXT' },
+    ];
+
+    for (const { table, column, ddl } of columnMigrations) {
       try {
-        const stmt = this.db.prepare(query);
-        const result = stmt.run(...params);
-        resolve({ id: result.lastInsertRowid, changes: result.changes });
+        const exists = this.db
+          .prepare('SELECT 1 FROM pragma_table_info(?) WHERE name = ?')
+          .get(table, column);
+        if (!exists) {
+          this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+          console.log(`Added missing column ${table}.${column}`);
+        }
       } catch (err) {
-        console.error('Error running query:', err.message);
-        reject(err);
+        console.error(
+          `Failed to migrate column ${table}.${column}:`,
+          err.message,
+        );
       }
+    }
+  }
+
+  // Earlier versions declared foreign keys against non-unique parent
+  // columns (e.g. race_results.run_number -> race_run.run_number, where
+  // race_run's key is composite). SQLite reports these as "foreign key
+  // mismatch" and, with enforcement on (the better-sqlite3 v12 default),
+  // refuses to prepare ANY insert/delete against the child table. Rebuild
+  // affected tables with the corrected declarations from TABLE_SCHEMAS.
+  repairInvalidForeignKeys() {
+    const invalidParentRefs = new Set([
+      'races.race_id',
+      'race_run.run_number',
+      'competition_team.team_id',
+    ]);
+    const candidates = [
+      'competition_team_members',
+      'race_run',
+      'race_competitor',
+      'race_results',
+    ];
+
+    for (const table of candidates) {
+      try {
+        const foreignKeys = this.db.pragma(`foreign_key_list(${table})`);
+        // Count columns per FK: the corrected composite FKs also contain
+        // e.g. a run_number -> race_run.run_number column pair, so only a
+        // SINGLE-column FK to one of these parents is invalid
+        const columnsPerFk = {};
+        for (const fk of foreignKeys) {
+          columnsPerFk[fk.id] = (columnsPerFk[fk.id] || 0) + 1;
+        }
+        const needsRebuild = foreignKeys.some(
+          (fk) =>
+            columnsPerFk[fk.id] === 1 &&
+            invalidParentRefs.has(`${fk.table}.${fk.to}`),
+        );
+        if (needsRebuild) {
+          this.rebuildTable(table);
+          console.log(`Rebuilt ${table} with corrected foreign keys`);
+        }
+      } catch (err) {
+        console.error(`Failed to repair table ${table}:`, err.message);
+      }
+    }
+  }
+
+  // Standard SQLite table rebuild: create the corrected table under a
+  // temporary name, copy every shared column across, then swap it in.
+  // Runs as one transaction so a failure leaves the original untouched.
+  rebuildTable(table) {
+    const createSql = TABLE_SCHEMAS[table].replace(
+      `CREATE TABLE IF NOT EXISTS ${table}`,
+      `CREATE TABLE ${table}_rebuild`,
+    );
+
+    const rebuild = this.db.transaction(() => {
+      this.db.exec(`DROP TABLE IF EXISTS ${table}_rebuild`);
+      this.db.exec(createSql);
+      const oldColumns = this.db
+        .pragma(`table_info(${table})`)
+        .map((c) => c.name);
+      const newColumns = this.db
+        .pragma(`table_info(${table}_rebuild)`)
+        .map((c) => c.name);
+      const shared = oldColumns
+        .filter((c) => newColumns.includes(c))
+        .join(', ');
+      this.db.exec(
+        `INSERT INTO ${table}_rebuild (${shared}) SELECT ${shared} FROM ${table}`,
+      );
+      this.db.exec(`DROP TABLE ${table}`);
+      this.db.exec(`ALTER TABLE ${table}_rebuild RENAME TO ${table}`);
     });
+    rebuild();
+  }
+
+  // A plain file copy of a WAL-mode database can miss recent writes, so
+  // back up via VACUUM INTO, which produces a consistent snapshot.
+  createAutomaticBackup(dbPath) {
+    try {
+      const backupDir = path.join(app.getPath('userData'), 'backups');
+      fs.mkdirSync(backupDir, { recursive: true });
+
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const baseName = path.basename(dbPath, path.extname(dbPath));
+      const backupPath = path.join(backupDir, `${baseName}-${stamp}.db`);
+
+      this.db.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
+      console.log('Automatic backup created at:', backupPath);
+
+      const backups = fs
+        .readdirSync(backupDir)
+        .filter((f) => f.endsWith('.db'))
+        .map((f) => ({
+          name: f,
+          mtime: fs.statSync(path.join(backupDir, f)).mtimeMs,
+        }))
+        .sort((a, b) => b.mtime - a.mtime);
+
+      for (const old of backups.slice(MAX_AUTOMATIC_BACKUPS)) {
+        fs.unlinkSync(path.join(backupDir, old.name));
+      }
+    } catch (err) {
+      // A failed backup must never stop the app from starting
+      console.error('Automatic backup failed:', err.message);
+    }
+  }
+
+  run(query, params = []) {
+    const result = this.db.prepare(query).run(...params);
+    return { id: result.lastInsertRowid, changes: result.changes };
   }
 
   get(query, params = []) {
-    return new Promise((resolve, reject) => {
-      try {
-        const stmt = this.db.prepare(query);
-        const row = stmt.get(...params);
-        resolve(row);
-      } catch (err) {
-        console.error('Error fetching data:', err.message);
-        reject(err);
-      }
-    });
+    return this.db.prepare(query).get(...params);
   }
 
   all(query, params = []) {
-    return new Promise((resolve, reject) => {
-      try {
-        const stmt = this.db.prepare(query);
-        const rows = stmt.all(...params);
-        resolve(rows);
-      } catch (err) {
-        console.error('Error fetching data:', err.message);
-        reject(err);
-      }
-    });
+    return this.db.prepare(query).all(...params);
   }
 
   delete(query, params = []) {
-    return new Promise((resolve, reject) => {
-      try {
-        const stmt = this.db.prepare(query);
-        const result = stmt.run(...params);
-        resolve({ changes: result.changes });
-      } catch (err) {
-        console.error('Error deleting data:', err.message);
-        reject(err);
-      }
-    });
+    const result = this.db.prepare(query).run(...params);
+    return { changes: result.changes };
   }
 
-  beginTransaction() {
-    return new Promise((resolve, reject) => {
-      try {
-        this.db.exec('BEGIN TRANSACTION');
-        resolve();
-      } catch (err) {
-        console.error('Error beginning transaction:', err.message);
-        reject(err);
+  // Executes a list of {type, query, params} operations atomically.
+  // better-sqlite3's transaction() runs the whole batch synchronously, so
+  // no other IPC-dispatched statement can interleave between BEGIN and
+  // COMMIT, and any thrown error rolls the entire batch back.
+  transaction(operations) {
+    const runAll = this.db.transaction((ops) => {
+      const results = [];
+      for (const op of ops) {
+        switch (op.type) {
+          case 'select':
+            results.push(this.all(op.query, op.params || []));
+            break;
+          case 'insert':
+          case 'update':
+          case 'run':
+            results.push(this.run(op.query, op.params || []));
+            break;
+          case 'delete':
+            results.push(this.delete(op.query, op.params || []));
+            break;
+          default:
+            throw new Error(`Unknown operation type: ${op.type}`);
+        }
       }
+      return results;
     });
-  }
-
-  commit() {
-    return new Promise((resolve, reject) => {
-      try {
-        this.db.exec('COMMIT');
-        resolve();
-      } catch (err) {
-        console.error('Error committing transaction:', err.message);
-        reject(err);
-      }
-    });
-  }
-
-  rollback() {
-    return new Promise((resolve, reject) => {
-      try {
-        this.db.exec('ROLLBACK');
-        resolve();
-      } catch (err) {
-        console.error('Error rolling back transaction:', err.message);
-        reject(err);
-      }
-    });
-  }
-
-  async transaction(callback) {
-    try {
-      await this.beginTransaction();
-      const result = await callback();
-      await this.commit();
-      return result;
-    } catch (error) {
-      await this.rollback();
-      throw error;
-    }
+    return runAll(operations);
   }
 }
 
@@ -404,7 +515,17 @@ function exportDatabase() {
 
   if (result) {
     try {
-      fs.copyFileSync(currentDbPath, result);
+      // VACUUM INTO on a fresh connection gives a consistent snapshot even
+      // in WAL mode, where copying just the .db file can miss recent writes
+      const source = new Database(currentDbPath, { readonly: true });
+      try {
+        if (fs.existsSync(result)) {
+          fs.unlinkSync(result);
+        }
+        source.exec(`VACUUM INTO '${result.replace(/'/g, "''")}'`);
+      } finally {
+        source.close();
+      }
       dialog.showMessageBoxSync({
         type: 'info',
         title: 'Export Successful',

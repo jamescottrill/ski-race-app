@@ -13,13 +13,14 @@ const SelectTrigger = React.forwardRef<
     label?: string;
     error?: string;
     fullWidth?: boolean;
+    required?: boolean;
   }
->(({ className, children, label, error, fullWidth, ...props }, ref) => (
+>(({ className, children, label, error, fullWidth, required, ...props }, ref) => (
   <div className={cn('space-y-2', fullWidth && 'w-full')}>
     {label && (
       <label className="block text-sm font-medium text-neutral-700">
         {label}
-        {props.required && <span className="ml-1 text-danger">*</span>}
+        {required && <span className="ml-1 text-danger">*</span>}
       </label>
     )}
     <SelectPrimitive.Trigger

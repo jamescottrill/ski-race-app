@@ -31,7 +31,8 @@
     "start:main": "cross-env NODE_ENV=development electronmon -r tsx .",
     "start:preload": "cross-env NODE_ENV=development NODE_OPTIONS='--import tsx' webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development NODE_OPTIONS='--import tsx' webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
-    "test": "jest"
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "browserslist": [],
   "prettier": {
@@ -65,9 +66,6 @@
       "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/.erb/mocks/fileMock.js",
       "\\.(css|less|sass|scss)$": "identity-obj-proxy"
     },
-    "setupFiles": [
-      "./.erb/scripts/check-build-exists.ts"
-    ],
     "testEnvironment": "jsdom",
     "testEnvironmentOptions": {
       "url": "http://localhost/"
