@@ -139,13 +139,12 @@ Confirmed with the user and implemented:
   skiers (minimum three), the same number is used for T1 and the divisor is twice that
   number.
 
-Still open:
+Also confirmed: initial points come from the Army Alpine Seed List first (the base
+list under B3), then the entered arrival corps seed, then 2000, in both the seed list
+calculation and the seeding race query.
 
-- A competitor with an AASL entry but no arrival corps seed is treated as seeded (not
-  grouped) and scores 2000 in the seed list; using their AASL points instead is a small
-  change if wanted.
-- Operations and seed list tests run against Node's built-in SQLite (`node:sqlite`,
-  Node 22.13+) and skip themselves on older Node.
+Note: operations and seed list tests run against Node's built-in SQLite (`node:sqlite`,
+Node 22.13+) and skip themselves on older Node.
 
 ---
 
