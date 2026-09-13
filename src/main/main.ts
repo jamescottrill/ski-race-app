@@ -1,10 +1,23 @@
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import os from 'os';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  net,
+  safeStorage,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { Database, AppPreferences, closeActiveDatabase } from './utils/db';
+import { createSettingsStore } from './sync/settings';
+import { createClient } from './sync/client';
+import { createSyncWorker } from './sync/worker';
+import { registerSyncIpc } from './sync/ipc';
 
 const fs = require('fs');
 
@@ -17,6 +30,7 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let syncWorker: ReturnType<typeof createSyncWorker> | null = null;
 
 function ensureDatabasePath(): string | undefined {
   const preferences = AppPreferences.loadPreferences();
@@ -123,6 +137,46 @@ async function createWindow() {
       }
     }
   }
+
+  // Sync with the central results service: the settings live in the
+  // preferences file, the worker drains the outbox (src/main/sync), and the
+  // renderer reaches both through the sync-* IPC channels
+  const runOperation = (name: string, payload?: object) =>
+    db.operation(name, payload);
+  const settings = createSettingsStore({
+    load: () => AppPreferences.loadPreferences(),
+    save: (preferences: object) => AppPreferences.savePreferences(preferences),
+    safeStorage,
+  });
+  syncWorker = createSyncWorker({
+    db: db.db,
+    operation: runOperation,
+    settings,
+    createClient: (options: object) =>
+      createClient({
+        fetchImpl: (url: string, init?: object) => net.fetch(url, init),
+        ...options,
+      }),
+    notify: (status: unknown) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('sync-status', status);
+      }
+    },
+    log,
+    appVersion: app.getVersion(),
+    hostname: os.hostname(),
+  });
+  db.onOperationCommitted = (name: string, payload: any) =>
+    syncWorker?.requestSync({ competitionId: payload?.competitionId });
+  db.onClose = () => syncWorker?.stop();
+  registerSyncIpc({
+    ipcMain,
+    worker: syncWorker,
+    settings,
+    db: db.db,
+    operation: runOperation,
+  });
+  syncWorker.start();
 
   ipcMain.handle('db-select', async (event, query, params) => {
     try {
@@ -240,6 +294,7 @@ app.on('window-all-closed', () => {
 // (used to relaunch after switching databases) skips this event, so the
 // menu calls closeActiveDatabase() itself before exiting.
 app.on('will-quit', () => {
+  syncWorker?.stop();
   closeActiveDatabase();
 });
 
