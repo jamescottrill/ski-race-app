@@ -119,7 +119,11 @@ jobs:
           deno-version: v2.x
 
       - name: Type-check the edge functions
-        run: deno check supabase/functions/ingest/index.ts supabase/functions/ping/index.ts
+        # Run from the functions directory so Deno picks up its deno.json
+        # (the repository root has a package.json, which would win otherwise)
+        working-directory: supabase/functions
+        run: deno check ingest/index.ts ping/index.ts
 
       - name: Test the edge functions
-        run: deno test supabase/functions/tests
+        working-directory: supabase/functions
+        run: deno test tests
