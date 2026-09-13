@@ -32,7 +32,7 @@ export default function CreateRacePageNew() {
 
   const [formData, setFormData] = useState({
     raceName: '',
-    raceType: 'Slalom',
+    raceType: 'SL',
     isIndividual: true,
     isTeam: false,
     isTraining: false,
@@ -179,6 +179,7 @@ export default function CreateRacePageNew() {
                     <option value="GS">Giant Slalom</option>
                     <option value="SG">Super G</option>
                     <option value="DH">Downhill</option>
+                    <option value="AC">Alpine Combined</option>
                   </SimpleSelect>
                   <SimpleSelect
                     label="Number of Runs"

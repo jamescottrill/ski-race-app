@@ -137,6 +137,11 @@ class DatabaseWrapper {
       { table: 'races', column: 'flip_count', ddl: 'INTEGER DEFAULT 15' },
       { table: 'races', column: 'flip_count_women', ddl: 'INTEGER DEFAULT 5' },
       { table: 'competition_team', column: 'team_type', ddl: 'TEXT' },
+      {
+        table: 'competition_competitor',
+        column: 'training_group',
+        ddl: 'INTEGER',
+      },
     ];
 
     for (const { table, column, ddl } of columnMigrations) {

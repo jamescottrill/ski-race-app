@@ -62,12 +62,19 @@ export default function IndividualResultsNew() {
           data = await fetchSeedList(
             competitionId,
             initialRaces.filter((e) => !e.isSeeding).map((e) => e.id),
+            { awardPenalties: false },
           );
         } else {
           data = await fetchSeedList(
             competitionId,
             initialRaces.map((e) => e.id),
+            { awardPenalties: false },
           );
+        }
+        // Rule B13.d: race points awarded under the seeding exceptions are
+        // not used for combination results; anyone missing a race is left
+        // out below rather than scored on awarded points
+        if (false) {
         }
         data = data.filter((e) => {
           for (const race of initialRaces) {

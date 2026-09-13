@@ -403,7 +403,12 @@ export default function UploadCompetitorsPageNew() {
               </li>
               <li>
                 • <strong>arrivalSeed</strong> or <strong>Arrival Seed</strong>{' '}
-                (defaults to 2000)
+                (leave blank if unseeded)
+              </li>
+              <li>
+                • <strong>trainingGroup</strong> or <strong>Group</strong>{' '}
+                (ability group, 1 = strongest; orders competitors with no seed
+                points in the seeding race start list)
               </li>
             </ul>
             <p className="text-xs text-neutral-500 mt-3">

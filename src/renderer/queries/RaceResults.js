@@ -47,8 +47,10 @@ const statusColumns = (run) => `run${run}.is_dns AS run_${run}_dns,
                     run${run}.dsq_gate AS run_${run}_dsq_gate,
                     run${run}.dsq_reason AS run_${run}_dsq_reason,`;
 
-// A missing run counts as 9999 s so unfinished competitors rank last
-const TWO_RUN_TOTAL = `COALESCE(run1.race_time, 9999) + COALESCE(run2.race_time, 9999)`;
+// A total exists only when both runs were completed, so nobody can earn
+// points or set the winning time on one run of a two-run race
+const TWO_RUN_TOTAL = `CASE WHEN run1.race_time IS NOT NULL AND run2.race_time IS NOT NULL
+                            THEN ROUND(run1.race_time + run2.race_time, 2) END`;
 
 const ONE_RUN_STATUS = `run1.is_dns AS is_dns,
                     run1.is_dnf AS is_dnf,
@@ -80,13 +82,13 @@ export function buildRaceResultsQuery({
                     run1.race_id,
                     run1.competition_id,
                     run1.race_time AS run_1_time,
-                    ${twoRuns ? `run2.race_time AS run_2_time,\n                    ROUND(${TWO_RUN_TOTAL}, 2) AS total_time,` : ''}
+                    ${twoRuns ? `run2.race_time AS run_2_time,\n                    ${TWO_RUN_TOTAL} AS total_time,` : ''}
                     ${statusColumns(1)}
                     ${twoRuns ? statusColumns(2) : ''}
                     ${twoRuns ? TWO_RUN_STATUS : ONE_RUN_STATUS}
                     ${COMPETITOR_COLUMNS},
                     ${team ? TEAM_COLUMNS : ''}
-                    MIN(${twoRuns ? TWO_RUN_TOTAL : 'COALESCE(run1.race_time, 9999)'}) OVER (ORDER BY run1.race_id) AS mintime
+                    MIN(${twoRuns ? TWO_RUN_TOTAL : 'run1.race_time'}) OVER (ORDER BY run1.race_id) AS mintime
                   FROM run1
                     ${twoRuns ? 'LEFT JOIN run2 ON run2.racer_id = run1.racer_id AND run2.race_id = run1.race_id' : ''}
                     ${COMPETITOR_JOINS}

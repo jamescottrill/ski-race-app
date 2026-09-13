@@ -70,6 +70,13 @@ describe('race results queries', () => {
     );
   });
 
+  it('only totals two-run races when both runs were completed', () => {
+    expect(raceResultsTwoRunQuery).toContain(
+      'CASE WHEN run1.race_time IS NOT NULL AND run2.race_time IS NOT NULL',
+    );
+    expect(raceResultsTwoRunQuery).not.toContain('9999');
+  });
+
   it('nulls the time of a run the competitor did not complete', () => {
     expect(buildRaceResultsQuery({ runs: 1 })).toContain(
       'WHEN COALESCE(is_dnf, 0) OR COALESCE(is_dns, 0) OR COALESCE(is_dsq, 0) OR COALESCE(is_ns, 0) THEN NULL',

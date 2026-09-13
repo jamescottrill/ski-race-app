@@ -37,7 +37,7 @@ export default function EditRacePageNew() {
   // Form state
   const [formData, setFormData] = useState({
     race_name: '',
-    race_type: 'Giant Slalom',
+    race_type: 'GS',
     race_date: '',
     venue: '',
     number_runs: '2',

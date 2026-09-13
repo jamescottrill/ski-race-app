@@ -135,6 +135,8 @@ function GenerateSeedListNew() {
         if (initialSelected.length > 0) {
           await loadSeedList(initialSelected);
         }
+      } else {
+        await loadSeedList([]);
       }
     } catch (error) {
       console.error('Failed to fetch races:', error);
@@ -216,6 +218,18 @@ function GenerateSeedListNew() {
               {row.original.team_name}
             </div>
           )}
+          {row.original.aasl_points != null ? (
+            <div className="text-xs text-neutral-500">seeded from AASL</div>
+          ) : null}
+          {row.original.arrival_corps_seed == null &&
+          row.original.arrival_army_seed == null &&
+          row.original.aasl_points == null ? (
+            <div className="text-xs text-warning">
+              no seed points
+              {row.original.training_group != null &&
+                `, training group ${row.original.training_group}`}
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -479,11 +493,23 @@ function GenerateSeedListNew() {
 
                     <div className="text-sm text-neutral-600">
                       <p className="font-medium mb-2">
-                        Reference Skiers ({cppResult.skiersUsed}):
+                        T1: lowest AASL points on the list (
+                        {cppResult.referenceSkiers?.length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {cppResult.referenceSkiers?.map((skier) => (
+                          <Badge key={skier.racer_id} variant="outline">
+                            {skier.name} (AASL: {skier.aasl_points?.toFixed(2)})
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="font-medium mb-2">
+                        T2 and T3: lowest AASL points in the top ten (
+                        {cppResult.skiersUsed}):
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {cppResult.qualifyingSkiers?.map((skier, idx) => (
-                          <Badge key={idx} variant="outline">
+                        {cppResult.qualifyingSkiers?.map((skier) => (
+                          <Badge key={skier.racer_id} variant="outline">
                             {skier.name} (AASL: {skier.aasl_points?.toFixed(2)},
                             Seed: {skier.seed_points?.toFixed(2)})
                           </Badge>

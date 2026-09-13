@@ -78,9 +78,26 @@ describe('validateCompetitorRows', () => {
     expect(row.competitor.arrivalSeed).toBe(150);
   });
 
-  it('defaults the arrival seed when blank', () => {
+  it('leaves a blank arrival seed empty so a provisional seed can be assigned', () => {
     const [row] = validateCompetitorRows([{ ...good, arrivalSeed: '' }]);
-    expect(row.competitor.arrivalSeed).toBe(2000);
+    expect(row.competitor.arrivalSeed).toBeNull();
+  });
+
+  it('reads and validates the training group', () => {
+    expect(
+      validateCompetitorRows([{ ...good, trainingGroup: '2' }])[0].competitor
+        .trainingGroup,
+    ).toBe(2);
+    expect(
+      validateCompetitorRows([{ ...good, Group: '3' }])[0].competitor
+        .trainingGroup,
+    ).toBe(3);
+    expect(
+      validateCompetitorRows([{ ...good }])[0].competitor.trainingGroup,
+    ).toBeNull();
+    expect(
+      validateCompetitorRows([{ ...good, trainingGroup: 'A' }])[0].problems,
+    ).toEqual(['Training group "A" must be a whole number']);
   });
 
   it('reports every problem on a row', () => {

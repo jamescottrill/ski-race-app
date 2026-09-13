@@ -36,8 +36,9 @@ function EditCompetitorPageNew() {
     country: 'GBR',
     serviceNumber: '',
     gender: 'M',
-    arrivalSeed: 2000,
+    arrivalSeed: '',
     armySeed: '',
+    trainingGroup: '',
     isNovice: false,
     isJunior: false,
     isSenior: false,
@@ -55,7 +56,7 @@ function EditCompetitorPageNew() {
       const personQuery = `
         SELECT p.first_name, p.last_name, p.birth_year, p.country, p.id AS service_number, p.gender,
                cc.arrival_corps_seed, cc.arrival_army_seed, cc.is_novice, cc.is_junior, cc.is_senior,
-               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title
+               cc.is_veteran, cc.is_reserve, cc.regiment, cc.title, cc.training_group
         FROM people p
         INNER JOIN competition_competitor cc ON p.id = cc.racer_id
         WHERE p.id = ? AND cc.competition_id = ?
@@ -76,8 +77,10 @@ function EditCompetitorPageNew() {
           country: competitor.country || 'GBR',
           serviceNumber: competitor.service_number || '',
           gender: competitor.gender || 'M',
-          arrivalSeed: competitor.arrival_seed || 2000,
-          armySeed: competitor.army_seed || '',
+          // Blank means unseeded; never invent a seed here
+          arrivalSeed: competitor.arrival_corps_seed ?? '',
+          armySeed: competitor.arrival_army_seed ?? '',
+          trainingGroup: competitor.training_group ?? '',
           isNovice: competitor.is_novice === 1,
           isJunior: competitor.is_junior === 1,
           isSenior: competitor.is_senior === 1,
@@ -177,12 +180,13 @@ function EditCompetitorPageNew() {
       const competitorQuery = `
         UPDATE competition_competitor
         SET arrival_corps_seed = ?, arrival_army_seed = ?, is_novice = ?, is_junior = ?,
-            is_senior = ?, is_veteran = ?, is_reserve = ?, regiment = ?, title = ?
+            is_senior = ?, is_veteran = ?, is_reserve = ?, regiment = ?, title = ?,
+            training_group = ?
         WHERE racer_id = ? AND competition_id = ?
       `;
       const competitorParams = [
-        formData.arrivalSeed,
-        formData.armySeed || null,
+        formData.arrivalSeed === '' ? null : Number(formData.arrivalSeed),
+        formData.armySeed === '' ? null : Number(formData.armySeed),
         formData.isNovice ? 1 : 0,
         formData.isJunior ? 1 : 0,
         formData.isSenior ? 1 : 0,
@@ -190,6 +194,7 @@ function EditCompetitorPageNew() {
         formData.isReserve ? 1 : 0,
         formData.regiment,
         formData.title,
+        formData.trainingGroup === '' ? null : Number(formData.trainingGroup),
         competitorId,
         competitionId,
       ];
@@ -374,7 +379,7 @@ function EditCompetitorPageNew() {
                       <Hash className="w-5 h-5 text-primary-600" />
                       Competition Categories
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <TextField
                         label="Arrival Seed Points"
                         name="arrivalSeed"
@@ -388,6 +393,14 @@ function EditCompetitorPageNew() {
                         type="number"
                         value={formData.armySeed}
                         onChange={handleInputChange}
+                      />
+                      <TextField
+                        label="Training Group"
+                        name="trainingGroup"
+                        type="number"
+                        value={formData.trainingGroup}
+                        onChange={handleInputChange}
+                        helperText="Ability group, 1 = strongest. Orders competitors with no seed points in the seeding race start list."
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-4 mt-4">
