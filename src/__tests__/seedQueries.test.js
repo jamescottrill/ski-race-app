@@ -4,7 +4,7 @@
 import { seedResults, seedingPoints } from '../renderer/queries/SeedResults';
 import { raceResultsTwoRunQuery } from '../renderer/queries/RaceResults';
 
-const { TABLE_SCHEMAS } = require('../main/utils/schema');
+const { createSchema } = require('../main/utils/migrations');
 
 let sqlite = null;
 try {
@@ -18,7 +18,7 @@ const describeWithSqlite = sqlite ? describe : describe.skip;
 function openDatabase() {
   const db = new sqlite.DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = OFF'); // as the app runs
-  Object.values(TABLE_SCHEMAS).forEach((sql) => db.exec(sql));
+  createSchema(db);
   db.prepare(
     `INSERT INTO competitions (id, competition_name) VALUES ('C', 'Test')`,
   ).run();

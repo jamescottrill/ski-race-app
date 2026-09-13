@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-const { TABLE_SCHEMAS } = require('../main/utils/schema');
+const { createSchema } = require('../main/utils/migrations');
 const { runOperation } = require('../main/operations');
 
 // node:sqlite ships with Node 22.13+; on older Node these tests are skipped
@@ -19,7 +19,7 @@ const RACE = 'race';
 
 function openDatabase({ numberRuns = 2, isSeeding = 0 } = {}) {
   const db = new sqlite.DatabaseSync(':memory:');
-  Object.values(TABLE_SCHEMAS).forEach((sql) => db.exec(sql));
+  createSchema(db);
   db.prepare(
     `INSERT INTO competitions (id, competition_name) VALUES (?, ?)`,
   ).run(COMP, 'Test');

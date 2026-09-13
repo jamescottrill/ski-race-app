@@ -8,7 +8,7 @@ import {
   rankList,
 } from '../renderer/utils/FetchSeedList';
 
-const { TABLE_SCHEMAS } = require('../main/utils/schema');
+const { createSchema } = require('../main/utils/migrations');
 
 let sqlite = null;
 try {
@@ -53,7 +53,7 @@ const result = (race, run, racer, time, flags = {}) =>
 function openDatabase() {
   db = new sqlite.DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = OFF');
-  Object.values(TABLE_SCHEMAS).forEach((sql) => db.exec(sql));
+  createSchema(db);
   db.prepare(
     `INSERT INTO competitions (id, competition_name) VALUES ('C', 'Test')`,
   ).run();

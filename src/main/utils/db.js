@@ -3,52 +3,16 @@ const path = require('path');
 const { app, dialog } = require('electron');
 const fs = require('fs');
 const { normaliseParams } = require('./sqlParams');
-const { TABLE_SCHEMAS } = require('./schema');
 const { runOperation } = require('../operations');
+const { createSchema } = require('./migrations');
+// Re-exported below so main.ts keeps importing it from here
+const { AppPreferences } = require('./preferences');
 
 const MAX_AUTOMATIC_BACKUPS = 10;
 
 // The connection currently serving the app, so quit/relaunch paths can
 // close it cleanly (see closeActiveDatabase)
 let activeDatabase = null;
-
-class AppPreferences {
-  static preferencesPath = path.join(app.getPath('userData'), 'config.json');
-
-  static loadPreferences() {
-    try {
-      if (fs.existsSync(this.preferencesPath)) {
-        const data = fs.readFileSync(this.preferencesPath, 'utf-8');
-        return JSON.parse(data);
-      }
-    } catch (error) {
-      console.error('Failed to load preferences:', error);
-      // Keep the unreadable file for manual recovery rather than overwriting it
-      try {
-        fs.copyFileSync(
-          this.preferencesPath,
-          `${this.preferencesPath}.corrupt`,
-        );
-      } catch (backupError) {
-        console.error('Failed to back up corrupt preferences:', backupError);
-      }
-    }
-    return {};
-  }
-
-  static savePreferences(preferences) {
-    try {
-      // Write to a temp file then rename so a crash mid-write can't
-      // leave a truncated config.json behind
-      const tmpPath = `${this.preferencesPath}.tmp`;
-      fs.writeFileSync(tmpPath, JSON.stringify(preferences, null, 2));
-      fs.renameSync(tmpPath, this.preferencesPath);
-    } catch (error) {
-      console.error('Failed to save preferences:', error);
-      throw new Error('Could not save preferences: ' + error.message);
-    }
-  }
-}
 
 const preferences = AppPreferences.loadPreferences();
 
@@ -60,9 +24,10 @@ function selectDatabaseFile() {
   });
 
   if (result && result.length > 0) {
-    preferences.databasePath = result[0];
+    const [selectedPath] = result;
+    preferences.databasePath = selectedPath;
     AppPreferences.savePreferences(preferences);
-    return result[0];
+    return selectedPath;
   }
   return undefined;
 }
@@ -91,15 +56,16 @@ class DatabaseWrapper {
       // every statement on those tables fail at prepare time under
       // enforcement. Keep enforcement off (the behaviour the app was
       // written against) until existing data has been cleaned up;
-      // repairInvalidForeignKeys() below fixes the declarations so
+      // migration 1 (see ./migrations.js) fixes the declarations so
       // enforcement can be switched on deliberately later.
       this.db.pragma('foreign_keys = OFF');
       console.log('Connected to the SQLite database at:', finalPath);
-      // Snapshot BEFORE any schema work so a bad migration is recoverable
+      // Snapshot BEFORE any schema work so a bad migration is recoverable.
+      // A failed migration throws out of here with that backup intact.
       this.createAutomaticBackup(finalPath);
-      this.initializeDatabase();
-      this.applyColumnMigrations();
-      this.repairInvalidForeignKeys();
+      createSchema(this.db).forEach(({ version, name }) =>
+        console.log(`Applied schema migration ${version} (${name})`),
+      );
       activeDatabase = this;
     } catch (err) {
       console.error('Failed to connect to database at path:', finalPath);
@@ -111,129 +77,6 @@ class DatabaseWrapper {
       }
       throw err;
     }
-  }
-
-  initializeDatabase() {
-    const errors = [];
-    for (const [table, query] of Object.entries(TABLE_SCHEMAS)) {
-      try {
-        this.db.exec(query);
-      } catch (err) {
-        console.error(`Error creating table ${table}:`, err.message);
-        errors.push(err.message);
-      }
-    }
-
-    if (errors.length > 0) {
-      console.error(`Failed to create ${errors.length} table(s):`, errors);
-    }
-  }
-
-  // CREATE TABLE IF NOT EXISTS never alters tables that already exist, so
-  // columns added to the schema after a database was created have to be
-  // back-filled here.
-  applyColumnMigrations() {
-    const columnMigrations = [
-      { table: 'races', column: 'flip_count', ddl: 'INTEGER DEFAULT 15' },
-      { table: 'races', column: 'flip_count_women', ddl: 'INTEGER DEFAULT 5' },
-      { table: 'competition_team', column: 'team_type', ddl: 'TEXT' },
-      {
-        table: 'competition_competitor',
-        column: 'training_group',
-        ddl: 'INTEGER',
-      },
-    ];
-
-    for (const { table, column, ddl } of columnMigrations) {
-      try {
-        const exists = this.db
-          .prepare('SELECT 1 FROM pragma_table_info(?) WHERE name = ?')
-          .get(table, column);
-        if (!exists) {
-          this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
-          console.log(`Added missing column ${table}.${column}`);
-        }
-      } catch (err) {
-        console.error(
-          `Failed to migrate column ${table}.${column}:`,
-          err.message,
-        );
-      }
-    }
-  }
-
-  // Earlier versions declared foreign keys against non-unique parent
-  // columns (e.g. race_results.run_number -> race_run.run_number, where
-  // race_run's key is composite). SQLite reports these as "foreign key
-  // mismatch" and, with enforcement on (the better-sqlite3 v12 default),
-  // refuses to prepare ANY insert/delete against the child table. Rebuild
-  // affected tables with the corrected declarations from TABLE_SCHEMAS.
-  repairInvalidForeignKeys() {
-    const invalidParentRefs = new Set([
-      'races.race_id',
-      'race_run.run_number',
-      'competition_team.team_id',
-    ]);
-    const candidates = [
-      'competition_team_members',
-      'race_run',
-      'race_competitor',
-      'race_results',
-    ];
-
-    for (const table of candidates) {
-      try {
-        const foreignKeys = this.db.pragma(`foreign_key_list(${table})`);
-        // Count columns per FK: the corrected composite FKs also contain
-        // e.g. a run_number -> race_run.run_number column pair, so only a
-        // SINGLE-column FK to one of these parents is invalid
-        const columnsPerFk = {};
-        for (const fk of foreignKeys) {
-          columnsPerFk[fk.id] = (columnsPerFk[fk.id] || 0) + 1;
-        }
-        const needsRebuild = foreignKeys.some(
-          (fk) =>
-            columnsPerFk[fk.id] === 1 &&
-            invalidParentRefs.has(`${fk.table}.${fk.to}`),
-        );
-        if (needsRebuild) {
-          this.rebuildTable(table);
-          console.log(`Rebuilt ${table} with corrected foreign keys`);
-        }
-      } catch (err) {
-        console.error(`Failed to repair table ${table}:`, err.message);
-      }
-    }
-  }
-
-  // Standard SQLite table rebuild: create the corrected table under a
-  // temporary name, copy every shared column across, then swap it in.
-  // Runs as one transaction so a failure leaves the original untouched.
-  rebuildTable(table) {
-    const createSql = TABLE_SCHEMAS[table].replace(
-      `CREATE TABLE IF NOT EXISTS ${table}`,
-      `CREATE TABLE ${table}_rebuild`,
-    );
-
-    const rebuild = this.db.transaction(() => {
-      this.db.exec(`DROP TABLE IF EXISTS ${table}_rebuild`);
-      this.db.exec(createSql);
-      const oldColumns = this.db
-        .pragma(`table_info(${table})`)
-        .map((c) => c.name);
-      const newColumns = this.db
-        .pragma(`table_info(${table}_rebuild)`)
-        .map((c) => c.name);
-      const shared = oldColumns
-        .filter((c) => newColumns.includes(c))
-        .join(', ');
-      this.db.exec(
-        `INSERT INTO ${table}_rebuild (${shared}) SELECT ${shared} FROM ${table}`,
-      );
-      this.db.exec(`DROP TABLE ${table}`);
-      this.db.exec(`ALTER TABLE ${table}_rebuild RENAME TO ${table}`);
-    });
-    rebuild();
   }
 
   // A plain file copy of a WAL-mode database can miss recent writes, so
@@ -259,9 +102,9 @@ class DatabaseWrapper {
         }))
         .sort((a, b) => b.mtime - a.mtime);
 
-      for (const old of backups.slice(MAX_AUTOMATIC_BACKUPS)) {
-        fs.unlinkSync(path.join(backupDir, old.name));
-      }
+      backups
+        .slice(MAX_AUTOMATIC_BACKUPS)
+        .forEach((old) => fs.unlinkSync(path.join(backupDir, old.name)));
     } catch (err) {
       // A failed backup must never stop the app from starting
       console.error('Automatic backup failed:', err.message);
@@ -293,7 +136,7 @@ class DatabaseWrapper {
   transaction(operations) {
     const runAll = this.db.transaction((ops) => {
       const results = [];
-      for (const op of ops) {
+      ops.forEach((op) => {
         switch (op.type) {
           case 'select':
             results.push(this.all(op.query, op.params || []));
@@ -309,7 +152,7 @@ class DatabaseWrapper {
           default:
             throw new Error(`Unknown operation type: ${op.type}`);
         }
-      }
+      });
       return results;
     });
     return runAll(operations);

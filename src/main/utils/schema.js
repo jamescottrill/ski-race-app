@@ -9,7 +9,7 @@
  */
 // Canonical table definitions, used both to create tables in new databases
 // and to rebuild existing tables whose foreign key declarations are invalid
-// (see repairInvalidForeignKeys). Every foreign key must reference the
+// (see migrations.js). Every foreign key must reference the
 // parent table's primary key or a unique index — SQLite treats anything
 // else as a "foreign key mismatch" and refuses to prepare statements
 // against the child table while enforcement is on.
@@ -168,6 +168,8 @@ const TABLE_SCHEMAS = {
         FOREIGN KEY (competition_id, race_id, run_number) REFERENCES race_run(competition_id, race_id, run_number)
       )
       `,
+  // No foreign key from service_number to people(id): the army-wide list
+  // legitimately contains people not registered in this database
   aasl: `
       CREATE TABLE IF NOT EXISTS aasl (
         service_number TEXT NOT NULL,
@@ -178,8 +180,7 @@ const TABLE_SCHEMAS = {
         seed_points NUMBER NOT NULL,
         season TEXT NOT NULL,
         import_date TEXT,
-        PRIMARY KEY (service_number, season),
-        FOREIGN KEY (service_number) REFERENCES people(id)
+        PRIMARY KEY (service_number, season)
       )
       `,
   competition_cpp: `
