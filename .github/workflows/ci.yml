@@ -72,8 +72,8 @@ jobs:
           echo "$FILES"
           echo "$FILES" | xargs npx cross-env NODE_ENV=development eslint --ext .js,.jsx,.ts,.tsx
 
-  scoring:
-    name: Shared scoring package (Vitest)
+  packages:
+    name: Shared packages (Vitest)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -89,4 +89,4 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Run package tests
-        run: npm -w packages/scoring test
+        run: npm -w packages/scoring -w packages/sync-contract test

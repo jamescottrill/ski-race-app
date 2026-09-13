@@ -1,0 +1,23 @@
+{
+  "name": "@awsa/sync-contract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The event contract between the Ski Race Results app's sync outbox and the central results service: entity types, keys, payload schemas and a reference batch",
+  "license": "MIT",
+  "main": "src/index.js",
+  "types": "index.d.ts",
+  "files": [
+    "src",
+    "index.d.ts",
+    "fixtures"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.4"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.0"
+  }
+}

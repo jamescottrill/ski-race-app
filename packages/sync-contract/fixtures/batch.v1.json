@@ -1,0 +1,220 @@
+{
+  "installation_id": "5f0c3e2a-7c1e-4a6b-9d3f-2b1c8e7a6d54",
+  "meeting_id": "0b8e1c2d-3f4a-4b5c-8d6e-7f8091a2b3c4",
+  "schema_version": 1,
+  "app_version": "0.3.0",
+  "hostname": "RACE-SEC-LAPTOP",
+  "events": [
+    {
+      "event_id": 1,
+      "entity_type": "meeting",
+      "operation": "upsert",
+      "key": {},
+      "data": {
+        "name": "Ex SPARTAN HIKE 2026",
+        "description": "Qualifying Championship",
+        "venue": "Serre Chevalier",
+        "starts_on": "2026-01-05",
+        "ends_on": "2026-01-10"
+      },
+      "occurred_at": "2026-01-04T18:00:00.000Z"
+    },
+    {
+      "event_id": 2,
+      "entity_type": "competitor",
+      "operation": "upsert",
+      "key": { "service_number": "30123456" },
+      "data": {
+        "first_name": "Ann",
+        "last_name": "Able",
+        "title": "Capt",
+        "birth_year": 1994,
+        "gender": "F",
+        "country": "GBR"
+      },
+      "occurred_at": "2026-01-04T18:00:01.000Z"
+    },
+    {
+      "event_id": 3,
+      "entity_type": "meeting_entry",
+      "operation": "upsert",
+      "key": { "service_number": "30123456" },
+      "data": {
+        "title": "Capt",
+        "regiment": "1 RHA",
+        "arrival_army_seed": null,
+        "arrival_corps_seed": 150.25,
+        "is_novice": false,
+        "is_junior": false,
+        "is_senior": true,
+        "is_veteran": false,
+        "is_reserve": false,
+        "is_female": true,
+        "is_hc": false,
+        "training_group": null,
+        "do_not_publish": false,
+        "army_opt_out": false
+      },
+      "occurred_at": "2026-01-04T18:00:02.000Z"
+    },
+    {
+      "event_id": 4,
+      "entity_type": "team",
+      "operation": "upsert",
+      "key": { "team_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e" },
+      "data": {
+        "name": "1 RHA A",
+        "team_type": "unit",
+        "is_corps": false,
+        "is_reserve": false,
+        "is_female": false,
+        "is_hc": false
+      },
+      "occurred_at": "2026-01-04T18:00:03.000Z"
+    },
+    {
+      "event_id": 5,
+      "entity_type": "team_members",
+      "operation": "upsert",
+      "key": {
+        "team_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+        "race_id": null
+      },
+      "data": { "service_numbers": ["30123456"] },
+      "occurred_at": "2026-01-04T18:00:04.000Z"
+    },
+    {
+      "event_id": 6,
+      "entity_type": "race",
+      "operation": "upsert",
+      "key": { "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f" },
+      "data": {
+        "name": "Seeding Giant Slalom",
+        "race_date": "2026-01-05",
+        "race_type": "GS",
+        "is_individual": true,
+        "is_team": false,
+        "is_training": false,
+        "is_seeding": true,
+        "women_separate": false,
+        "number_runs": 2,
+        "venue": "Serre Chevalier",
+        "course_name": "Luc Alphand",
+        "weather": "Sunny",
+        "snow": "Packed",
+        "temp_start": -4,
+        "temp_finish": -1,
+        "start_altitude": 2200,
+        "finish_altitude": 1900,
+        "homologation": "12345/01/24",
+        "flip_count": 15,
+        "flip_count_women": 5,
+        "officials": {
+          "tech_delegate": "Maj BAKER B GBR",
+          "referee": "Capt CLARK C GBR",
+          "asst_referee": null,
+          "chief_of_race": "Lt Col DAVIES D GBR"
+        },
+        "status": "scheduled",
+        "official_at": null,
+        "dsq_notice_posted_at": null
+      },
+      "occurred_at": "2026-01-04T18:00:05.000Z"
+    },
+    {
+      "event_id": 7,
+      "entity_type": "race_run",
+      "operation": "upsert",
+      "key": {
+        "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "run_number": 1
+      },
+      "data": {
+        "course_setter": "Capt EVANS Edward GBR",
+        "number_gates": 42,
+        "turning_gates": 40,
+        "start_time": "09:30",
+        "forerunners": ["FOX GBR", "GREEN GBR", null, null],
+        "is_complete": false
+      },
+      "occurred_at": "2026-01-04T18:00:06.000Z"
+    },
+    {
+      "event_id": 8,
+      "entity_type": "start_list",
+      "operation": "upsert",
+      "key": { "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f" },
+      "data": {
+        "entries": [
+          {
+            "service_number": "30123456",
+            "bib_number": 1,
+            "seed_points": 150.25
+          }
+        ]
+      },
+      "occurred_at": "2026-01-04T18:00:07.000Z"
+    },
+    {
+      "event_id": 9,
+      "entity_type": "result",
+      "operation": "upsert",
+      "key": {
+        "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "run_number": 1,
+        "service_number": "30123456"
+      },
+      "data": {
+        "race_time": 61.23,
+        "is_dns": false,
+        "is_dnf": false,
+        "is_dsq": false,
+        "is_ns": false,
+        "dsq_gate": null,
+        "dsq_reason": null
+      },
+      "occurred_at": "2026-01-05T10:14:03.120Z"
+    },
+    {
+      "event_id": 10,
+      "entity_type": "race_run",
+      "operation": "upsert",
+      "key": {
+        "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "run_number": 1
+      },
+      "data": {
+        "course_setter": "Capt EVANS Edward GBR",
+        "number_gates": 42,
+        "turning_gates": 40,
+        "start_time": "09:30",
+        "forerunners": ["FOX GBR", "GREEN GBR", null, null],
+        "is_complete": true
+      },
+      "occurred_at": "2026-01-05T11:00:00.000Z"
+    },
+    {
+      "event_id": 11,
+      "entity_type": "result",
+      "operation": "delete",
+      "key": {
+        "race_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "run_number": 2,
+        "service_number": "30123456"
+      },
+      "data": null,
+      "occurred_at": "2026-01-05T11:00:01.000Z"
+    },
+    {
+      "event_id": 12,
+      "entity_type": "competitor_merge",
+      "operation": "upsert",
+      "key": {
+        "source_service_number": "30123457",
+        "target_service_number": "30123456"
+      },
+      "data": {},
+      "occurred_at": "2026-01-05T12:00:00.000Z"
+    }
+  ]
+}

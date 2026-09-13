@@ -129,6 +129,8 @@ describeWithSqlite('schema migrations', () => {
     expect(columns(db, 'races')).toEqual(
       expect.arrayContaining(['status', 'official_at', 'dsq_notice_posted_at']),
     );
+    expect(tableExists(db, 'sync_events')).toBe(true);
+    expect(tableExists(db, 'sync_state')).toBe(true);
   });
 
   it('upgrades a legacy database in place, keeping its rows', () => {
@@ -141,6 +143,7 @@ describeWithSqlite('schema migrations', () => {
     expect(applied).toEqual([
       { version: 1, name: 'baseline-columns-and-fk-repair' },
       { version: 2, name: 'competition-metadata-and-race-status' },
+      { version: 3, name: 'sync-outbox' },
     ]);
     expect(getUserVersion(db)).toBe(LATEST_SCHEMA_VERSION);
 

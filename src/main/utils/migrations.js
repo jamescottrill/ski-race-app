@@ -159,6 +159,42 @@ function backfillTeamMemberCompetition(db) {
            WHERE competition_id IS NULL`);
 }
 
+// Version 3: the sync outbox that replaces result_events (which stays in the
+// baseline until a later migration drops it). See operations/events.js.
+const SYNC_TABLES = `
+  CREATE TABLE IF NOT EXISTS sync_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    competition_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_key TEXT NOT NULL,
+    op TEXT NOT NULL CHECK (op IN ('upsert', 'delete')),
+    payload TEXT,
+    source_operation TEXT NOT NULL,
+    schema_version INTEGER NOT NULL,
+    snapshot_id TEXT,
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending', 'synced', 'dead', 'superseded')),
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL,
+    synced_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS sync_events_pending
+    ON sync_events (competition_id, id) WHERE status = 'pending';
+  CREATE INDEX IF NOT EXISTS sync_events_by_competition
+    ON sync_events (competition_id, id);
+  CREATE TABLE IF NOT EXISTS sync_state (
+    competition_id TEXT PRIMARY KEY,
+    last_synced_event_id INTEGER,
+    last_success_at TEXT,
+    last_error TEXT,
+    last_error_at TEXT,
+    last_snapshot_id TEXT,
+    last_snapshot_at TEXT
+  );
+`;
+
 const MIGRATIONS = [
   {
     version: 1,
@@ -177,6 +213,13 @@ const MIGRATIONS = [
         addColumnIfMissing(db, spec),
       );
       backfillTeamMemberCompetition(db);
+    },
+  },
+  {
+    version: 3,
+    name: 'sync-outbox',
+    up(db) {
+      db.exec(SYNC_TABLES);
     },
   },
 ];

@@ -1,4 +1,5 @@
 const { requireFields } = require('./validate');
+const { emit } = require('./events');
 
 // Tables keyed on a person id. keyColumns are the rest of each table's
 // primary key: where the target already has a row with the same key, the
@@ -62,6 +63,14 @@ function merge(tx, payload) {
     }
   });
 
+  // Every meeting either person is entered in learns about the merge
+  const competitions = tx
+    .all(
+      `SELECT DISTINCT competition_id FROM competition_competitor WHERE racer_id IN (?, ?)`,
+      [sourceId, targetId],
+    )
+    .map((row) => row.competition_id);
+
   RACER_TABLES.forEach(({ table, column, keyColumns }) => {
     const keyMatch = keyColumns
       .map((k) => `t2.${k} IS ${table}.${k}`)
@@ -89,6 +98,19 @@ function merge(tx, payload) {
     ]),
   );
   tx.run(`DELETE FROM people WHERE id = ?`, [sourceId]);
+  competitions.forEach((competitionId) =>
+    emit(tx, {
+      competitionId,
+      entityType: 'competitor_merge',
+      key: {
+        source_service_number: sourceId,
+        target_service_number: targetId,
+      },
+      op: 'upsert',
+      payload: {},
+      operation: name,
+    }),
+  );
   return { success: true };
 }
 
