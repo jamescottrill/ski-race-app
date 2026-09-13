@@ -1,12 +1,48 @@
-const calculateAgeCategory = (birthYear) => {
-  const currentYear = new Date().getFullYear();
-  const age = currentYear - parseInt(birthYear);
+/**
+ * Competitor persistence helpers shared by the single-competitor and bulk
+ * import paths.
+ *
+ * The build*Operations functions return statement lists for
+ * window.api.transaction, so a caller can compose many competitors into one
+ * atomic write. createCompetitor/updateCompetitor run one competitor's list
+ * on its own.
+ */
+
+export const DEFAULT_ARRIVAL_SEED = 2000;
+
+// SQLite binds integers, not JS booleans
+const toFlag = (value) => (value ? 1 : 0);
+
+const calculateAgeCategory = (
+  birthYear,
+  currentYear = new Date().getFullYear(),
+) => {
+  const age = currentYear - parseInt(birthYear, 10);
 
   return {
     isJunior: age < 20,
     isSenior: age >= 20 && age < 35,
     isVeteran: age >= 35,
   };
+};
+
+// Age category comes from the birth year when we have one; otherwise fall
+// back to explicit flags, defaulting to senior. The update path previously
+// ignored the birth year and reset every age flag on re-import.
+const resolveAgeCategory = (
+  formData,
+  currentYear = new Date().getFullYear(),
+) => {
+  if (formData.birthYear) {
+    return calculateAgeCategory(formData.birthYear, currentYear);
+  }
+  const isJunior = Boolean(formData.isJunior);
+  const isVeteran = Boolean(formData.isVeteran);
+  const isSenior =
+    formData.isSenior === undefined
+      ? !isJunior && !isVeteran
+      : Boolean(formData.isSenior);
+  return { isJunior, isSenior, isVeteran };
 };
 
 const competitorExists = async (serviceNumber, competitionId) => {
@@ -31,58 +67,112 @@ const personExists = async (serviceNumber) => {
     if (result.length > 0) return [true, result[0].id];
     return [false, null];
   } catch (error) {
-    console.error('Failed to check if competitor exists:', error);
-    throw new Error('Database error checking competitor existence');
+    console.error('Failed to check if person exists:', error);
+    throw new Error('Database error checking person existence');
   }
 };
 
-const updateCompetitor = async (
-  formData,
-  competitorId,
-  existingCompetitor,
-  competitionId,
-) => {
-  const query1 = `
-      UPDATE people
-      SET title = ?,  country = ?
-      WHERE id = ?
-    `;
-  const params1 = [formData.title, formData.country, competitorId];
+const CHUNK_SIZE = 500;
 
-  try {
-    let query2;
-    let params2;
-    if (!existingCompetitor) {
-      let isJunior = false;
-      let isVeteran = false;
-      let isSenior = true;
-      if (formData.birthYear) {
-        ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(
-          formData.birthYear,
-        ));
-      }
-      query2 = `
+const chunk = (items) => {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    chunks.push(items.slice(i, i + CHUNK_SIZE));
+  }
+  return chunks;
+};
+
+// Which of the given service numbers already exist as people. Queried in
+// chunks to stay well inside SQLite's bound-parameter limit.
+const findExistingPeople = async (serviceNumbers) => {
+  const results = await Promise.all(
+    chunk(serviceNumbers).map((ids) =>
+      window.api.select(
+        `SELECT id FROM people WHERE id IN (${ids.map(() => '?').join(', ')})`,
+        ids,
+      ),
+    ),
+  );
+  return new Set(results.flat().map((row) => row.id));
+};
+
+// Which of the given service numbers are already entered in the competition
+const findExistingCompetitionEntries = async (
+  competitionId,
+  serviceNumbers,
+) => {
+  const results = await Promise.all(
+    chunk(serviceNumbers).map((ids) =>
+      window.api.select(
+        `SELECT racer_id FROM competition_competitor
+         WHERE competition_id = ? AND racer_id IN (${ids.map(() => '?').join(', ')})`,
+        [competitionId, ...ids],
+      ),
+    ),
+  );
+  return new Set(results.flat().map((row) => row.racer_id));
+};
+
+const personInsert = (formData) => ({
+  type: 'insert',
+  query: `
+      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+  params: [
+    formData.serviceNumber,
+    formData.firstName,
+    formData.lastName,
+    formData.title,
+    formData.birthYear || null,
+    formData.country,
+    formData.gender,
+  ],
+});
+
+// A person's name and identity are shared across competitions, so an update
+// only refreshes the details that legitimately change between them
+const personUpdate = (formData, competitorId) => ({
+  type: 'update',
+  query: `
+      UPDATE people
+      SET title = ?, country = ?
+      WHERE id = ?
+    `,
+  params: [formData.title, formData.country, competitorId],
+});
+
+const competitionEntryInsert = (formData, competitorId, competitionId) => {
+  const { isJunior, isSenior, isVeteran } = resolveAgeCategory(formData);
+  return {
+    type: 'insert',
+    query: `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
-          is_senior, is_veteran, is_reserve, is_female, title, arrival_corps_seed,
-         regiment)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-      params2 = [
-        competitionId,
-        competitorId,
-        formData.isNovice,
-        isJunior,
-        isSenior,
-        isVeteran,
-        formData.isReserve,
-        formData.isFemale,
-        formData.title,
-        formData.arrivalSeed || 2000,
-        formData.regiment,
-      ];
-    } else {
-      query2 = `
+      `,
+    params: [
+      competitionId,
+      competitorId,
+      toFlag(formData.isNovice),
+      toFlag(isJunior),
+      toFlag(isSenior),
+      toFlag(isVeteran),
+      toFlag(formData.isReserve),
+      toFlag(formData.isFemale),
+      formData.title,
+      formData.regiment,
+      formData.arrivalSeed || DEFAULT_ARRIVAL_SEED,
+    ],
+  };
+};
+
+const competitionEntryUpdate = (formData, competitorId, competitionId) => {
+  const { isJunior, isSenior, isVeteran } = resolveAgeCategory(formData);
+  return {
+    type: 'update',
+    query: `
           UPDATE competition_competitor
           SET
               arrival_corps_seed = ?,
@@ -96,39 +186,82 @@ const updateCompetitor = async (
               regiment     = ?
           WHERE competition_id = ?
             AND racer_id = ?
-        `;
-      params2 = [
-        formData.arrivalSeed || 2000,
-        formData.isNovice || false,
-        formData.isJunior || false,
-        formData.isSenior || false,
-        formData.isVeteran || false,
-        formData.isReserve || false,
-        formData.isFemale || false,
-        formData.title,
-        formData.regiment,
-        competitionId,
-        competitorId,
-      ];
-    }
+        `,
+    params: [
+      formData.arrivalSeed || DEFAULT_ARRIVAL_SEED,
+      toFlag(formData.isNovice),
+      toFlag(isJunior),
+      toFlag(isSenior),
+      toFlag(isVeteran),
+      toFlag(formData.isReserve),
+      toFlag(formData.isFemale),
+      formData.title,
+      formData.regiment,
+      competitionId,
+      competitorId,
+    ],
+  };
+};
+
+const teamMembershipInsert = (formData, competitorId, competitionId) => ({
+  type: 'insert',
+  query: `INSERT OR IGNORE INTO competition_team_members (competition_id, team_id, racer_id)
+          VALUES (?, ?, ?)`,
+  params: [competitionId, formData.teamId, competitorId],
+});
+
+// Statements that create a brand-new person and enter them in the competition
+const buildCreateCompetitorOperations = (formData, competitionId) => {
+  const id = formData.serviceNumber;
+  const operations = [
+    personInsert(formData),
+    competitionEntryInsert(formData, id, competitionId),
+  ];
+  if (formData.teamId) {
+    operations.push(teamMembershipInsert(formData, id, competitionId));
+  }
+  return operations;
+};
+
+// Statements that refresh an existing person and either update their
+// competition entry or create it if they are new to this competition
+const buildUpdateCompetitorOperations = (
+  formData,
+  competitorId,
+  hasCompetitionEntry,
+  competitionId,
+) => {
+  const operations = [
+    personUpdate(formData, competitorId),
+    hasCompetitionEntry
+      ? competitionEntryUpdate(formData, competitorId, competitionId)
+      : competitionEntryInsert(formData, competitorId, competitionId),
+  ];
+  if (formData.teamId) {
+    operations.push(
+      teamMembershipInsert(formData, competitorId, competitionId),
+    );
+  }
+  return operations;
+};
+
+const updateCompetitor = async (
+  formData,
+  competitorId,
+  existingCompetitor,
+  competitionId,
+) => {
+  try {
     // Person, competition entry, and team membership are written as one
     // transaction so a failure can't leave a partially-updated competitor
-    const operations = [
-      { type: 'update', query: query1, params: params1 },
-      { type: 'run', query: query2, params: params2 },
-    ];
-
-    if (formData.teamId) {
-      operations.push({
-        type: 'insert',
-        query: `INSERT OR IGNORE INTO competition_team_members (competition_id, team_id, racer_id)
-                VALUES (?, ?, ?)`,
-        params: [competitionId, formData.teamId, competitorId],
-      });
-    }
-
-    await window.api.transaction(operations);
-
+    await window.api.transaction(
+      buildUpdateCompetitorOperations(
+        formData,
+        competitorId,
+        existingCompetitor,
+        competitionId,
+      ),
+    );
     return { success: true };
   } catch (error) {
     console.error('Failed to update competitor:', error);
@@ -137,17 +270,11 @@ const updateCompetitor = async (
 };
 
 const createCompetitor = async (formData, competitionId) => {
-  let { isJunior, isVeteran } = false;
-  let isSenior = true;
-  if (formData.birthYear) {
-    ({ isJunior, isSenior, isVeteran } = calculateAgeCategory(formData.birthYear));
-  }
   const id = formData.serviceNumber;
 
-  // Check if service number already exists
   const existingPerson = await window.api.select(
     'SELECT id, first_name, last_name FROM people WHERE id = ?',
-    [id]
+    [id],
   );
   if (existingPerson.length > 0) {
     const person = existingPerson[0];
@@ -157,49 +284,13 @@ const createCompetitor = async (formData, competitionId) => {
     };
   }
 
-  const query1 = `
-      INSERT INTO people (id, first_name, last_name, title, birth_year, country, gender)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-  const params1 = [
-    id,
-    formData.firstName,
-    formData.lastName,
-    formData.title,
-    formData.birthYear,
-    formData.country,
-    formData.gender,
-  ];
-
   try {
-    const query2 = `
-        INSERT INTO competition_competitor
-        (competition_id, racer_id, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-    const params2 = [
-      competitionId,
-      id,
-      formData.isNovice,
-      isJunior,
-      isSenior,
-      isVeteran,
-      formData.isReserve,
-      formData.isFemale,
-      formData.title,
-      formData.regiment,
-      formData.arrivalSeed || 2000,
-    ];
-
     // Person and competition entry are created atomically: a failure can't
     // leave a person on record with no competition entry, which previously
     // blocked re-importing them
-    await window.api.transaction([
-      { type: 'insert', query: query1, params: params1 },
-      { type: 'insert', query: query2, params: params2 },
-    ]);
-
+    await window.api.transaction(
+      buildCreateCompetitorOperations(formData, competitionId),
+    );
     return { success: true, id };
   } catch (error) {
     console.error('Failed to create competitor:', error);
@@ -238,8 +329,13 @@ const calculateCategory = (competitor) => {
 export {
   updateCompetitor,
   calculateAgeCategory,
+  resolveAgeCategory,
   createCompetitor,
   competitorExists,
   calculateCategory,
-  personExists
+  personExists,
+  buildCreateCompetitorOperations,
+  buildUpdateCompetitorOperations,
+  findExistingPeople,
+  findExistingCompetitionEntries,
 };

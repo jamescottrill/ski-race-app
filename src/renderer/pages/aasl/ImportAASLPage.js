@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   FileSpreadsheet,
   Check,
-  AlertCircle,
   X
 } from 'lucide-react';
 import {
@@ -18,10 +17,12 @@ import {
   TextField,
   DataTable,
   Badge,
-  cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { importAASLEntries } from '../../utils/AASLManagement';
+import {
+  importAASLEntries,
+  validateAASLEntries,
+} from '../../utils/AASLManagement';
 import toast from 'react-hot-toast';
 
 export default function ImportAASLPage() {
@@ -64,7 +65,12 @@ export default function ImportAASLPage() {
           setHeaders(headerRow);
           autoDetectColumns(headerRow);
 
-          const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== ''));
+          // Keep each row's spreadsheet number so problems can be reported
+          // against the row the user sees, even after blank rows are dropped
+          const dataRows = jsonData
+            .slice(1)
+            .map((cells, index) => ({ cells, rowNumber: index + 2 }))
+            .filter(({ cells }) => cells.some((cell) => cell !== null && cell !== ''));
           setParsedData(dataRows);
         }
       } catch (error) {
@@ -109,55 +115,55 @@ export default function ImportAASLPage() {
   };
 
   const getMappedData = () => {
-    return parsedData.map((row, index) => {
+    return parsedData.map(({ cells, rowNumber }) => {
       const getColumnValue = (column) => {
         const colIndex = headers.indexOf(column);
-        return colIndex >= 0 ? row[colIndex] : '';
+        return colIndex >= 0 ? cells[colIndex] : '';
       };
 
       return {
-        rowIndex: index,
+        rowNumber,
         serviceNumber: String(getColumnValue(columnMapping.serviceNumber) || '').trim(),
         firstName: String(getColumnValue(columnMapping.firstName) || '').trim(),
         lastName: String(getColumnValue(columnMapping.lastName) || '').trim(),
         gender: String(getColumnValue(columnMapping.gender) || '').trim().toUpperCase().charAt(0),
         category: String(getColumnValue(columnMapping.category) || '').trim(),
-        seedPoints: parseFloat(getColumnValue(columnMapping.seedPoints)) || 0,
-        isValid: !!getColumnValue(columnMapping.serviceNumber) && !!getColumnValue(columnMapping.seedPoints)
+        seedPoints: getColumnValue(columnMapping.seedPoints),
       };
     });
   };
 
-  const handleImport = async () => {
-    const mappedData = getMappedData();
-    const validData = mappedData.filter(row => row.isValid);
+  // Validation runs on every render so the preview and the import agree
+  const previewData = validateAASLEntries(getMappedData());
+  const validCount = previewData.filter((r) => r.isValid).length;
+  const invalidRows = previewData.filter((r) => !r.isValid);
 
-    if (validData.length === 0) {
+  const handleImport = async () => {
+    if (validCount === 0) {
       toast.error('No valid entries to import');
       return;
     }
 
     setImporting(true);
     try {
-      const result = await importAASLEntries(validData, season);
-
-      if (result.success) {
-        toast.success(`Imported ${result.successCount} new entries, updated ${result.updateCount} existing`);
-        navigate('/aasl');
+      // importAASLEntries writes every valid row in one transaction; a throw
+      // means nothing was written
+      const result = await importAASLEntries(previewData, season);
+      toast.success(
+        `Imported ${result.successCount} new entries, updated ${result.updateCount} existing`,
+      );
+      if (result.skippedCount > 0) {
+        toast(`${result.skippedCount} invalid row(s) were skipped`, { icon: '⚠️' });
       } else {
-        toast.error(`Import completed with ${result.errorCount} errors`);
+        navigate('/aasl');
       }
     } catch (error) {
       console.error('Import failed:', error);
-      toast.error('Import failed: ' + error.message);
+      toast.error(`Import failed and nothing was written: ${error.message}`);
     } finally {
       setImporting(false);
     }
   };
-
-  const previewData = getMappedData();
-  const validCount = previewData.filter(r => r.isValid).length;
-  const invalidCount = previewData.filter(r => !r.isValid).length;
 
   const columns = [
     {
@@ -177,7 +183,20 @@ export default function ImportAASLPage() {
     {
       header: 'Seed Points',
       accessorKey: 'seedPoints',
-      cell: ({ row }) => row.original.seedPoints.toFixed(2)
+      cell: ({ row }) =>
+        Number.isNaN(row.original.seedPoints) ? (
+          <span className="text-danger">{String(row.original.rawSeedPoints ?? '')}</span>
+        ) : (
+          row.original.seedPoints.toFixed(2)
+        )
+    },
+    {
+      header: 'Problems',
+      accessorKey: 'problems',
+      cell: ({ row }) =>
+        row.original.problems.length > 0 ? (
+          <span className="text-danger text-sm">{row.original.problems.join('; ')}</span>
+        ) : null
     }
   ];
 
@@ -283,11 +302,30 @@ export default function ImportAASLPage() {
                 <h3 className="text-lg font-semibold text-neutral-900">Step 3: Preview & Import</h3>
                 <div className="flex items-center gap-4">
                   <Badge variant="success">{validCount} valid</Badge>
-                  {invalidCount > 0 && (
-                    <Badge variant="danger">{invalidCount} invalid</Badge>
+                  {invalidRows.length > 0 && (
+                    <Badge variant="danger">{invalidRows.length} invalid</Badge>
                   )}
                 </div>
               </div>
+
+              {invalidRows.length > 0 && (
+                <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-md text-sm">
+                  <p className="font-medium text-danger mb-1">
+                    {invalidRows.length} row(s) will be skipped:
+                  </p>
+                  <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
+                    {invalidRows.slice(0, 20).map((row) => (
+                      <li key={row.rowNumber}>
+                        Row {row.rowNumber}
+                        {row.serviceNumber && ` (${row.serviceNumber})`}: {row.problems.join('; ')}
+                      </li>
+                    ))}
+                    {invalidRows.length > 20 && (
+                      <li>... and {invalidRows.length - 20} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
               <DataTable
                 data={previewData.slice(0, 10)}

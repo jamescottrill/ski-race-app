@@ -59,75 +59,128 @@ export const getAASLSeasons = async () => {
 };
 
 /**
- * Import AASL entries from parsed data
+ * Validate parsed AASL rows before anything is written.
+ * @param {Array} entries - Rows with serviceNumber and seedPoints (raw cell values)
+ * @returns {Array} One entry per row with rowNumber, coerced values, problems and isValid
+ */
+export const validateAASLEntries = (entries) => {
+  const firstRowForServiceNumber = new Map();
+
+  return entries.map((entry, index) => {
+    // Prefer the caller's spreadsheet row number; otherwise number from 1
+    const rowNumber = entry.rowNumber ?? index + 1;
+    const serviceNumber = String(entry.serviceNumber ?? '').trim();
+    const rawPoints = entry.seedPoints;
+    const pointsMissing = rawPoints === '' || rawPoints === null || rawPoints === undefined;
+    const seedPoints = pointsMissing ? NaN : Number(rawPoints);
+    const problems = [];
+
+    if (!serviceNumber) {
+      problems.push('Missing service number');
+    }
+    if (pointsMissing) {
+      problems.push('Missing seed points');
+    } else if (Number.isNaN(seedPoints)) {
+      problems.push(`Seed points "${rawPoints}" is not a number`);
+    } else if (seedPoints < 0) {
+      problems.push('Seed points cannot be negative');
+    }
+    if (serviceNumber) {
+      if (firstRowForServiceNumber.has(serviceNumber)) {
+        problems.push(
+          `Service number already used on row ${firstRowForServiceNumber.get(serviceNumber)}`,
+        );
+      } else {
+        firstRowForServiceNumber.set(serviceNumber, rowNumber);
+      }
+    }
+
+    return {
+      ...entry,
+      rowNumber,
+      serviceNumber,
+      seedPoints,
+      rawSeedPoints: rawPoints,
+      problems,
+      isValid: problems.length === 0,
+    };
+  });
+};
+
+/**
+ * Build one upsert per entry for window.api.transaction
+ * @param {Array} entries - Validated entries
+ * @param {string} season - Season the entries belong to
+ * @param {string} importDate - ISO timestamp recorded against each row
+ */
+export const buildAASLOperations = (entries, season, importDate) =>
+  entries.map((entry) => ({
+    type: 'insert',
+    query: `
+      INSERT INTO aasl (service_number, first_name, last_name, gender, category, seed_points, season, import_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(service_number, season) DO UPDATE SET
+        first_name = excluded.first_name,
+        last_name = excluded.last_name,
+        gender = excluded.gender,
+        category = excluded.category,
+        seed_points = excluded.seed_points,
+        import_date = excluded.import_date
+    `,
+    params: [
+      entry.serviceNumber,
+      entry.firstName ?? null,
+      entry.lastName ?? null,
+      entry.gender ?? null,
+      entry.category ?? null,
+      entry.seedPoints,
+      season,
+      importDate,
+    ],
+  }));
+
+/**
+ * Import AASL entries from parsed data as one transaction: every valid row
+ * is written or none is. Rows that fail validation are skipped and returned
+ * so the caller can list them.
  * @param {Array} entries - Array of AASL entries to import
  * @param {string} season - Season for these entries
- * @returns {Promise<Object>} Import result with success/error counts
+ * @returns {Promise<Object>} Counts of created/updated/skipped rows and the skipped rows
+ * @throws When the season is missing, nothing is importable, or the write fails
  */
 export const importAASLEntries = async (entries, season) => {
-  let successCount = 0;
-  let errorCount = 0;
-  let updateCount = 0;
-  const errors = [];
-  const importDate = new Date().toISOString();
-
-  for (const entry of entries) {
-    try {
-      // Check if entry already exists for this service_number and season
-      const existing = await window.api.select(
-        `SELECT service_number FROM aasl WHERE service_number = ? AND season = ?`,
-        [entry.serviceNumber, season]
-      );
-
-      if (existing.length > 0) {
-        // Update existing entry
-        const updateQuery = `
-          UPDATE aasl
-          SET first_name = ?, last_name = ?, gender = ?, category = ?,
-              seed_points = ?, import_date = ?
-          WHERE service_number = ? AND season = ?
-        `;
-        await window.api.insert(updateQuery, [
-          entry.firstName,
-          entry.lastName,
-          entry.gender,
-          entry.category,
-          entry.seedPoints,
-          importDate,
-          entry.serviceNumber,
-          season
-        ]);
-        updateCount++;
-      } else {
-        // Insert new entry
-        const insertQuery = `
-          INSERT INTO aasl (service_number, first_name, last_name, gender, category, seed_points, season, import_date)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        await window.api.insert(insertQuery, [
-          entry.serviceNumber,
-          entry.firstName,
-          entry.lastName,
-          entry.gender,
-          entry.category,
-          entry.seedPoints,
-          season,
-          importDate
-        ]);
-        successCount++;
-      }
-    } catch (error) {
-      errorCount++;
-      errors.push({ entry, error: error.message });
-    }
+  const seasonKey = String(season ?? '').trim();
+  if (!seasonKey) {
+    throw new Error('A season is required');
   }
 
+  const rows = validateAASLEntries(entries);
+  const valid = rows.filter((row) => row.isValid);
+  const skipped = rows.filter((row) => !row.isValid);
+  if (valid.length === 0) {
+    throw new Error('No rows can be imported');
+  }
+
+  const existing = await window.api.select(
+    `SELECT service_number FROM aasl WHERE season = ?`,
+    [seasonKey],
+  );
+  const existingServiceNumbers = new Set(existing.map((row) => row.service_number));
+
+  await window.api.transaction(
+    buildAASLOperations(valid, seasonKey, new Date().toISOString()),
+  );
+
+  const updateCount = valid.filter((row) =>
+    existingServiceNumbers.has(row.serviceNumber),
+  ).length;
+
   return {
-    success: errorCount === 0,
-    successCount,
+    success: true,
+    successCount: valid.length - updateCount,
     updateCount,
-    errorCount,
-    errors
+    skippedCount: skipped.length,
+    skipped,
   };
 };
 
