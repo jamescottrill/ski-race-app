@@ -17,6 +17,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '../design-system/utils/cn';
+import SyncStatusIndicator from './SyncStatusIndicator';
 
 const SidebarNew = () => {
   const navigate = useNavigate();
@@ -131,6 +132,7 @@ const SidebarNew = () => {
           label="Settings"
           path={`/competition/${competitionId}/settings`}
         />
+        <SyncStatusIndicator competitionId={competitionId} />
 
         <div className="h-px bg-border my-4" />
 

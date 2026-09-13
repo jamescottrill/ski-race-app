@@ -3,6 +3,7 @@ import LandingPageNew from './pages/landingPageNew';
 import CreateCompetitionPageNew from './pages/createCompetitionNew';
 import CompetitionManagementPageNew from './pages/competitionManagementPageNew';
 import CompetitionSettingsPage from './pages/CompetitionSettingsPage';
+import SyncLogPage from './pages/sync/SyncLogPage';
 import CompetitorRoutesNew from './routes/CompetitorRoutesNew';
 import ResultsRoutesNew from './routes/ResultsRoutesNew';
 import RaceRoutesNew from './routes/RaceRoutesNew';
@@ -37,6 +38,14 @@ export default function MyRoutesNew() {
         element={
           <LayoutNew>
             <CompetitionSettingsPage />
+          </LayoutNew>
+        }
+      />
+      <Route
+        path="/competition/:competitionId/sync/log"
+        element={
+          <LayoutNew>
+            <SyncLogPage />
           </LayoutNew>
         }
       />
