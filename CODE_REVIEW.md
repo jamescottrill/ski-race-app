@@ -21,7 +21,7 @@ the recommended order in §5 unless stated.
 | §1.5 Clean shutdown | Done: the connection is closed on quit and before a menu-triggered relaunch, so the WAL is checkpointed into the `.db` file |
 | 5.5 Dead-code purge | Done: 52 unreachable source files, 6 root codegen scripts, 5 migration docs and the unused jest setup script removed; `upload.csv` and the UI zip untracked |
 | 5.6 De-duplicate the results components, with tests on the scoring logic | Done: one query builder, one factor table, pure scoring/grouping helpers with tests, and three shared result views replace the five clones and the two MUI tables |
-| 5.7 Named-operation IPC layer and event log | Not started |
+| 5.7 Named-operation IPC layer and event log | Done for the hot paths: results entry, run lock/unlock, results import, start list regenerate and bib order, people merge. Every results write also appends to `result_events`. 32 write call sites on other pages still use the raw-SQL channels |
 | §4 Dependency consolidation | Done: 11 unused packages removed, then MUI and Emotion once the last MUI tables went in 5.6 |
 
 ### Findings since the original review
@@ -52,8 +52,8 @@ the recommended order in §5 unless stated.
 - **AASL and foreign keys.** `aasl.service_number` declares a foreign key to
   `people(id)`, but the army-wide seed list legitimately contains people not yet
   registered in the app. That FK must be dropped before `PRAGMA foreign_keys = ON`.
-- **Importing results into a locked run bypasses the lock** (pre-existing). The
-  importer should refuse runs marked complete, as the entry page does.
+- **Importing results into a locked run** used to bypass the lock; `results.importBatch`
+  now refuses a run marked complete.
 - `CHANGELOG.md` is the electron-react-boilerplate changelog, not this app's.
 - Removed the 11 dependencies nothing imported after the purge, then `@mui/material`,
   `@emotion/react` and `@emotion/styled` once the two MUI result tables (which were
@@ -75,6 +75,24 @@ the recommended order in §5 unless stated.
   competition has always excluded corps and women's teams; the one-run competition
   never has. Both behaviours are preserved, now as one explicit `openTeamsOnly` flag
   per query in `queries/RaceResults.js`. Say which is intended and the other can match.
+- **Named operations (5.7).** Writes on the hot paths no longer send SQL from the
+  renderer. `src/main/operations` holds named operations (`results.saveFields`,
+  `results.saveRunDetails`, `results.setRunComplete`, `results.importBatch`,
+  `startList.regenerate`, `startList.saveBibOrder`, `people.merge`), each a function of
+  `(tx, payload)` that validates its input and runs in one transaction; the renderer
+  calls them through `window.api.operation` via the thin wrappers in
+  `src/renderer/api/operations.js`. Locking a run now rebuilds the next run from the
+  database rather than from React state, which also fixes the case where a stale
+  competitor list could rebuild the wrong start order. The table definitions moved to
+  `src/main/utils/schema.js` (no Electron import) so the operations are tested against
+  a real in-memory SQLite via Node's built-in `node:sqlite` (Node 22.13+; the suite
+  skips itself on older Node). The raw `db-select`/`db-insert`/`db-delete`/
+  `db-transaction` channels remain for reads and for the pages not yet migrated.
+- **Event log for sync (5.7).** `result_events(id, competition_id, race_id, run_number,
+  racer_id, operation, payload, created_at, synced_at)` is appended inside every results
+  operation's transaction, with a partial index on unsynced rows. This is the outbox a
+  sync worker drains when live results go to a server: read unsynced rows in id order,
+  post, set `synced_at`. Nothing reads it yet.
 
 ---
 
