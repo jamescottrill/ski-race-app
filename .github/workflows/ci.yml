@@ -1,0 +1,70 @@
+name: CI
+
+# Runs on every pull request into development or master and on pushes to
+# both. The release workflow (release.yml) is separate and tag-triggered.
+on:
+  pull_request:
+    branches: [development, master]
+  push:
+    branches: [development, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  electron:
+    name: Electron app (tests, typecheck, lint on changed files)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full history so changed-file detection can diff against the base branch
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # node:sqlite (used by the operations and seed list suites) needs Node 22.13+
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # --ignore-scripts skips the Electron download and the native rebuild of
+        # better-sqlite3, neither of which the tests need (they run on node:sqlite)
+        run: npm ci --ignore-scripts
+
+      - name: Run tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint changed files
+        # The repository carries historic lint debt, so only files touched by this
+        # change are linted. Pull requests diff against the base branch; pushes diff
+        # against the previous commit on the branch. Context values are passed in
+        # through the environment rather than interpolated into the script.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            RANGE="origin/${BASE_REF}...HEAD"
+          elif git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            RANGE="${BEFORE_SHA}..HEAD"
+          else
+            # First push of a branch (or a force push) has no usable "before" commit
+            RANGE="HEAD~1..HEAD"
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMR "$RANGE" -- '*.js' '*.jsx' '*.ts' '*.tsx' \
+            | grep -v '^new_ui/' | grep -v '^release/' || true)
+          if [ -z "$FILES" ]; then
+            echo "No JavaScript or TypeScript files changed; skipping lint"
+            exit 0
+          fi
+          echo "$FILES"
+          echo "$FILES" | xargs npx cross-env NODE_ENV=development eslint --ext .js,.jsx,.ts,.tsx
