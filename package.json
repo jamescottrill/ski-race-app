@@ -80,9 +80,6 @@
   },
   "dependencies": {
     "@electron/notarize": "^2.3.2",
-    "@emotion/react": "^11.13.0",
-    "@emotion/styled": "^11.13.0",
-    "@mui/material": "^5.16.7",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
