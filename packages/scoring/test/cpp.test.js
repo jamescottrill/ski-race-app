@@ -1,7 +1,4 @@
-import {
-  calculateCPP,
-  applyCPPToSeedList,
-} from '../renderer/utils/CPPCalculation';
+import { calculateCPP, applyCPPToSeedList } from '../src/index.js';
 
 // Seed list rows: position, meeting seed points, AASL points (null = none)
 const row = (racer_id, position, seed_points, aasl_points) => ({

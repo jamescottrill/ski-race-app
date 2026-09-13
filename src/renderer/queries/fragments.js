@@ -6,14 +6,9 @@
  * defined.
  */
 
-// Discipline factors that turn a time gap on the winner into race points
-export const RACE_FACTORS = [
-  { race: 'SL', factor: 730 },
-  { race: 'GS', factor: 1010 },
-  { race: 'SG', factor: 1190 },
-  { race: 'DH', factor: 1250 },
-  { race: 'AC', factor: 1360 },
-];
+import { RACE_FACTORS } from '@awsa/scoring';
+
+export { RACE_FACTORS };
 
 // `factors(factor, race)`, joined on races.race_type
 export const FACTORS_CTE = `factors AS (${RACE_FACTORS.map(

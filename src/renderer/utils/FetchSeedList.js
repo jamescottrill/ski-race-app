@@ -27,13 +27,13 @@
  *   flagged `<raceId>-penalty`. Pass `awardPenalties: false` for the uses
  *   B13.d excludes (combination results, final seed lists).
  */
+import { round } from '@awsa/scoring';
 import { seedPointsOneRun, seedPointsTwoRun } from '../queries/SeedPoints';
 import { seedingPoints } from '../queries/SeedResults';
 import {
   raceResultsOneRunQuery,
   raceResultsTwoRunQuery,
 } from '../queries/RaceResults';
-import { round } from './MathFx';
 
 export const DEFAULT_SEED_POINTS = 2000;
 

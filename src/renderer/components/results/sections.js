@@ -4,8 +4,8 @@
  * state and the PDF button.
  */
 import React from 'react';
+import { categoryPodiums } from '@awsa/scoring';
 import { Card, CardContent, DataTable, Button } from '../../design-system';
-import { categoryPodiums } from '../../utils/raceResults';
 import { statusColumns, podiumColumns } from './columns';
 
 const STATUS_TABLE_PAGE_SIZE = 30;

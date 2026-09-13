@@ -1,11 +1,7 @@
 import React, { useMemo } from 'react';
+import { mapSeedResult, partitionResults, finishedAnyRun } from '@awsa/scoring';
 import { useRaceResults } from '../../hooks/useRaceResults';
 import { seedResults } from '../../queries/SeedResults';
-import {
-  mapSeedResult,
-  partitionResults,
-  finishedAnyRun,
-} from '../../utils/raceResults';
 import { resultsSeedPdf } from '../../utils/ResultsSeedPdf';
 import { seedResultColumns } from './columns';
 import { ResultsSection, StatusTables, NoResults, PdfButton } from './sections';

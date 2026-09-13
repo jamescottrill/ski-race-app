@@ -7,7 +7,7 @@ import {
   finishedAnyRun,
   categoryPodiums,
   buildTeamResults,
-} from '../renderer/utils/raceResults';
+} from '../src/index.js';
 
 const base = {
   racer_id: 'A',

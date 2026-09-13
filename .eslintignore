@@ -23,6 +23,11 @@ release/build
 .erb/dll
 new_ui
 
+# Workspaces carry their own lint configuration
+packages
+apps
+supabase
+
 .idea
 npm-debug.log.*
 *.css.d.ts

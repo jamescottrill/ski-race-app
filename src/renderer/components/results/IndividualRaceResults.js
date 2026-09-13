@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
+import { mapIndividualResult, partitionResults } from '@awsa/scoring';
 import { useRaceResults } from '../../hooks/useRaceResults';
 import {
   raceResultsOneRunQuery,
   raceResultsTwoRunQuery,
 } from '../../queries/RaceResults';
-import { mapIndividualResult, partitionResults } from '../../utils/raceResults';
 import { resultsPdf } from '../../utils/ResultsPdf';
 import { resultsTwoPdf } from '../../utils/ResultsTwoPdf';
 import { individualResultColumns } from './columns';

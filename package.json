@@ -34,6 +34,10 @@
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "browserslist": [],
   "prettier": {
     "singleQuote": true,
@@ -72,7 +76,10 @@
     },
     "testPathIgnorePatterns": [
       "release/app/dist",
-      ".erb/dll"
+      ".erb/dll",
+      "<rootDir>/packages/",
+      "<rootDir>/apps/",
+      "<rootDir>/.claude/"
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
