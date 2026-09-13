@@ -3,8 +3,8 @@
  * and PDF generators consume. No React and no database access, so the
  * scoring and grouping rules can be unit tested directly.
  */
-import { convertRaceTime } from './TimeUtils';
-import { round } from './MathFx';
+import { convertRaceTime } from './time.js';
+import { round } from './math.js';
 
 export const TEAM_SCORING_SIZE = 3;
 export const PODIUM_SIZE = 3;

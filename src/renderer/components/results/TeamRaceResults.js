@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
+import { mapIndividualResult, buildTeamResults } from '@awsa/scoring';
 import { Card, CardContent } from '../../design-system';
 import { useRaceResults } from '../../hooks/useRaceResults';
 import {
   teamResultsOneRunQuery,
   teamResultsTwoRunQuery,
 } from '../../queries/RaceResults';
-import { mapIndividualResult, buildTeamResults } from '../../utils/raceResults';
 import { resultsTeamPdf } from '../../utils/ResultsTeamPdf';
 import { teamResultColumns } from './columns';
 import { ResultsSection, NoResults, PdfButton } from './sections';

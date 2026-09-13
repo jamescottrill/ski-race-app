@@ -15,5 +15,15 @@
     "allowJs": true,
     "outDir": ".erb/dll"
   },
-  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll", "new_ui"]
+  "exclude": [
+    "test",
+    "release/build",
+    "release/app/dist",
+    ".erb/dll",
+    "new_ui",
+    "apps",
+    "supabase",
+    "packages/*/test",
+    ".claude"
+  ]
 }

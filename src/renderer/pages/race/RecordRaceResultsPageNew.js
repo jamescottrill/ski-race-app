@@ -15,6 +15,7 @@ import {
   Unlock,
   Lock,
 } from 'lucide-react';
+import { convertRaceTime, convertHumanTime, formatTime } from '@awsa/scoring';
 import {
   PageContainer,
   PageHeader,
@@ -33,11 +34,6 @@ import {
 import { useBackButton } from '../../utils/navigation';
 import * as operations from '../../api/operations';
 import { handleDatabaseError } from '../../utils/ErrorHandler';
-import {
-  convertRaceTime,
-  convertHumanTime,
-  formatTime,
-} from '../../utils/TimeUtils';
 
 function RecordRaceResultsPageNew() {
   const { competitionId, raceId } = useParams();

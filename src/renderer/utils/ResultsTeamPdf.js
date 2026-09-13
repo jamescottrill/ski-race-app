@@ -1,8 +1,8 @@
+import { round } from '@awsa/scoring';
 import { tableStyles, teamTableLayout } from './PdfStyles';
 import { getFormattedDate } from './DateUtils';
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
-import { round } from './MathFx';
 import { showSuccess } from './ErrorHandler';
 // pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
