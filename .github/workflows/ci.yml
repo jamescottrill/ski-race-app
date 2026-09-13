@@ -90,3 +90,25 @@ jobs:
 
       - name: Run package tests
         run: npm -w packages/scoring -w packages/sync-contract test
+
+  supabase:
+    name: Supabase (migrations, pgTAP, lint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Start the local database
+        # Only the Postgres container: applies every migration and the seed
+        run: supabase db start
+
+      - name: Run pgTAP tests
+        run: supabase test db
+
+      - name: Lint the schema
+        run: supabase db lint --level warning --fail-on warning
