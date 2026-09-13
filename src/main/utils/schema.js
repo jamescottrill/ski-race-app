@@ -2,10 +2,9 @@
  * Canonical table definitions, kept free of Electron imports so tests can
  * build the schema in an in-memory database.
  *
- * result_events is an append-only log written in the same transaction as
- * every results operation (see ../operations/results.js). It is the audit
- * trail today and the outbox a sync worker will drain when live results
- * are pushed to a server.
+ * result_events was the first outbox. Schema version 3 replaced it with
+ * sync_events (see ../operations/events.js and utils/migrations.js); the
+ * table stays in this frozen baseline until a migration drops it.
  */
 // Canonical table definitions, used both to create tables in new databases
 // and to rebuild existing tables whose foreign key declarations are invalid

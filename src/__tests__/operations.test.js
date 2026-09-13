@@ -1,8 +1,10 @@
 /**
  * @jest-environment node
  */
+const { validateEvent } = require('@awsa/sync-contract');
 const { createSchema } = require('../main/utils/migrations');
-const { runOperation } = require('../main/operations');
+const { runOperation, createTx } = require('../main/operations');
+const { ENTITY_LOADERS, emitEntity } = require('../main/operations/events');
 
 // node:sqlite ships with Node 22.13+; on older Node these tests are skipped
 let sqlite = null;
@@ -46,11 +48,38 @@ function openDatabase({ numberRuns = 2, isSeeding = 0 } = {}) {
 }
 
 const rows = (db, sql, params = []) => db.prepare(sql).all(...params);
+// The sync outbox, decoded. Every event is also checked against the contract
+// so a payload the service would reject fails here first.
 const events = (db) =>
   rows(
     db,
-    `SELECT operation, run_number, racer_id, payload FROM result_events ORDER BY id`,
-  );
+    `SELECT id, entity_type, entity_key, op, payload, source_operation, schema_version, created_at
+     FROM sync_events ORDER BY id`,
+  ).map((row) => {
+    const event = {
+      ...row,
+      entity_key: JSON.parse(row.entity_key),
+      payload: row.payload === null ? null : JSON.parse(row.payload),
+    };
+    validateEvent({
+      event_id: event.id,
+      entity_type: event.entity_type,
+      operation: event.op,
+      key: event.entity_key,
+      data: event.payload,
+      occurred_at: event.created_at,
+    });
+    return event;
+  });
+const lastEvent = (db) => events(db).at(-1);
+const noFinish = {
+  is_dns: false,
+  is_dnf: false,
+  is_dsq: false,
+  is_ns: false,
+  dsq_gate: null,
+  dsq_reason: null,
+};
 const run = (db, name, payload) => runOperation(db, name, payload);
 
 describeWithSqlite('operations', () => {
@@ -79,11 +108,21 @@ describeWithSqlite('operations', () => {
       expect(
         rows(db, `SELECT race_time, is_dsq, dsq_gate FROM race_results`),
       ).toEqual([{ race_time: 61.2, is_dsq: 1, dsq_gate: 4 }]);
-      expect(
-        events(db).map((e) => [e.operation, e.racer_id, JSON.parse(e.payload)]),
-      ).toEqual([
-        ['results.saveFields', 'A', { race_time: 61.2, is_dnf: 0 }],
-        ['results.saveFields', 'A', { is_dsq: 1, dsq_gate: 4 }],
+      // Each write publishes the whole row as it now stands
+      const key = { race_id: RACE, run_number: 1, service_number: 'A' };
+      expect(events(db)).toEqual([
+        expect.objectContaining({
+          entity_type: 'result',
+          op: 'upsert',
+          source_operation: 'results.saveFields',
+          schema_version: 1,
+          entity_key: key,
+          payload: { race_time: 61.2, ...noFinish },
+        }),
+        expect.objectContaining({
+          entity_key: key,
+          payload: { race_time: 61.2, ...noFinish, is_dsq: true, dsq_gate: 4 },
+        }),
       ]);
     });
 
@@ -151,10 +190,28 @@ describeWithSqlite('operations', () => {
       expect(
         rows(db, `SELECT racer_id FROM race_results WHERE run_number = 2`),
       ).toEqual([{ racer_id: 'A' }]);
-      expect(events(db).at(-1)).toMatchObject({
-        operation: 'results.setRunComplete',
-        run_number: 1,
-      });
+      // The stale run-2 row for B is withdrawn, A's run-2 row is published,
+      // and the lock on run 1 goes last
+      const published = events(db).filter(
+        (e) => e.source_operation === 'results.setRunComplete',
+      );
+      expect(published.map((e) => [e.entity_type, e.op, e.entity_key])).toEqual(
+        [
+          [
+            'result',
+            'delete',
+            { race_id: RACE, run_number: 2, service_number: 'B' },
+          ],
+          [
+            'result',
+            'upsert',
+            { race_id: RACE, run_number: 2, service_number: 'A' },
+          ],
+          ['race_run', 'upsert', { race_id: RACE, run_number: 1 }],
+        ],
+      );
+      expect(published[1].payload).toEqual({ race_time: null, ...noFinish });
+      expect(published[2].payload).toMatchObject({ is_complete: true });
     });
 
     it('keeps next-run times already entered when a run is unlocked and relocked', () => {
@@ -248,7 +305,16 @@ describeWithSqlite('operations', () => {
         { racer_id: 'A', race_time: 55.1, is_dnf: 0 },
         { racer_id: 'B', race_time: null, is_dnf: 1 },
       ]);
-      expect(events(db)).toHaveLength(2);
+      // The run it created is published before the results that need it
+      expect(events(db).map((e) => [e.entity_type, e.entity_key])).toEqual([
+        ['race_run', { race_id: RACE, run_number: 1 }],
+        ['result', { race_id: RACE, run_number: 1, service_number: 'A' }],
+        ['result', { race_id: RACE, run_number: 1, service_number: 'B' }],
+      ]);
+      expect(events(db)[2].payload).toMatchObject({
+        race_time: null,
+        is_dnf: true,
+      });
     });
 
     it('refuses a locked run and writes nothing on any failure', () => {
@@ -298,6 +364,18 @@ describeWithSqlite('operations', () => {
         { racer_id: 'C', bib_number: 1, seed_points: 5 },
         { racer_id: 'A', bib_number: 2, seed_points: 0 },
       ]);
+      // The whole list is published in bib order
+      expect(lastEvent(db)).toMatchObject({
+        entity_type: 'start_list',
+        op: 'upsert',
+        entity_key: { race_id: RACE },
+        payload: {
+          entries: [
+            { service_number: 'C', bib_number: 1, seed_points: 5 },
+            { service_number: 'A', bib_number: 2, seed_points: 0 },
+          ],
+        },
+      });
     });
 
     it('saveBibOrder renumbers and rejects duplicate or invalid bibs', () => {
@@ -315,6 +393,9 @@ describeWithSqlite('operations', () => {
       expect(
         rows(db, `SELECT racer_id FROM race_competitor ORDER BY bib_number`),
       ).toEqual([{ racer_id: 'C' }, { racer_id: 'B' }, { racer_id: 'A' }]);
+      expect(
+        lastEvent(db).payload.entries.map((e) => e.service_number),
+      ).toEqual(['C', 'B', 'A']);
       expect(() =>
         run(db, 'startList.saveBibOrder', {
           competitionId: COMP,
@@ -373,6 +454,11 @@ describeWithSqlite('operations', () => {
       expect(rows(db, `SELECT chief_of_race FROM races`)).toEqual([
         { chief_of_race: 'B' },
       ]);
+      expect(lastEvent(db)).toMatchObject({
+        entity_type: 'competitor_merge',
+        entity_key: { source_service_number: 'A', target_service_number: 'B' },
+        payload: {},
+      });
     });
 
     it('refuses a self-merge or an unknown person', () => {
@@ -416,6 +502,17 @@ describeWithSqlite('operations', () => {
         sync_enabled: 0,
       });
       expect(row.updated_at).toEqual(expect.any(String));
+      expect(lastEvent(db)).toMatchObject({
+        entity_type: 'meeting',
+        entity_key: {},
+        payload: {
+          name: 'Ex SPARTAN HIKE',
+          description: 'Qualifying meeting',
+          venue: 'Serre Chevalier',
+          starts_on: '2026-01-05',
+          ends_on: '2026-01-10',
+        },
+      });
     });
 
     it('stores blank optional fields as null', () => {
@@ -497,6 +594,14 @@ describeWithSqlite('operations', () => {
         remote_meeting_id: 'remote-1',
         updated_at: expect.any(String),
       });
+      // Level, season and the sync settings are the service's own business
+      expect(lastEvent(db).payload).toEqual({
+        name: 'Renamed',
+        description: null,
+        venue: "Val d'Isere",
+        starts_on: '2026-01-05',
+        ends_on: '2026-01-09',
+      });
     });
 
     it('validates a changed date against the stored one', () => {
@@ -546,6 +651,159 @@ describeWithSqlite('operations', () => {
           fields: { venue: 'X' },
         }),
       ).toThrow('competition missing not found');
+    });
+  });
+
+  describe('sync outbox', () => {
+    it('renders officials as display strings, never service numbers', () => {
+      const db = openDatabase();
+      db.prepare(
+        `INSERT INTO people (id, first_name, last_name, title, country) VALUES ('30000009', 'Brian', 'Baker', 'Maj', 'GBR')`,
+      ).run();
+      db.prepare(
+        `UPDATE races SET tech_delegate = '30000009', race_type = 'GS', race_date = '2026-01-05'`,
+      ).run();
+      db.prepare(
+        `UPDATE race_run SET course_setter = '30000009', forerunner_a = '30000009', forerunner_b = 'unknown' WHERE run_number = 1`,
+      ).run();
+      const tx = createTx(db);
+
+      const race = ENTITY_LOADERS.race(tx, COMP, { race_id: RACE });
+      expect(race).toMatchObject({
+        name: 'GS',
+        race_type: 'GS',
+        race_date: '2026-01-05',
+        number_runs: 2,
+        is_seeding: false,
+        status: 'scheduled',
+        officials: {
+          tech_delegate: 'Maj BAKER B GBR',
+          referee: null,
+          asst_referee: null,
+          chief_of_race: null,
+        },
+      });
+      expect(JSON.stringify(race)).not.toContain('30000009');
+
+      const run1 = ENTITY_LOADERS.race_run(tx, COMP, {
+        race_id: RACE,
+        run_number: 1,
+      });
+      expect(run1).toEqual({
+        course_setter: 'Maj BAKER Brian GBR',
+        number_gates: null,
+        turning_gates: null,
+        start_time: null,
+        forerunners: ['BAKER GBR', null, null, null],
+        is_complete: false,
+      });
+    });
+
+    it('loads competitors, entries and teams in the contract shape', () => {
+      const db = openDatabase();
+      db.prepare(
+        `UPDATE people SET title = 'Capt', birth_year = 1994, gender = 'F', country = 'GBR' WHERE id = 'A'`,
+      ).run();
+      db.prepare(
+        `UPDATE competition_competitor SET regiment = '1 RHA', is_female = 1, is_senior = 1,
+           arrival_corps_seed = 150.25, army_qual_opt_out = 1 WHERE racer_id = 'A'`,
+      ).run();
+      db.prepare(
+        `INSERT INTO competition_team (competition_id, team_id, team_name, team_type, is_corps) VALUES (?, 't1', '1 RHA A', 'unit', 0)`,
+      ).run(COMP);
+      db.prepare(
+        `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id) VALUES (?, 't1', NULL, 'A'), (?, 't1', ?, 'B')`,
+      ).run(COMP, COMP, RACE);
+      const tx = createTx(db);
+
+      expect(
+        ENTITY_LOADERS.competitor(tx, COMP, { service_number: 'A' }),
+      ).toEqual({
+        first_name: 'A',
+        last_name: 'Racer',
+        title: 'Capt',
+        birth_year: 1994,
+        gender: 'F',
+        country: 'GBR',
+      });
+      expect(
+        ENTITY_LOADERS.meeting_entry(tx, COMP, { service_number: 'A' }),
+      ).toMatchObject({
+        regiment: '1 RHA',
+        arrival_corps_seed: 150.25,
+        arrival_army_seed: null,
+        is_female: true,
+        is_senior: true,
+        is_novice: false,
+        do_not_publish: false,
+        army_opt_out: true,
+      });
+      expect(ENTITY_LOADERS.team(tx, COMP, { team_id: 't1' })).toEqual({
+        name: '1 RHA A',
+        team_type: 'unit',
+        is_corps: false,
+        is_reserve: false,
+        is_female: false,
+        is_hc: false,
+      });
+      expect(
+        ENTITY_LOADERS.team_members(tx, COMP, { team_id: 't1', race_id: null }),
+      ).toEqual({ service_numbers: ['A'] });
+      expect(
+        ENTITY_LOADERS.team_members(tx, COMP, { team_id: 't1', race_id: RACE }),
+      ).toEqual({ service_numbers: ['B'] });
+      // A missing row is null, so nothing stale can be published
+      expect(
+        ENTITY_LOADERS.competitor(tx, COMP, { service_number: 'Z' }),
+      ).toBeNull();
+    });
+
+    it('every loader output satisfies the contract for its entity type', () => {
+      const db = openDatabase();
+      const tx = createTx(db);
+      run(db, 'results.saveFields', {
+        competitionId: COMP,
+        raceId: RACE,
+        runNumber: 1,
+        racerId: 'A',
+        fields: { race_time: 60 },
+      });
+      const cases = {
+        meeting: {},
+        competitor: { service_number: 'A' },
+        meeting_entry: { service_number: 'A' },
+        race: { race_id: RACE },
+        race_run: { race_id: RACE, run_number: 1 },
+        start_list: { race_id: RACE },
+        result: { race_id: RACE, run_number: 1, service_number: 'A' },
+      };
+      Object.entries(cases).forEach(([entityType, key]) => {
+        const data = ENTITY_LOADERS[entityType](tx, COMP, key);
+        expect(() =>
+          validateEvent({
+            event_id: 1,
+            entity_type: entityType,
+            operation: 'upsert',
+            key,
+            data,
+            occurred_at: new Date().toISOString(),
+          }),
+        ).not.toThrow();
+      });
+    });
+
+    it('refuses to publish an entity that does not exist', () => {
+      const db = openDatabase();
+      const tx = createTx(db);
+      expect(() =>
+        emitEntity(tx, {
+          competitionId: COMP,
+          entityType: 'race',
+          key: { race_id: 'missing' },
+          operation: 'test',
+        }),
+      ).toThrow('cannot publish race {"race_id":"missing"}: not found');
+      expect(events(db)).toEqual([]);
     });
   });
 });

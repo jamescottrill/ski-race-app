@@ -1,8 +1,10 @@
 /**
- * Results operations. Every write here also appends to result_events inside
- * the same transaction, so the log can never disagree with the results.
+ * Results operations. Every write here also appends to the sync outbox
+ * inside the same transaction, so the outbox can never disagree with the
+ * results (see ./events.js).
  */
 const { requireFields, requireList } = require('./validate');
+const { emitEntity, emitDelete } = require('./events');
 
 const RESULT_COLUMNS = [
   'race_time',
@@ -14,32 +16,6 @@ const RESULT_COLUMNS = [
   'dsq_reason',
 ];
 const STATUS_CODES = ['DNF', 'DSQ', 'DNS', 'NS'];
-
-function recordEvent(
-  tx,
-  {
-    competitionId,
-    raceId,
-    runNumber = null,
-    racerId = null,
-    operation,
-    payload,
-  },
-) {
-  tx.run(
-    `INSERT INTO result_events (competition_id, race_id, run_number, racer_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      competitionId,
-      raceId,
-      runNumber,
-      racerId,
-      operation,
-      JSON.stringify(payload),
-      new Date().toISOString(),
-    ],
-  );
-}
 
 function upsertResult(
   tx,
@@ -69,6 +45,16 @@ function upsertResult(
   );
 }
 
+const resultKey = ({ raceId, runNumber, racerId }) => ({
+  race_id: raceId,
+  run_number: Number(runNumber),
+  service_number: racerId,
+});
+const runKey = ({ raceId, runNumber }) => ({
+  race_id: raceId,
+  run_number: Number(runNumber),
+});
+
 function runIsComplete(tx, { competitionId, raceId, runNumber }) {
   const run = tx.get(
     `SELECT is_complete FROM race_run WHERE competition_id = ? AND race_id = ? AND run_number = ?`,
@@ -91,7 +77,12 @@ function saveFields(tx, payload) {
     'racerId',
   ]);
   upsertResult(tx, name, payload);
-  recordEvent(tx, { ...payload, operation: name, payload: payload.fields });
+  emitEntity(tx, {
+    competitionId: payload.competitionId,
+    entityType: 'result',
+    key: resultKey(payload),
+    operation: name,
+  });
   return { success: true };
 }
 
@@ -126,6 +117,12 @@ function saveRunDetails(tx, payload) {
   if (result.changes === 0) {
     throw new Error(`${name}: run ${payload.runNumber} not found`);
   }
+  emitEntity(tx, {
+    competitionId: payload.competitionId,
+    entityType: 'race_run',
+    key: runKey(payload),
+    operation: name,
+  });
   return { success: true };
 }
 
@@ -143,7 +140,7 @@ const finishedRun = (row) =>
 // unlock-and-relock never wipes times already entered for the next run.
 function rebuildNextRun(
   tx,
-  { competitionId, raceId, runNumber, nextRun, isSeeding },
+  { competitionId, raceId, runNumber, nextRun, isSeeding, operation },
 ) {
   const entrants =
     runNumber === 1
@@ -163,18 +160,34 @@ function rebuildNextRun(
   const advancing = entrants.filter((row) => isSeeding || finishedRun(row));
   const dropped = isSeeding ? [] : entrants.filter((row) => !finishedRun(row));
 
-  dropped.forEach((row) =>
-    tx.run(
+  dropped.forEach((row) => {
+    const deleted = tx.run(
       `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?`,
       [competitionId, raceId, nextRun, row.racer_id],
-    ),
-  );
-  advancing.forEach((row) =>
-    tx.run(
+    );
+    if (deleted.changes > 0) {
+      emitDelete(tx, {
+        competitionId,
+        entityType: 'result',
+        key: resultKey({ raceId, runNumber: nextRun, racerId: row.racer_id }),
+        operation,
+      });
+    }
+  });
+  advancing.forEach((row) => {
+    const inserted = tx.run(
       `INSERT OR IGNORE INTO race_results (competition_id, race_id, run_number, racer_id) VALUES (?, ?, ?, ?)`,
       [competitionId, raceId, nextRun, row.racer_id],
-    ),
-  );
+    );
+    if (inserted.changes > 0) {
+      emitEntity(tx, {
+        competitionId,
+        entityType: 'result',
+        key: resultKey({ raceId, runNumber: nextRun, racerId: row.racer_id }),
+        operation,
+      });
+    }
+  });
   return { advanced: advancing.length, removed: dropped.length };
 }
 
@@ -211,15 +224,17 @@ function setRunComplete(tx, payload) {
       runNumber,
       nextRun,
       isSeeding: Boolean(race.is_seeding),
+      operation: name,
     });
   }
 
-  recordEvent(tx, {
+  // The lock itself goes last: the service derives the race status from it
+  // once the next run's rows are in place
+  emitEntity(tx, {
     competitionId,
-    raceId,
-    runNumber,
+    entityType: 'race_run',
+    key: runKey({ raceId, runNumber }),
     operation: name,
-    payload: { isComplete: Boolean(isComplete), nextRun: nextRunChanges },
   });
   return { success: true, nextRun: nextRunChanges };
 }
@@ -245,10 +260,18 @@ function importBatch(tx, payload) {
         `${name}: run ${runNumber} is marked complete; unlock it before importing`,
       );
     }
-    tx.run(
+    const created = tx.run(
       `INSERT OR IGNORE INTO race_run (competition_id, race_id, run_id, run_number, is_complete) VALUES (?, ?, ?, ?, 0)`,
       [competitionId, raceId, `${raceId}-run-${runNumber}`, runNumber],
     );
+    if (created.changes > 0) {
+      emitEntity(tx, {
+        competitionId,
+        entityType: 'race_run',
+        key: runKey({ raceId, runNumber }),
+        operation: name,
+      });
+    }
   });
 
   results.forEach(({ racerId, runNumber, time, status }) => {
@@ -275,7 +298,12 @@ function importBatch(tx, payload) {
       racerId,
     };
     upsertResult(tx, name, { ...target, fields });
-    recordEvent(tx, { ...target, operation: name, payload: fields });
+    emitEntity(tx, {
+      competitionId,
+      entityType: 'result',
+      key: resultKey(target),
+      operation: name,
+    });
   });
 
   return { success: true, imported: results.length, runs: runNumbers };

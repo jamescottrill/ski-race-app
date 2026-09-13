@@ -1,4 +1,13 @@
 const { requireFields, requireList } = require('./validate');
+const { emitEntity } = require('./events');
+
+const publishStartList = (tx, competitionId, raceId, operation) =>
+  emitEntity(tx, {
+    competitionId,
+    entityType: 'start_list',
+    key: { race_id: raceId },
+    operation,
+  });
 
 /**
  * Replace a race's start list.
@@ -22,6 +31,7 @@ function regenerate(tx, payload) {
       [competitionId, raceId, racerId, bibNumber, seedPoints ?? 0],
     );
   });
+  publishStartList(tx, competitionId, raceId, name);
   return { success: true, entries: entries.length };
 }
 
@@ -59,6 +69,7 @@ function saveBibOrder(tx, payload) {
       [bibNumber, competitionId, raceId, racerId],
     ).changes;
   });
+  publishStartList(tx, competitionId, raceId, name);
   return { success: true, updated };
 }
 

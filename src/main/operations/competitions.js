@@ -3,6 +3,7 @@
  */
 const { randomUUID } = require('crypto');
 const { requireFields } = require('./validate');
+const { emitEntity } = require('./events');
 const {
   COMPETITION_LEVELS,
   isValidSeason,
@@ -85,6 +86,12 @@ function create(tx, payload) {
       new Date().toISOString(),
     ],
   );
+  emitEntity(tx, {
+    competitionId,
+    entityType: 'meeting',
+    key: {},
+    operation: name,
+  });
   return { success: true, competitionId };
 }
 
@@ -135,6 +142,12 @@ function update(tx, payload) {
       payload.competitionId,
     ],
   );
+  emitEntity(tx, {
+    competitionId: payload.competitionId,
+    entityType: 'meeting',
+    key: {},
+    operation: name,
+  });
   return { success: true };
 }
 
