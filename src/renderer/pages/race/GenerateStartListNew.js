@@ -28,7 +28,7 @@ import { fetchSeedList } from '../../utils/FetchSeedList';
 import { startListPdf } from '../../utils/StartListPdf';
 import { startListTwoRunPdf } from '../../utils/StartListTwoRunPdf';
 import { getRaceDetails } from '../../utils/RaceDetails';
-import { shuffleArray } from '../../utils/GenericUtils';
+import { buildStartOrder } from '../../utils/startOrder';
 import {
   handleDatabaseError,
   handlePdfError,
@@ -150,56 +150,12 @@ export default function GenerateStartListNew() {
     try {
       setLoading(true);
 
-      let filteredSeedList = seedList.filter(
-        (competitor) => !struckOutCompetitors[competitor.racer_id],
+      const filteredSeedList = buildStartOrder(
+        seedList.filter(
+          (competitor) => !struckOutCompetitors[competitor.racer_id],
+        ),
+        raceDetails,
       );
-
-      // Separate women if needed
-      if (raceDetails.women_separate) {
-        const womenSeedList = filteredSeedList.filter((c) => c.gender === 'F');
-        const menSeedList = filteredSeedList.filter((c) => c.gender === 'M');
-
-        // Process women's list
-        if (womenSeedList.length > raceDetails.randomise_top_women) {
-          const topWomen = shuffleArray(
-            womenSeedList.slice(0, raceDetails.randomise_top_women),
-          );
-          const restWomen = womenSeedList.slice(
-            raceDetails.randomise_top_women,
-          );
-          filteredSeedList = [...topWomen, ...restWomen];
-        } else {
-          filteredSeedList = shuffleArray(womenSeedList);
-        }
-
-        // Process men's list
-        if (menSeedList.length > raceDetails.randomise_top) {
-          const topMen = shuffleArray(
-            menSeedList.slice(0, raceDetails.randomise_top),
-          );
-          const restMen = menSeedList.slice(raceDetails.randomise_top);
-          const menList = [...topMen, ...restMen];
-          filteredSeedList = [...filteredSeedList, ...menList];
-        } else {
-          filteredSeedList = [
-            ...filteredSeedList,
-            ...shuffleArray(menSeedList),
-          ];
-        }
-      } else {
-        // Mixed start list
-        if (filteredSeedList.length > raceDetails.randomise_top) {
-          const topCompetitors = shuffleArray(
-            filteredSeedList.slice(0, raceDetails.randomise_top),
-          );
-          const restCompetitors = filteredSeedList.slice(
-            raceDetails.randomise_top,
-          );
-          filteredSeedList = [...topCompetitors, ...restCompetitors];
-        } else {
-          filteredSeedList = shuffleArray(filteredSeedList);
-        }
-      }
 
       // The main process clears and rebuilds the start list in one
       // transaction, so a failure part-way can never leave the race with a

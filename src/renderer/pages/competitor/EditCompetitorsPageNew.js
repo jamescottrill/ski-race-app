@@ -14,6 +14,10 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
+// An emptied number input reads '' and must be stored as NULL, not ''
+const blankToNull = (value) =>
+  value === '' || value === null || value === undefined ? null : Number(value);
+
 export default function EditCompetitorsPageNew() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
@@ -54,6 +58,7 @@ export default function EditCompetitorsPageNew() {
           cc.regiment,
           cc.arrival_corps_seed,
           cc.arrival_army_seed,
+          cc.training_group,
           cc.is_novice,
           cc.is_junior,
           cc.is_senior,
@@ -84,6 +89,7 @@ export default function EditCompetitorsPageNew() {
       regiment: competitor.regiment,
       arrival_corps_seed: competitor.arrival_corps_seed,
       arrival_army_seed: competitor.arrival_army_seed,
+      training_group: competitor.training_group,
     });
   };
 
@@ -99,12 +105,13 @@ export default function EditCompetitorsPageNew() {
       await window.api.insert(
         `UPDATE competition_competitor
          SET regiment = ?,
-             arrival_corps_seed = ?, arrival_army_seed = ?
+             arrival_corps_seed = ?, arrival_army_seed = ?, training_group = ?
          WHERE racer_id = ? AND competition_id = ?`,
         [
           editForm.regiment,
-          editForm.arrival_corps_seed,
-          editForm.arrival_army_seed,
+          blankToNull(editForm.arrival_corps_seed),
+          blankToNull(editForm.arrival_army_seed),
+          blankToNull(editForm.training_group),
           editingId,
           competitionId,
         ],
@@ -256,14 +263,27 @@ export default function EditCompetitorsPageNew() {
                 placeholder="Army"
                 className="w-20"
               />
+              <Input
+                type="number"
+                value={editForm.training_group ?? ''}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    training_group: e.target.value,
+                  })
+                }
+                placeholder="Group"
+                className="w-20"
+              />
             </div>
           );
         }
         return (
           <div className="text-sm">
             <span className="font-mono">
-              C: {row.original.arrival_corps_seed || '-'} / A:{' '}
-              {row.original.arrival_army_seed || '-'}
+              C: {row.original.arrival_corps_seed ?? '-'} / A:{' '}
+              {row.original.arrival_army_seed ?? '-'} / G:{' '}
+              {row.original.training_group ?? '-'}
             </span>
           </div>
         );

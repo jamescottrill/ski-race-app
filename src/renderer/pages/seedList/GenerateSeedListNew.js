@@ -135,6 +135,8 @@ function GenerateSeedListNew() {
         if (initialSelected.length > 0) {
           await loadSeedList(initialSelected);
         }
+      } else {
+        await loadSeedList([]);
       }
     } catch (error) {
       console.error('Failed to fetch races:', error);
@@ -216,6 +218,15 @@ function GenerateSeedListNew() {
               {row.original.team_name}
             </div>
           )}
+          {row.original.arrival_corps_seed == null &&
+          row.original.arrival_army_seed == null &&
+          row.original.aasl_points == null ? (
+            <div className="text-xs text-warning">
+              no seed points
+              {row.original.training_group != null &&
+                `, training group ${row.original.training_group}`}
+            </div>
+          ) : null}
         </div>
       ),
     },

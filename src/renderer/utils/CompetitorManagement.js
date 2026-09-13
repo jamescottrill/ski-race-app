@@ -8,8 +8,6 @@
  * on its own.
  */
 
-export const DEFAULT_ARRIVAL_SEED = 2000;
-
 // SQLite binds integers, not JS booleans
 const toFlag = (value) => (value ? 1 : 0);
 
@@ -149,8 +147,9 @@ const competitionEntryInsert = (formData, competitorId, competitionId) => {
     query: `
         INSERT INTO competition_competitor
         (competition_id, racer_id, is_novice, is_junior,
-         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         is_senior, is_veteran, is_reserve, is_female, title, regiment, arrival_corps_seed,
+         training_group)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
     params: [
       competitionId,
@@ -163,7 +162,8 @@ const competitionEntryInsert = (formData, competitorId, competitionId) => {
       toFlag(formData.isFemale),
       formData.title,
       formData.regiment,
-      formData.arrivalSeed || DEFAULT_ARRIVAL_SEED,
+      formData.arrivalSeed ?? null,
+      formData.trainingGroup ?? null,
     ],
   };
 };
@@ -183,12 +183,13 @@ const competitionEntryUpdate = (formData, competitorId, competitionId) => {
               is_reserve   = ?,
               is_female    = ?,
               title        = ?,
-              regiment     = ?
+              regiment     = ?,
+              training_group = ?
           WHERE competition_id = ?
             AND racer_id = ?
         `,
     params: [
-      formData.arrivalSeed || DEFAULT_ARRIVAL_SEED,
+      formData.arrivalSeed ?? null,
       toFlag(formData.isNovice),
       toFlag(isJunior),
       toFlag(isSenior),
@@ -197,6 +198,7 @@ const competitionEntryUpdate = (formData, competitorId, competitionId) => {
       toFlag(formData.isFemale),
       formData.title,
       formData.regiment,
+      formData.trainingGroup ?? null,
       competitionId,
       competitorId,
     ],

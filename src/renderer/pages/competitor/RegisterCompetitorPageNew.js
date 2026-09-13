@@ -42,6 +42,7 @@ function RegisterCompetitorPageNew() {
     team: '',
     // arrivalSeed: 2000,
     armySeed: '',
+    trainingGroup: '',
     isNovice: false,
     isJunior: false,
     isSenior: false,
@@ -193,8 +194,8 @@ function RegisterCompetitorPageNew() {
       INSERT INTO competition_competitor (
         competition_id, racer_id, arrival_corps_seed, arrival_army_seed,
         is_novice, is_junior, is_senior, is_veteran, is_reserve, is_female,
-        regiment, title
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        regiment, title, training_group
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const competitorParams = [
       competitionId,
@@ -209,6 +210,7 @@ function RegisterCompetitorPageNew() {
       formData.gender === 'F' ? 1 : 0,
       formData.regiment,
       formData.title,
+      formData.trainingGroup ? Number(formData.trainingGroup) : null,
     ];
 
     try {
@@ -386,7 +388,7 @@ function RegisterCompetitorPageNew() {
                     <h3 className="text-lg font-semibold text-neutral-900 mb-4">
                       Competition Categories
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <TextField
                         label="Arrival Seed Points"
                         name="arrivalSeed"
@@ -400,6 +402,14 @@ function RegisterCompetitorPageNew() {
                         type="number"
                         value={formData.armySeed}
                         onChange={handleInputChange}
+                      />
+                      <TextField
+                        label="Training Group"
+                        name="trainingGroup"
+                        type="number"
+                        value={formData.trainingGroup}
+                        onChange={handleInputChange}
+                        helperText="Ability group, 1 = strongest. Orders competitors with no seed points in the seeding race start list."
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-4 mt-4">

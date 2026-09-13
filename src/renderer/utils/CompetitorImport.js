@@ -3,7 +3,6 @@
  * the competitor shape CompetitorManagement expects, and validating a whole
  * file before anything is written.
  */
-import { DEFAULT_ARRIVAL_SEED } from './CompetitorManagement';
 
 // First non-empty value among the accepted spellings of a column, trimmed
 const pick = (row, ...columns) => {
@@ -31,6 +30,13 @@ export function mapCsvRowToCompetitor(row) {
     gender,
     regiment: pick(row, 'regiment', 'Regiment', 'unit', 'Unit'),
     arrivalSeed: pick(row, 'arrivalSeed', 'Arrival Seed'),
+    trainingGroup: pick(
+      row,
+      'trainingGroup',
+      'Training Group',
+      'group',
+      'Group',
+    ),
     isNovice: isYes(pick(row, 'novice', 'Novice')),
     isReserve: isYes(pick(row, 'reserve', 'Reserve')),
     isFemale: gender === 'F',
@@ -72,6 +78,11 @@ export function validateCompetitorRows(csvRows) {
     ) {
       problems.push(`Arrival seed "${competitor.arrivalSeed}" is not a number`);
     }
+    if (competitor.trainingGroup && !/^\d+$/.test(competitor.trainingGroup)) {
+      problems.push(
+        `Training group "${competitor.trainingGroup}" must be a whole number`,
+      );
+    }
     if (competitor.serviceNumber) {
       if (firstRowForServiceNumber.has(competitor.serviceNumber)) {
         problems.push(
@@ -87,9 +98,14 @@ export function validateCompetitorRows(csvRows) {
       competitor: {
         ...competitor,
         birthYear: competitor.birthYear ? Number(competitor.birthYear) : null,
+        // No arrival seed means unseeded; the seeding race start list orders
+        // such competitors by training group instead
         arrivalSeed: competitor.arrivalSeed
           ? Number(competitor.arrivalSeed)
-          : DEFAULT_ARRIVAL_SEED,
+          : null,
+        trainingGroup: competitor.trainingGroup
+          ? Number(competitor.trainingGroup)
+          : null,
       },
       problems,
       importable: problems.length === 0,

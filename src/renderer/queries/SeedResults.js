@@ -4,10 +4,11 @@ const seedResults = `
           WITH ${FACTORS_CTE},
                run1 AS (SELECT race_id,
                                rr.racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE race_time END AS race_time,
+                               CASE WHEN COALESCE(is_dnf, 0) OR COALESCE(is_dns, 0) OR COALESCE(is_dsq, 0) OR COALESCE(is_ns, 0) THEN NULL ELSE race_time END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason,
                                rr.competition_id
@@ -18,10 +19,11 @@ const seedResults = `
                           AND race_id = ?),
                run2 AS (SELECT race_id,
                                rr.racer_id,
-                               CASE WHEN is_dnf OR is_dns OR is_dsq THEN NULL ELSE race_time END AS race_time,
+                               CASE WHEN COALESCE(is_dnf, 0) OR COALESCE(is_dns, 0) OR COALESCE(is_dsq, 0) OR COALESCE(is_ns, 0) THEN NULL ELSE race_time END AS race_time,
                                COALESCE(is_dsq, FALSE) AS is_dsq,
                                COALESCE(is_dnf, FALSE) AS is_dnf,
                                COALESCE(is_dns, FALSE) AS is_dns,
+                               COALESCE(is_ns, FALSE) AS is_ns,
                                dsq_gate,
                                dsq_reason
                         FROM race_results rr
@@ -40,6 +42,8 @@ const seedResults = `
                                run2.is_dsq                                                               AS run_2_dsq,
                                run1.is_dnf                                                               AS run_1_dnf,
                                run2.is_dnf                                                               AS run_2_dnf,
+                               run1.is_ns                                                                AS run_1_ns,
+                               run2.is_ns                                                                AS run_2_ns,
                                run1.dsq_gate                                                             AS run_1_dsq_gate,
                                run2.dsq_gate                                                             AS run_2_dsq_gate,
                                run1.dsq_reason                                                           AS run_1_dsq_reason,
@@ -73,7 +77,7 @@ const seedResults = `
             SELECT
               *,
               CASE
-                WHEN NOT seed_1 AND NOT seed_2 THEN NULL
+                WHEN seed_1 IS NULL AND seed_2 IS NULL THEN NULL
                 WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) THEN seed_1 ELSE seed_2 END AS overall_seed
             FROM seeds
           )
@@ -129,10 +133,9 @@ const seedingPoints = `
               total_time,
               is_ns,
               CASE
-                WHEN NOT seed_1 AND NOT seed_2 THEN NULL
-                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < cc.arrival_corps_seed THEN seed_1
-                WHEN COALESCE(seed_2, 999999) < cc.arrival_corps_seed THEN seed_2
-                ELSE arrival_corps_seed END AS seed_point
+                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < COALESCE(cc.arrival_corps_seed, 2000) THEN seed_1
+                WHEN COALESCE(seed_2, 999999) < COALESCE(cc.arrival_corps_seed, 2000) THEN seed_2
+                ELSE COALESCE(cc.arrival_corps_seed, 2000) END AS seed_point
             FROM seeds s
             JOIN competition_competitor cc ON cc.racer_id = s.racer_id AND cc.competition_id = s.competition_id
           ORDER BY total_time NULLS LAST
