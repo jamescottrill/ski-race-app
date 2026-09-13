@@ -115,6 +115,50 @@ function dropAaslForeignKey(db) {
   }
 }
 
+// Version 2: the metadata that places a competition on the championship
+// ladder (level, season, dates, venue), its link to the central meeting and
+// the sync switch; the per-competitor Army qualification opt-out (Rule B17.a)
+// and do-not-publish flags; and the race publication status. Also repairs
+// team membership rows that an earlier page wrote without a competition id.
+const COMPETITION_METADATA_COLUMNS = [
+  { table: 'competitions', column: 'level', ddl: 'TEXT' },
+  { table: 'competitions', column: 'season', ddl: 'TEXT' },
+  { table: 'competitions', column: 'start_date', ddl: 'TEXT' },
+  { table: 'competitions', column: 'end_date', ddl: 'TEXT' },
+  { table: 'competitions', column: 'venue', ddl: 'TEXT' },
+  { table: 'competitions', column: 'remote_meeting_id', ddl: 'TEXT' },
+  {
+    table: 'competitions',
+    column: 'sync_enabled',
+    ddl: 'INTEGER NOT NULL DEFAULT 0',
+  },
+  { table: 'competitions', column: 'updated_at', ddl: 'TEXT' },
+  {
+    table: 'competition_competitor',
+    column: 'army_qual_opt_out',
+    ddl: 'INTEGER NOT NULL DEFAULT 0',
+  },
+  {
+    table: 'competition_competitor',
+    column: 'do_not_publish',
+    ddl: 'INTEGER NOT NULL DEFAULT 0',
+  },
+  {
+    table: 'races',
+    column: 'status',
+    ddl: "TEXT NOT NULL DEFAULT 'scheduled'",
+  },
+  { table: 'races', column: 'official_at', ddl: 'TEXT' },
+  { table: 'races', column: 'dsq_notice_posted_at', ddl: 'TEXT' },
+];
+
+function backfillTeamMemberCompetition(db) {
+  db.exec(`UPDATE competition_team_members
+           SET competition_id = (SELECT ct.competition_id FROM competition_team ct
+                                 WHERE ct.team_id = competition_team_members.team_id)
+           WHERE competition_id IS NULL`);
+}
+
 const MIGRATIONS = [
   {
     version: 1,
@@ -123,6 +167,16 @@ const MIGRATIONS = [
       BASELINE_COLUMNS.forEach((spec) => addColumnIfMissing(db, spec));
       repairInvalidForeignKeys(db);
       dropAaslForeignKey(db);
+    },
+  },
+  {
+    version: 2,
+    name: 'competition-metadata-and-race-status',
+    up(db) {
+      COMPETITION_METADATA_COLUMNS.forEach((spec) =>
+        addColumnIfMissing(db, spec),
+      );
+      backfillTeamMemberCompetition(db);
     },
   },
 ];

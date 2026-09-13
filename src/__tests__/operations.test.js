@@ -386,4 +386,166 @@ describeWithSqlite('operations', () => {
       expect(rows(db, `SELECT id FROM people`)).toHaveLength(3);
     });
   });
+
+  describe('competitions.create', () => {
+    it('creates a competition with a generated id and the given metadata', () => {
+      const db = openDatabase();
+      const result = run(db, 'competitions.create', {
+        name: 'Ex SPARTAN HIKE',
+        description: 'Qualifying meeting',
+        level: 'qualifying',
+        season: '2025-26',
+        startDate: '2026-01-05',
+        endDate: '2026-01-10',
+        venue: 'Serre Chevalier',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.competitionId).toMatch(/^[0-9a-f-]{36}$/);
+      const row = db
+        .prepare('SELECT * FROM competitions WHERE id = ?')
+        .get(result.competitionId);
+      expect(row).toMatchObject({
+        competition_name: 'Ex SPARTAN HIKE',
+        competition_description: 'Qualifying meeting',
+        level: 'qualifying',
+        season: '2025-26',
+        start_date: '2026-01-05',
+        end_date: '2026-01-10',
+        venue: 'Serre Chevalier',
+        sync_enabled: 0,
+      });
+      expect(row.updated_at).toEqual(expect.any(String));
+    });
+
+    it('stores blank optional fields as null', () => {
+      const db = openDatabase();
+      const { competitionId } = run(db, 'competitions.create', {
+        name: 'Corps meeting',
+        level: 'corps',
+        season: '2025-26',
+        startDate: '',
+        venue: '',
+      });
+      expect(
+        db
+          .prepare('SELECT * FROM competitions WHERE id = ?')
+          .get(competitionId),
+      ).toMatchObject({
+        competition_description: null,
+        start_date: null,
+        end_date: null,
+        venue: null,
+      });
+    });
+
+    it('rejects a missing name, an unknown level, a malformed season and reversed dates', () => {
+      const db = openDatabase();
+      const valid = { name: 'X', level: 'army', season: '2025-26' };
+      expect(() =>
+        run(db, 'competitions.create', { ...valid, name: '' }),
+      ).toThrow('name is required');
+      expect(() =>
+        run(db, 'competitions.create', { ...valid, level: 'divisional' }),
+      ).toThrow('level must be one of');
+      expect(() =>
+        run(db, 'competitions.create', { ...valid, season: '2025' }),
+      ).toThrow('season must look like');
+      expect(() =>
+        run(db, 'competitions.create', { ...valid, season: '2025-27' }),
+      ).toThrow('season must look like');
+      expect(() =>
+        run(db, 'competitions.create', { ...valid, startDate: '05/01/2026' }),
+      ).toThrow('start_date must be a date');
+      expect(() =>
+        run(db, 'competitions.create', {
+          ...valid,
+          startDate: '2026-01-10',
+          endDate: '2026-01-05',
+        }),
+      ).toThrow('end_date is before start_date');
+      expect(rows(db, 'SELECT id FROM competitions')).toHaveLength(1);
+    });
+  });
+
+  describe('competitions.update', () => {
+    it('changes the given columns and stamps updated_at', () => {
+      const db = openDatabase();
+      run(db, 'competitions.update', {
+        competitionId: COMP,
+        fields: {
+          competition_name: 'Renamed',
+          level: 'corps',
+          season: '2025-26',
+          start_date: '2026-01-05',
+          end_date: '2026-01-09',
+          venue: "Val d'Isere",
+          sync_enabled: true,
+          remote_meeting_id: 'remote-1',
+        },
+      });
+      expect(
+        db.prepare('SELECT * FROM competitions WHERE id = ?').get(COMP),
+      ).toMatchObject({
+        competition_name: 'Renamed',
+        level: 'corps',
+        season: '2025-26',
+        start_date: '2026-01-05',
+        end_date: '2026-01-09',
+        venue: "Val d'Isere",
+        sync_enabled: 1,
+        remote_meeting_id: 'remote-1',
+        updated_at: expect.any(String),
+      });
+    });
+
+    it('validates a changed date against the stored one', () => {
+      const db = openDatabase();
+      run(db, 'competitions.update', {
+        competitionId: COMP,
+        fields: { start_date: '2026-01-05' },
+      });
+      expect(() =>
+        run(db, 'competitions.update', {
+          competitionId: COMP,
+          fields: { end_date: '2026-01-04' },
+        }),
+      ).toThrow('end_date is before start_date');
+      // Clearing the start date lifts the constraint
+      run(db, 'competitions.update', {
+        competitionId: COMP,
+        fields: { start_date: '', end_date: '2026-01-04' },
+      });
+      expect(
+        db
+          .prepare('SELECT start_date, end_date FROM competitions WHERE id = ?')
+          .get(COMP),
+      ).toEqual({ start_date: null, end_date: '2026-01-04' });
+    });
+
+    it('rejects unknown columns, a blank name, an empty change and a missing competition', () => {
+      const db = openDatabase();
+      expect(() =>
+        run(db, 'competitions.update', {
+          competitionId: COMP,
+          fields: { id: 'other' },
+        }),
+      ).toThrow('unknown column(s) id');
+      expect(() =>
+        run(db, 'competitions.update', {
+          competitionId: COMP,
+          fields: { competition_name: '' },
+        }),
+      ).toThrow('competition_name cannot be blank');
+      expect(() =>
+        run(db, 'competitions.update', { competitionId: COMP, fields: {} }),
+      ).toThrow('no columns given');
+      expect(() =>
+        run(db, 'competitions.update', {
+          competitionId: 'missing',
+          fields: { venue: 'X' },
+        }),
+      ).toThrow('competition missing not found');
+    });
+  });
 });

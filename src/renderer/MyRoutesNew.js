@@ -2,6 +2,7 @@ import { Route } from 'react-router-dom';
 import LandingPageNew from './pages/landingPageNew';
 import CreateCompetitionPageNew from './pages/createCompetitionNew';
 import CompetitionManagementPageNew from './pages/competitionManagementPageNew';
+import CompetitionSettingsPage from './pages/CompetitionSettingsPage';
 import CompetitorRoutesNew from './routes/CompetitorRoutesNew';
 import ResultsRoutesNew from './routes/ResultsRoutesNew';
 import RaceRoutesNew from './routes/RaceRoutesNew';
@@ -28,6 +29,14 @@ export default function MyRoutesNew() {
         element={
           <LayoutNew>
             <CompetitionManagementPageNew />
+          </LayoutNew>
+        }
+      />
+      <Route
+        path="/competition/:competitionId/settings"
+        element={
+          <LayoutNew>
+            <CompetitionSettingsPage />
           </LayoutNew>
         }
       />

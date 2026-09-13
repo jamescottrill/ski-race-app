@@ -14,6 +14,7 @@ import {
   List,
   Home,
   Mountain,
+  Settings,
 } from 'lucide-react';
 import { cn } from '../design-system/utils/cn';
 
@@ -124,6 +125,11 @@ const SidebarNew = () => {
           icon={Home}
           label="Dashboard"
           path={`/competition/${competitionId}`}
+        />
+        <NavItem
+          icon={Settings}
+          label="Settings"
+          path={`/competition/${competitionId}/settings`}
         />
 
         <div className="h-px bg-border my-4" />

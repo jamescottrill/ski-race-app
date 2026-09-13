@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { v4 as uuid4 } from 'uuid';
 import { ArrowLeft, Trophy, Calendar, MapPin, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -11,14 +10,28 @@ import {
   CardContent,
   Button,
   TextField,
+  SimpleSelect,
   PageContainer,
   PageHeader,
 } from '../design-system';
 import { useBackButton } from '../utils/navigation';
+import * as operations from '../api/operations';
+import {
+  COMPETITION_LEVELS,
+  COMPETITION_LEVEL_LABELS,
+  seasonForDate,
+} from '../../shared/competition';
 
 function CreateCompetitionPageNew() {
   const [competitionName, setCompetitionName] = useState('');
   const [competitionDescription, setCompetitionDescription] = useState('');
+  const [details, setDetails] = useState({
+    level: '',
+    season: seasonForDate(),
+    startDate: '',
+    endDate: '',
+    venue: '',
+  });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const handleBack = useBackButton();
@@ -30,29 +43,30 @@ function CreateCompetitionPageNew() {
       toast.error('Competition name is required');
       return;
     }
+    if (!details.level) {
+      toast.error('Choose the level of the competition');
+      return;
+    }
 
     setLoading(true);
-    const id = uuid4();
-    const query = `
-      INSERT INTO competitions (id, competition_name, competition_description)
-      VALUES (?, ?, ?)
-    `;
-    const params = [id, competitionName, competitionDescription];
-
     try {
-      const result = await window.api.insert(query, params);
-      if (result.success) {
-        toast.success('Competition created successfully!');
-        navigate(`/competition/${id}`);
-      } else {
-        toast.error('Failed to create competition: ' + result.error);
-      }
+      const result = await operations.createCompetition({
+        name: competitionName.trim(),
+        description: competitionDescription,
+        ...details,
+      });
+      toast.success('Competition created successfully!');
+      navigate(`/competition/${result.competitionId}`);
     } catch (error) {
-      console.error('Error creating competition:', error);
-      toast.error('An error occurred while creating the competition');
+      toast.error(`Failed to create competition: ${error.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDetailChange = (event) => {
+    const { name, value } = event.target;
+    setDetails((current) => ({ ...current, [name]: value }));
   };
 
   return (
@@ -114,6 +128,55 @@ function CreateCompetitionPageNew() {
                     <p className="text-sm text-neutral-500">
                       Optional: Provide additional details about the competition
                     </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SimpleSelect
+                      label="Level"
+                      name="level"
+                      value={details.level}
+                      onChange={handleDetailChange}
+                      required
+                      helperText="Where this meeting sits on the championship ladder"
+                    >
+                      <option value="">Select...</option>
+                      {COMPETITION_LEVELS.map((level) => (
+                        <option key={level} value={level}>
+                          {COMPETITION_LEVEL_LABELS[level]}
+                        </option>
+                      ))}
+                    </SimpleSelect>
+                    <TextField
+                      label="Season"
+                      name="season"
+                      value={details.season}
+                      onChange={handleDetailChange}
+                      required
+                      placeholder="2025-26"
+                      helperText="Seasons run from 1 July to 30 June"
+                    />
+                    <TextField
+                      label="Start Date"
+                      name="startDate"
+                      type="date"
+                      value={details.startDate}
+                      onChange={handleDetailChange}
+                    />
+                    <TextField
+                      label="End Date"
+                      name="endDate"
+                      type="date"
+                      value={details.endDate}
+                      onChange={handleDetailChange}
+                    />
+                    <TextField
+                      label="Venue"
+                      name="venue"
+                      value={details.venue}
+                      onChange={handleDetailChange}
+                      placeholder="e.g., Serre Chevalier"
+                      leftIcon={<MapPin className="w-4 h-4 text-neutral-500" />}
+                    />
                   </div>
 
                   <div className="flex gap-3 pt-4">
@@ -208,11 +271,11 @@ function CreateCompetitionPageNew() {
                   <Calendar className="w-5 h-5 text-primary-700 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-primary-900">
-                      Season 2024
+                      Season {details.season || seasonForDate()}
                     </p>
                     <p className="text-xs text-primary-700 mt-1">
-                      Remember to configure race dates and venues after creating
-                      the competition
+                      Level and season can be changed later from the competition
+                      settings
                     </p>
                   </div>
                 </div>

@@ -48,3 +48,25 @@ export const saveBibOrder = ({ competitionId, raceId, bibs }) =>
 
 export const mergePeople = ({ sourceId, targetId }) =>
   run('people.merge', { sourceId, targetId });
+
+export const createCompetition = ({
+  name,
+  description,
+  level,
+  season,
+  startDate,
+  endDate,
+  venue,
+}) =>
+  run('competitions.create', {
+    name,
+    description,
+    level,
+    season,
+    startDate,
+    endDate,
+    venue,
+  });
+
+export const updateCompetition = ({ competitionId, fields }) =>
+  run('competitions.update', { competitionId, fields });
