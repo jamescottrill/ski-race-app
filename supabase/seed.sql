@@ -46,3 +46,9 @@ insert into results (race_id, run_number, entry_id, race_time, is_dns, is_dnf, i
   ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 1, 'a1111111-1111-4111-8111-111111111111', 61.23, false, false, false, false, null),
   ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 1, 'a2222222-2222-4222-8222-222222222222', null, false, true, false, false, null),
   ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 1, 'a4444444-4444-4444-8444-444444444444', null, false, false, true, false, 17);
+
+-- A key for local development only (the plaintext is in supabase/README.md);
+-- hosted projects issue keys through the admin area and never seed one
+insert into meeting_api_keys (meeting_id, key_hash, key_prefix, label) values
+  ('0b8e1c2d-3f4a-4b5c-8d6e-7f8091a2b3c4', extensions.digest('awsa_demomeet_localdevelopmentkey000000000000', 'sha256'),
+   'awsa_demomeet_loca', 'local development');

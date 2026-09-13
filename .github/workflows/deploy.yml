@@ -1,0 +1,49 @@
+name: Deploy
+
+# development deploys to the staging Supabase project, master to production.
+# Every step is skipped until the repository has SUPABASE_ACCESS_TOKEN,
+# SUPABASE_DB_PASSWORD_STAGING / _PRODUCTION and the project refs as
+# variables, so the workflow is safe to merge before those exist.
+on:
+  push:
+    branches: [development, master]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  supabase:
+    name: Supabase (migrations and functions)
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ github.ref_name == 'master' && vars.SUPABASE_PROJECT_REF_PRODUCTION || vars.SUPABASE_PROJECT_REF_STAGING }}
+      SUPABASE_DB_PASSWORD: ${{ github.ref_name == 'master' && secrets.SUPABASE_DB_PASSWORD_PRODUCTION || secrets.SUPABASE_DB_PASSWORD_STAGING }}
+    steps:
+      - name: Checkout code
+        if: env.HAS_TOKEN == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        if: env.HAS_TOKEN == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link the project
+        if: env.HAS_TOKEN == 'true' && env.PROJECT_REF != ''
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: Push migrations
+        if: env.HAS_TOKEN == 'true' && env.PROJECT_REF != ''
+        run: supabase db push
+
+      - name: Deploy functions
+        if: env.HAS_TOKEN == 'true' && env.PROJECT_REF != ''
+        run: supabase functions deploy ingest ping --no-verify-jwt --project-ref "$PROJECT_REF"
+
+      - name: Nothing to do
+        if: env.HAS_TOKEN != 'true'
+        run: echo "SUPABASE_ACCESS_TOKEN is not set; skipping deployment"
