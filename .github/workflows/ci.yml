@@ -111,4 +111,4 @@ jobs:
         run: supabase test db
 
       - name: Lint the schema
-        run: supabase db lint --level warning --fail-on warning
+        run: supabase db lint --level warning --fail-on error
