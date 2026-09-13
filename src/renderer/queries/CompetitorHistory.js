@@ -2,6 +2,8 @@
  * Query helpers for competitor performance history
  */
 
+import { RACE_FACTORS_CTE } from './fragments';
+
 export const getCompetitorBio = async (competitorId) => {
   const query = `
     SELECT
@@ -43,13 +45,7 @@ export const getCompetitorRaceHistory = async (competitorId) => {
       FROM valid_results
       GROUP BY race_id, competition_id, run_number
     ),
-    race_factors AS (
-      SELECT 'SL' AS race_type, 730 AS factor
-      UNION ALL SELECT 'GS', 1010
-      UNION ALL SELECT 'SG', 1190
-      UNION ALL SELECT 'DH', 1250
-      UNION ALL SELECT 'AC', 1360
-    ),
+    ${RACE_FACTORS_CTE},
     run1_seed_points AS (
       SELECT
         vr.race_id,
@@ -236,13 +232,7 @@ export const getRaceSeedPointsForCompetitor = async (competitorId) => {
       FROM valid_results
       GROUP BY race_id, competition_id, run_number
     ),
-    race_factors AS (
-      SELECT 'SL' AS race_type, 730 AS factor
-      UNION ALL SELECT 'GS', 1010
-      UNION ALL SELECT 'SG', 1190
-      UNION ALL SELECT 'DH', 1250
-      UNION ALL SELECT 'AC', 1360
-    ),
+    ${RACE_FACTORS_CTE},
     run1_seed_points AS (
       SELECT
         vr.race_id,

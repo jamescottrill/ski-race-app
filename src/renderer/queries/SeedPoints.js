@@ -1,13 +1,7 @@
+import { FACTORS_CTE } from './fragments';
+
 const seedPointsOneRun = `
- WITH factors AS (SELECT 730 AS factor, 'SL' AS race
-                           UNION ALL
-                           SELECT 1010 AS factor, 'GS' AS race
-                           UNION ALL
-                           SELECT 1190 AS factor, 'SG' AS race
-                           UNION ALL
-                           SELECT 1250 AS factor, 'DH' AS race
-                           UNION ALL
-                           SELECT 1360 AS factor, 'AC' AS race),
+ WITH ${FACTORS_CTE},
                run1 AS (SELECT race_id,
                                rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time
@@ -37,15 +31,7 @@ const seedPointsOneRun = `
 `;
 
 const seedPointsTwoRun = `
-WITH factors AS (SELECT 730 AS factor, 'SL' AS race
-                           UNION ALL
-                           SELECT 1010 AS factor, 'GS' AS race
-                           UNION ALL
-                           SELECT 1190 AS factor, 'SG' AS race
-                           UNION ALL
-                           SELECT 1250 AS factor, 'DH' AS race
-                           UNION ALL
-                           SELECT 1360 AS factor, 'AC' AS race),
+WITH ${FACTORS_CTE},
                run1 AS (SELECT race_id,
                                rr.racer_id,
                                CASE WHEN is_dnf OR is_dns OR is_dsq OR is_ns THEN NULL ELSE ROUND(race_time, 2) END AS race_time

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import {
   PageContainer,
@@ -11,11 +11,9 @@ import {
   TabsContent,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import RaceResultSeedNew from '../../components/RaceResultSeedNew';
-import RaceResultTwoRunNew from '../../components/RaceResultTwoRunNew';
-import RaceResultOneRunNew from '../../components/RaceResultOneRunNew';
-import RaceTeamResultTwoRunNew from '../../components/RaceTeamResultTwoRunNew';
-import RaceTeamResultOneRunNew from '../../components/RaceTeamResultOneRunNew';
+import IndividualRaceResults from '../../components/results/IndividualRaceResults';
+import SeedRaceResults from '../../components/results/SeedRaceResults';
+import TeamRaceResults from '../../components/results/TeamRaceResults';
 import { getRaceDetails } from '../../utils/RaceDetails';
 
 export default function RaceResultsPageNew() {
@@ -70,39 +68,31 @@ export default function RaceResultsPageNew() {
     );
   }
 
+  const runs = raceRuns.length;
+
   const renderResultContent = () => {
-    if (raceRuns.length === 2 && raceDetails.is_seeding) {
-      return (
-        <RaceResultSeedNew raceId={raceId} competitionId={competitionId} />
-      );
+    if (runs === 2 && raceDetails.is_seeding) {
+      return <SeedRaceResults raceId={raceId} competitionId={competitionId} />;
     }
-    if (raceRuns.length === 2 && !raceDetails.is_seeding) {
+    if (runs === 1 || runs === 2) {
       return (
-        <RaceResultTwoRunNew raceId={raceId} competitionId={competitionId} />
-      );
-    }
-    if (raceRuns.length === 1) {
-      return (
-        <RaceResultOneRunNew raceId={raceId} competitionId={competitionId} />
+        <IndividualRaceResults
+          raceId={raceId}
+          competitionId={competitionId}
+          runs={runs}
+        />
       );
     }
     return null;
   };
 
   const renderTeamContent = () => {
-    if (raceDetails.is_team && raceRuns.length === 2) {
+    if (raceDetails.is_team && (runs === 1 || runs === 2)) {
       return (
-        <RaceTeamResultTwoRunNew
+        <TeamRaceResults
           raceId={raceId}
           competitionId={competitionId}
-        />
-      );
-    }
-    if (raceDetails.is_team && raceRuns.length === 1) {
-      return (
-        <RaceTeamResultOneRunNew
-          raceId={raceId}
-          competitionId={competitionId}
+          runs={runs}
         />
       );
     }
