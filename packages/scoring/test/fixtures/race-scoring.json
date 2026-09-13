@@ -1,0 +1,165 @@
+{
+  "description": "Golden race-scoring fixture: the same rows must score identically in the app's SQLite query and the service's race_result_rows view.",
+  "races": [
+    {
+      "id": "GS1",
+      "name": "Giant Slalom",
+      "race_type": "GS",
+      "number_runs": 1,
+      "entries": [
+        {
+          "sn": "A",
+          "bib": 1,
+          "runs": {
+            "1": {
+              "time": 60.0
+            }
+          }
+        },
+        {
+          "sn": "B",
+          "bib": 2,
+          "runs": {
+            "1": {
+              "time": 62.34
+            }
+          }
+        },
+        {
+          "sn": "C",
+          "bib": 3,
+          "runs": {
+            "1": {
+              "time": 62.34
+            }
+          }
+        },
+        {
+          "sn": "D",
+          "bib": 4,
+          "runs": {
+            "1": {
+              "time": 30.1,
+              "dnf": true
+            }
+          }
+        },
+        {
+          "sn": "E",
+          "bib": 5,
+          "runs": {
+            "1": {
+              "time": 65.0
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "sn": "A",
+          "position": 1,
+          "points": 0.0
+        },
+        {
+          "sn": "B",
+          "position": 2,
+          "points": 39.39
+        },
+        {
+          "sn": "C",
+          "position": 2,
+          "points": 39.39
+        },
+        {
+          "sn": "E",
+          "position": 4,
+          "points": 84.17
+        },
+        {
+          "sn": "D",
+          "position": null,
+          "points": null,
+          "is_dnf": true
+        }
+      ]
+    },
+    {
+      "id": "SL2",
+      "name": "Slalom",
+      "race_type": "SL",
+      "number_runs": 2,
+      "entries": [
+        {
+          "sn": "A",
+          "bib": 1,
+          "runs": {
+            "1": {
+              "time": 45.1
+            },
+            "2": {
+              "time": 46.2
+            }
+          }
+        },
+        {
+          "sn": "B",
+          "bib": 2,
+          "runs": {
+            "1": {
+              "time": 44.9
+            },
+            "2": {
+              "time": 47.6
+            }
+          }
+        },
+        {
+          "sn": "C",
+          "bib": 3,
+          "runs": {
+            "1": {
+              "time": 46.0
+            },
+            "2": {
+              "time": 20.0,
+              "dsq": true,
+              "gate": 12
+            }
+          }
+        },
+        {
+          "sn": "D",
+          "bib": 4,
+          "runs": {
+            "1": {
+              "time": 47.0
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "sn": "A",
+          "position": 1,
+          "points": 0.0
+        },
+        {
+          "sn": "B",
+          "position": 2,
+          "points": 9.59
+        },
+        {
+          "sn": "C",
+          "position": null,
+          "points": null,
+          "is_dsq": true
+        },
+        {
+          "sn": "D",
+          "position": null,
+          "points": null
+        }
+      ]
+    }
+  ]
+}
