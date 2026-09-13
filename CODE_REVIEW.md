@@ -124,18 +124,23 @@ seed list calculation against an in-memory SQLite built for the edge cases. Fixe
   list itself: a missing arrival seed is 2000 there, as agreed. A blank arrival seed is
   now stored as NULL rather than 2000.
 
-Assumptions and open points:
+Confirmed with the user and implemented:
 
-- B13.c does not say what a non-starter seeded below the last finisher receives; the
-  code gives the last finisher's points or their own, whichever is greater, with no
-  penalty. Confirm.
-- B13.d also excludes awarded points from **final seed lists**. The seed list page still
-  finalises the list it displays, awards included, because the rule does not say what a
-  competitor with insufficient real data gets in a final list. Decide, then it is a
-  one-line switch (`awardPenalties: false`) plus a rule for those competitors.
-- CPP: T2 is set equal to T1, so the formula collapses to (2·T1 − T3)/divisor. The
-  header comment defines T2 over a different set (the same reference skiers who finished
-  in the top ten). Check against the rulebook.
+- B13.c: a non-starter seeded below the last finisher receives the last finisher's
+  points or their own, whichever is greater, with no penalty.
+- B13.d: the finalised seed list keeps awarded points (no rule exists for competitors
+  with insufficient real data), while combination results exclude them.
+- Awarded points are never discarded: two real results plus an award become four of
+  five when the competitor finishes the next race.
+- CPP follows the rulebook: T1 is the AASL points of the five lowest-AASL skiers on
+  the meeting seed list, T2 the AASL points of the five lowest-AASL skiers who finished
+  in the top ten, T3 those T2 skiers' meeting seed points, CPP = (T1 + T2 − T3) / 10.
+  The old code used the top-ten set for both totals. With fewer than five qualifying
+  skiers (minimum three), the same number is used for T1 and the divisor is twice that
+  number.
+
+Still open:
+
 - A competitor with an AASL entry but no arrival corps seed is treated as seeded (not
   grouped) and scores 2000 in the seed list; using their AASL points instead is a small
   change if wanted.
