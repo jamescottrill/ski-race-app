@@ -2,8 +2,10 @@
 import * as dfd from 'danfojs';
 import { seedPointsOneRun, seedPointsTwoRun } from '../queries/SeedPoints';
 import { seedingPoints } from '../queries/SeedResults';
-import { raceQuery } from '../components/RaceResultTwoRun';
-import { raceQueryOneRun } from '../components/RaceResult';
+import {
+  raceResultsOneRunQuery,
+  raceResultsTwoRunQuery,
+} from '../queries/RaceResults';
 import { round } from './MathFx';
 // import { race } from 'eslint-plugin-promise/rules/lib/promise-statics';
 
@@ -45,10 +47,10 @@ const getRaceResult = async (competitionId, raceId) => {
     let query2;
     let values;
     if (numRuns === 1) {
-      query2 = raceQueryOneRun;
+      query2 = raceResultsOneRunQuery;
       values = [raceId];
     } else {
-      query2 = raceQuery;
+      query2 = raceResultsTwoRunQuery;
       values = [raceId, raceId];
     }
     const results2 = await window.api.select(query2, values);
