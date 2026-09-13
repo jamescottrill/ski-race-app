@@ -18,6 +18,7 @@ import {
   Badge,
   Input,
 } from '../../design-system';
+import { mergePeople } from '../../api/operations';
 
 export default function MergePeoplePageNew() {
   const navigate = useNavigate();
@@ -143,97 +144,9 @@ export default function MergePeoplePageNew() {
     setMerging(true);
 
     try {
-      // The whole merge runs as one transaction: either every reference is
-      // transferred and the source person deleted, or nothing changes.
-      const operations = [];
-
-      // Tables keyed on racer_id/service_number. keyColumns are the rest of
-      // each table's primary key: where the target already has a row with
-      // the same key, the source's duplicate row is deleted instead of
-      // updated, which would otherwise abort the merge with a PK violation.
-      const racerTables = [
-        {
-          table: 'competition_competitor',
-          column: 'racer_id',
-          keyColumns: ['competition_id'],
-        },
-        {
-          table: 'competition_team_members',
-          column: 'racer_id',
-          keyColumns: ['competition_id', 'team_id', 'race_id'],
-        },
-        {
-          table: 'race_competitor',
-          column: 'racer_id',
-          keyColumns: ['competition_id', 'race_id'],
-        },
-        {
-          table: 'race_results',
-          column: 'racer_id',
-          keyColumns: ['competition_id', 'race_id', 'run_number'],
-        },
-        {
-          table: 'competition_final_seed_list',
-          column: 'racer_id',
-          keyColumns: ['competition_id'],
-        },
-        { table: 'aasl', column: 'service_number', keyColumns: ['season'] },
-      ];
-
-      for (const { table, column, keyColumns } of racerTables) {
-        const keyMatch = keyColumns
-          .map((k) => `t2.${k} IS ${table}.${k}`)
-          .join(' AND ');
-        operations.push({
-          type: 'delete',
-          query: `DELETE FROM ${table} WHERE ${column} = ?
-                  AND EXISTS (SELECT 1 FROM ${table} t2 WHERE t2.${column} = ? AND ${keyMatch})`,
-          params: [sourceId, targetId],
-        });
-        operations.push({
-          type: 'update',
-          query: `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
-          params: [targetId, sourceId],
-        });
-      }
-
-      // Official references in races and race_run
-      const raceOfficials = [
-        'chief_of_race',
-        'tech_delegate',
-        'referee',
-        'asst_referee',
-      ];
-      for (const col of raceOfficials) {
-        operations.push({
-          type: 'update',
-          query: `UPDATE races SET ${col} = ? WHERE ${col} = ?`,
-          params: [targetId, sourceId],
-        });
-      }
-
-      const runOfficials = [
-        'course_setter',
-        'forerunner_a',
-        'forerunner_b',
-        'forerunner_c',
-        'forerunner_d',
-      ];
-      for (const col of runOfficials) {
-        operations.push({
-          type: 'update',
-          query: `UPDATE race_run SET ${col} = ? WHERE ${col} = ?`,
-          params: [targetId, sourceId],
-        });
-      }
-
-      operations.push({
-        type: 'delete',
-        query: `DELETE FROM people WHERE id = ?`,
-        params: [sourceId],
-      });
-
-      await window.api.transaction(operations);
+      // The main process transfers every reference and deletes the source
+      // person in one transaction: either all of it happens or none of it
+      await mergePeople({ sourceId, targetId });
 
       alert('People merged successfully!');
 

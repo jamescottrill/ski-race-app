@@ -31,6 +31,7 @@ import {
   SearchableSelect,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import * as operations from '../../api/operations';
 import { handleDatabaseError } from '../../utils/ErrorHandler';
 import {
   convertRaceTime,
@@ -168,32 +169,12 @@ function RecordRaceResultsPageNew() {
 
   const saveRunDetails = async (runNumber) => {
     try {
-      const details = runDetails[runNumber];
-      const query = `
-        UPDATE race_run
-        SET course_setter = ?,
-            number_gates = ?,
-            turning_gates = ?,
-            start_time = ?,
-            forerunner_a = ?,
-            forerunner_b = ?,
-            forerunner_c = ?,
-            forerunner_d = ?
-        WHERE race_id = ? AND competition_id = ? AND run_number = ?
-      `;
-      await window.api.insert(query, [
-        details.courseSetter || null,
-        details.numberGates || null,
-        details.turningGates || null,
-        details.startTime || null,
-        details.forerunner1 || null,
-        details.forerunner2 || null,
-        details.forerunner3 || null,
-        details.forerunner4 || null,
-        raceId,
+      await operations.saveRunDetails({
         competitionId,
+        raceId,
         runNumber,
-      ]);
+        details: runDetails[runNumber],
+      });
       setSaveStatus({
         type: 'success',
         message: `Run ${runNumber} course details saved`,
@@ -485,42 +466,44 @@ function RecordRaceResultsPageNew() {
     }
   };
 
-  // Persists one or more race_results columns for a competitor in a single
-  // atomic statement, creating the row if it doesn't exist yet. Throws on
-  // failure so callers can surface the error and revert optimistic state.
+  // Persists one or more race_results columns for a competitor as one
+  // named operation (atomic, event-logged). Throws on failure so callers can
+  // surface the error and revert optimistic state.
   const saveResultFields = async (runNumber, competitorId, fields) => {
-    const columns = Object.keys(fields);
-    const query = `
-      INSERT INTO race_results (competition_id, race_id, run_number, racer_id, ${columns.join(', ')})
-      VALUES (?, ?, ?, ?, ${columns.map(() => '?').join(', ')})
-      ON CONFLICT(competition_id, race_id, run_number, racer_id)
-      DO UPDATE SET ${columns.map((c) => `${c} = excluded.${c}`).join(', ')}
-    `;
-    await window.api.insert(query, [
+    await operations.saveResultFields({
       competitionId,
       raceId,
       runNumber,
-      competitorId,
-      ...Object.values(fields),
-    ]);
+      racerId: competitorId,
+      fields,
+    });
+  };
+
+  // Locks or unlocks a run. The main process rebuilds the next run's rows
+  // from the recorded results in the same transaction.
+  const setRunCompleteAndRefresh = async (runNumber, isComplete) => {
+    await operations.setRunComplete({
+      competitionId,
+      raceId,
+      runNumber,
+      isComplete,
+    });
+    setRaceRuns((prev) =>
+      prev.map((r) =>
+        r.run_number === runNumber
+          ? { ...r, is_complete: isComplete ? 1 : 0 }
+          : r,
+      ),
+    );
+    const nextRun = runNumber + 1;
+    if (nextRun <= (raceDetails?.number_runs || 1)) {
+      await fetchCompetitorsForRun(nextRun);
+    }
   };
 
   const markRunComplete = async (runNumber) => {
     try {
-      const query = `UPDATE race_run SET is_complete = 1 WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
-      await window.api.insert(query, [competitionId, raceId, runNumber]);
-
-      setRaceRuns((prev) =>
-        prev.map((r) =>
-          r.run_number === runNumber ? { ...r, is_complete: 1 } : r,
-        ),
-      );
-
-      const nextRun = runNumber + 1;
-      if (nextRun <= (raceDetails?.number_runs || 1)) {
-        await createNextRunResults(runNumber, nextRun, true);
-      }
-
+      await setRunCompleteAndRefresh(runNumber, true);
       setSaveStatus({
         type: 'success',
         message: `Run ${runNumber} marked complete and locked`,
@@ -534,20 +517,7 @@ function RecordRaceResultsPageNew() {
 
   const unlockRun = async (runNumber) => {
     try {
-      const query = `UPDATE race_run SET is_complete = 0 WHERE competition_id = ? AND race_id = ? AND run_number = ?`;
-      await window.api.insert(query, [competitionId, raceId, runNumber]);
-
-      setRaceRuns((prev) =>
-        prev.map((r) =>
-          r.run_number === runNumber ? { ...r, is_complete: 0 } : r,
-        ),
-      );
-
-      const nextRun = runNumber + 1;
-      if (nextRun <= (raceDetails?.number_runs || 1)) {
-        await createNextRunResults(runNumber, nextRun, true);
-      }
-
+      await setRunCompleteAndRefresh(runNumber, false);
       setSaveStatus({
         type: 'success',
         message: `Run ${runNumber} unlocked for editing`,
@@ -557,65 +527,6 @@ function RecordRaceResultsPageNew() {
       console.error('Failed to unlock run:', error);
       setSaveStatus({ type: 'error', message: 'Failed to unlock run' });
     }
-  };
-
-  // Rebuilds the next run's result rows as a single atomic transaction, so
-  // a crash or error can never leave the run half-deleted. Throws on
-  // failure; markRunComplete/unlockRun surface the error to the user.
-  const createNextRunResults = async (
-    currentRun,
-    nextRun,
-    preserveExisting = false,
-  ) => {
-    const isSeedingRace =
-      raceDetails?.is_seeding === 1 || raceDetails?.is_seeding === true;
-    const allCompetitors = competitors[currentRun] || [];
-
-    const competitorsForNextRun = isSeedingRace
-      ? allCompetitors
-      : allCompetitors.filter((c) => c.status === 'Finished');
-
-    const operations = [];
-
-    if (!preserveExisting) {
-      operations.push({
-        type: 'delete',
-        query: `DELETE FROM race_results WHERE competition_id = ? AND race_id = ? AND run_number = ?`,
-        params: [competitionId, raceId, nextRun],
-      });
-    } else if (!isSeedingRace) {
-      // For non-seeding races, remove competitors who no longer qualify
-      const nonFinishers = allCompetitors
-        .filter((c) => c.status !== 'Finished')
-        .map((c) => c.competitor_id);
-
-      if (nonFinishers.length > 0) {
-        const placeholders = nonFinishers.map(() => '?').join(',');
-        operations.push({
-          type: 'delete',
-          query: `
-            DELETE FROM race_results
-            WHERE competition_id = ? AND race_id = ? AND run_number = ?
-            AND racer_id IN (${placeholders})
-          `,
-          params: [competitionId, raceId, nextRun, ...nonFinishers],
-        });
-      }
-    }
-
-    for (const comp of competitorsForNextRun) {
-      operations.push({
-        type: 'insert',
-        query: `
-          INSERT OR IGNORE INTO race_results (competition_id, race_id, run_number, racer_id)
-          VALUES (?, ?, ?, ?)
-        `,
-        params: [competitionId, raceId, nextRun, comp.competitor_id],
-      });
-    }
-
-    await window.api.transaction(operations);
-    await fetchCompetitorsForRun(nextRun);
   };
 
   const getColumns = (runNumber, isLocked) => [

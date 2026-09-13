@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('db-delete', query, params),
   transaction: (operations: any[]) =>
     ipcRenderer.invoke('db-transaction', operations),
+  operation: (name: string, payload?: object) =>
+    ipcRenderer.invoke('db-operation', name, payload),
 });
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -16,6 +16,8 @@ interface DatabaseAPI {
   transaction: (
     operations: DatabaseOperation[],
   ) => Promise<{ success: true; results: any[] }>;
+  /** Run a named operation from src/main/operations atomically */
+  operation: (name: string, payload?: Record<string, unknown>) => Promise<any>;
 }
 
 interface ElectronAPI {

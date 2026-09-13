@@ -1,7 +1,7 @@
 import {
   parseTime,
   buildImportRows,
-  buildImportOperations,
+  buildImportPayload,
 } from '../renderer/utils/RaceResultsImport';
 
 describe('parseTime', () => {
@@ -145,39 +145,25 @@ describe('buildImportRows', () => {
   });
 });
 
-describe('buildImportOperations', () => {
-  const rows = [
-    {
-      competitor: { competitor_id: 'A1' },
-      runs: { 1: { time: 80, status: null }, 2: { time: null, status: 'DNF' } },
-    },
-    {
-      competitor: { competitor_id: 'B2' },
-      runs: { 1: { time: 81.5, status: null } },
-    },
-  ];
-  const ops = buildImportOperations({ competitionId: 'C', raceId: 'R', rows });
-
-  it('creates each run once, before any result', () => {
-    expect(ops[0].query).toMatch(/INSERT OR IGNORE INTO race_run/);
-    expect(ops.slice(0, 2).map((o) => o.params)).toEqual([
-      ['C', 'R', 'R-run-1', 1],
-      ['C', 'R', 'R-run-2', 2],
+describe('buildImportPayload', () => {
+  it('flattens rows into one entry per competitor and run', () => {
+    const rows = [
+      {
+        competitor: { competitor_id: 'A1' },
+        runs: {
+          1: { time: 80, status: null },
+          2: { time: null, status: 'DNF' },
+        },
+      },
+      {
+        competitor: { competitor_id: 'B2' },
+        runs: { 1: { time: 81.5, status: null } },
+      },
+    ];
+    expect(buildImportPayload(rows)).toEqual([
+      { racerId: 'A1', runNumber: 1, time: 80, status: null },
+      { racerId: 'A1', runNumber: 2, time: null, status: 'DNF' },
+      { racerId: 'B2', runNumber: 1, time: 81.5, status: null },
     ]);
-  });
-
-  it('upserts one result per competitor and run with the status flags', () => {
-    expect(ops).toHaveLength(5);
-    expect(ops[2].query).toMatch(
-      /ON CONFLICT\(competition_id, race_id, run_number, racer_id\)/,
-    );
-    // competition_id, race_id, run_number, racer_id, race_time, is_dnf, is_dsq, is_dns, is_ns
-    expect(ops[2].params).toEqual(['C', 'R', 1, 'A1', 80, 0, 0, 0, 0]);
-    expect(ops[3].params).toEqual(['C', 'R', 2, 'A1', null, 1, 0, 0, 0]);
-    expect(ops[4].params).toEqual(['C', 'R', 1, 'B2', 81.5, 0, 0, 0, 0]);
-  });
-
-  it('only uses operation types the transaction channel understands', () => {
-    ops.forEach((o) => expect(o.type).toBe('insert'));
   });
 });

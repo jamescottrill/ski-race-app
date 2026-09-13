@@ -21,8 +21,9 @@ import {
 import { useBackButton } from '../../utils/navigation';
 import {
   buildImportRows,
-  buildImportOperations,
+  buildImportPayload,
 } from '../../utils/RaceResultsImport';
+import { importResults } from '../../api/operations';
 import {
   handleDatabaseError,
   showSuccess,
@@ -182,10 +183,12 @@ export default function ImportRaceResultsPageNew() {
     const skippedCount = previewData.length - importable.length;
 
     try {
-      // One transaction: either every result lands or none does
-      await window.api.transaction(
-        buildImportOperations({ competitionId, raceId, rows: importable }),
-      );
+      // One atomic operation: either every result lands or none does
+      await importResults({
+        competitionId,
+        raceId,
+        results: buildImportPayload(importable),
+      });
       const resultCount = importable.reduce(
         (total, row) => total + Object.keys(row.runs).length,
         0,

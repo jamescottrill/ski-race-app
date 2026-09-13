@@ -143,58 +143,16 @@ export function buildImportRows({
 }
 
 /**
- * Build the operation list for window.api.transaction from the importable
- * rows: make sure each run row exists, then upsert one race_results row per
- * competitor and run. The caller executes the list as one transaction, so a
- * failure part-way writes nothing.
+ * Flatten the importable rows into one entry per competitor and run, in the
+ * shape the results.importBatch operation expects.
  */
-export function buildImportOperations({ competitionId, raceId, rows }) {
-  const runNumbers = new Set();
-  rows.forEach((row) =>
-    Object.keys(row.runs).forEach((n) => runNumbers.add(Number(n))),
+export function buildImportPayload(rows) {
+  return rows.flatMap((row) =>
+    Object.entries(row.runs).map(([runNumber, { time, status }]) => ({
+      racerId: row.competitor.competitor_id,
+      runNumber: Number(runNumber),
+      time,
+      status,
+    })),
   );
-
-  const operations = [...runNumbers]
-    .sort((a, b) => a - b)
-    .map((runNumber) => ({
-      type: 'insert',
-      query: `INSERT OR IGNORE INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
-              VALUES (?, ?, ?, ?, 0)`,
-      params: [competitionId, raceId, `${raceId}-run-${runNumber}`, runNumber],
-    }));
-
-  rows.forEach((row) => {
-    Object.entries(row.runs).forEach(([runNumber, { time, status }]) => {
-      operations.push({
-        type: 'insert',
-        // DSQ gate/reason are kept only while the row stays DSQ, matching
-        // what the results-entry page does when a status changes
-        query: `INSERT INTO race_results
-                  (competition_id, race_id, run_number, racer_id, race_time, is_dnf, is_dsq, is_dns, is_ns)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(competition_id, race_id, run_number, racer_id)
-                DO UPDATE SET
-                  race_time = excluded.race_time,
-                  is_dnf = excluded.is_dnf,
-                  is_dsq = excluded.is_dsq,
-                  is_dns = excluded.is_dns,
-                  is_ns = excluded.is_ns,
-                  dsq_gate = CASE WHEN excluded.is_dsq = 1 THEN race_results.dsq_gate ELSE NULL END,
-                  dsq_reason = CASE WHEN excluded.is_dsq = 1 THEN race_results.dsq_reason ELSE NULL END`,
-        params: [
-          competitionId,
-          raceId,
-          Number(runNumber),
-          row.competitor.competitor_id,
-          time,
-          status === 'DNF' ? 1 : 0,
-          status === 'DSQ' ? 1 : 0,
-          status === 'DNS' ? 1 : 0,
-          status === 'NS' ? 1 : 0,
-        ],
-      });
-    });
-  });
-
-  return operations;
 }

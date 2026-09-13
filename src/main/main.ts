@@ -154,6 +154,17 @@ async function createWindow() {
     }
   });
 
+  ipcMain.handle('db-operation', async (event, name, payload) => {
+    try {
+      // Named operations own their SQL and run atomically in the main
+      // process; see src/main/operations
+      return db.operation(name, payload);
+    } catch (error: any) {
+      console.error(`Operation ${name} failed:`, error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('db-transaction', async (event, operations) => {
     try {
       // Synchronous execution inside better-sqlite3's transaction() —

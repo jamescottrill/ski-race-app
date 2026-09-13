@@ -23,6 +23,7 @@ import {
   Checkbox,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { regenerateStartList, saveBibOrder } from '../../api/operations';
 import { fetchSeedList } from '../../utils/FetchSeedList';
 import { startListPdf } from '../../utils/StartListPdf';
 import { startListTwoRunPdf } from '../../utils/StartListTwoRunPdf';
@@ -33,7 +34,6 @@ import {
   handlePdfError,
   showSuccess,
 } from '../../utils/ErrorHandler';
-import toast from 'react-hot-toast';
 
 export default function GenerateStartListNew() {
   const { competitionId, raceId } = useParams();
@@ -201,30 +201,18 @@ export default function GenerateStartListNew() {
         }
       }
 
-      // Clear and rebuild the start list in one atomic transaction, so a
-      // failure part-way can never leave the race with a missing or
-      // partially-written start list
-      const operations = [
-        {
-          type: 'delete',
-          query: `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
-          params: [competitionId, raceId],
-        },
-        ...filteredSeedList.map((competitor, i) => ({
-          type: 'insert',
-          query: `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
-                  VALUES (?, ?, ?, ?, ?)`,
-          params: [
-            competitionId,
-            raceId,
-            competitor.racer_id,
-            i + 1,
-            competitor.seed_points || 0,
-          ],
+      // The main process clears and rebuilds the start list in one
+      // transaction, so a failure part-way can never leave the race with a
+      // missing or partially-written start list
+      await regenerateStartList({
+        competitionId,
+        raceId,
+        entries: filteredSeedList.map((competitor, i) => ({
+          racerId: competitor.racer_id,
+          bibNumber: i + 1,
+          seedPoints: competitor.seed_points || 0,
         })),
-      ];
-
-      await window.api.transaction(operations);
+      });
       await getStartList();
       showSuccess('Start list generated successfully!');
     } catch (error) {
@@ -267,18 +255,14 @@ export default function GenerateStartListNew() {
         ? [...(womenStartList || []), ...(startList || [])]
         : startList || [];
 
-      await window.api.transaction(
-        allCompetitors.map((competitor) => ({
-          type: 'update',
-          query: `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
-          params: [
-            competitor.bib_number,
-            competitionId,
-            raceId,
-            competitor.racer_id,
-          ],
+      await saveBibOrder({
+        competitionId,
+        raceId,
+        bibs: allCompetitors.map((competitor) => ({
+          racerId: competitor.racer_id,
+          bibNumber: competitor.bib_number,
         })),
-      );
+      });
 
       setHasChanges(false);
       setEditMode(false);
