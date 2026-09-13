@@ -2,8 +2,13 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { app, dialog } = require('electron');
 const fs = require('fs');
+const { normaliseParams } = require('./sqlParams');
 
 const MAX_AUTOMATIC_BACKUPS = 10;
+
+// The connection currently serving the app, so quit/relaunch paths can
+// close it cleanly (see closeActiveDatabase)
+let activeDatabase = null;
 
 class AppPreferences {
   static preferencesPath = path.join(app.getPath('userData'), 'config.json');
@@ -295,9 +300,15 @@ class DatabaseWrapper {
       this.initializeDatabase();
       this.applyColumnMigrations();
       this.repairInvalidForeignKeys();
+      activeDatabase = this;
     } catch (err) {
       console.error('Failed to connect to database at path:', finalPath);
       console.error('Error:', err.message);
+      // Don't leak the handle if the file opened but setup failed; the
+      // caller will offer to open a different database
+      if (this.db && this.db.open) {
+        this.db.close();
+      }
       throw err;
     }
   }
@@ -453,20 +464,20 @@ class DatabaseWrapper {
   }
 
   run(query, params = []) {
-    const result = this.db.prepare(query).run(...params);
+    const result = this.db.prepare(query).run(...normaliseParams(params));
     return { id: result.lastInsertRowid, changes: result.changes };
   }
 
   get(query, params = []) {
-    return this.db.prepare(query).get(...params);
+    return this.db.prepare(query).get(...normaliseParams(params));
   }
 
   all(query, params = []) {
-    return this.db.prepare(query).all(...params);
+    return this.db.prepare(query).all(...normaliseParams(params));
   }
 
   delete(query, params = []) {
-    const result = this.db.prepare(query).run(...params);
+    const result = this.db.prepare(query).run(...normaliseParams(params));
     return { changes: result.changes };
   }
 
@@ -498,6 +509,29 @@ class DatabaseWrapper {
     });
     return runAll(operations);
   }
+
+  // Checkpoints the WAL into the main file and releases the handle, so a
+  // plain file copy of the .db taken after quitting is complete
+  close() {
+    if (this.db && this.db.open) {
+      this.db.close();
+    }
+    if (activeDatabase === this) {
+      activeDatabase = null;
+    }
+  }
+}
+
+// Called from the quit and relaunch paths. Safe to call when nothing is open.
+function closeActiveDatabase() {
+  if (!activeDatabase) return;
+  try {
+    activeDatabase.close();
+    console.log('Database closed');
+  } catch (err) {
+    console.error('Failed to close database cleanly:', err.message);
+  }
+  activeDatabase = null;
 }
 
 function exportDatabase() {
@@ -592,6 +626,7 @@ function getCurrentDatabasePath() {
 module.exports = {
   Database: DatabaseWrapper,
   AppPreferences,
+  closeActiveDatabase,
   exportDatabase,
   importDatabase,
   switchDatabase,

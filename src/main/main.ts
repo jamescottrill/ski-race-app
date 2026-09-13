@@ -4,7 +4,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { Database, AppPreferences } from './utils/db';
+import { Database, AppPreferences, closeActiveDatabase } from './utils/db';
 
 const fs = require('fs');
 
@@ -213,6 +213,14 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Checkpoint the WAL and release the file handle before the process exits,
+// so a copy of the .db file taken after quitting is complete. app.exit()
+// (used to relaunch after switching databases) skips this event, so the
+// menu calls closeActiveDatabase() itself before exiting.
+app.on('will-quit', () => {
+  closeActiveDatabase();
 });
 
 app
