@@ -22,7 +22,7 @@ the recommended order in §5 unless stated.
 | 5.5 Dead-code purge | Done: 52 unreachable source files, 6 root codegen scripts, 5 migration docs and the unused jest setup script removed; `upload.csv` and the UI zip untracked |
 | 5.6 De-duplicate the results components, with tests on the scoring logic | Not started |
 | 5.7 Named-operation IPC layer and event log | Not started |
-| §4 Dependency consolidation | Not started; unused packages listed below |
+| §4 Dependency consolidation | Done for the 11 packages nothing imported. MUI and Emotion remain until the two MUI result tables move to the design system (part of 5.6) |
 
 ### Findings since the original review
 
@@ -43,25 +43,26 @@ the recommended order in §5 unless stated.
   start order, build it into that page behind an `is_team` branch.
 - **Tooling was unrunnable.** `npm test` demanded a production build, `npm run lint`
   crashed in ts-node, and `tsc` was hidden behind a bogus `typeRoots`. All three run now
-  and there is an `npm run typecheck` script. Lint still reports ~3,250 errors and ~300
-  warnings, 70% of them Prettier formatting; a one-off `prettier --write` as its own
-  commit would clear most of it.
-- **Personal data in git history.** `upload.csv` (names and service numbers) was
-  tracked despite the `*.csv` ignore rule. It is untracked now but remains in history;
-  decide whether that history needs rewriting.
+  and there is an `npm run typecheck` script. A one-off Prettier pass (commit
+  "style: format the codebase with Prettier") cleared the formatting errors; lint now
+  reports ~620 errors and ~180 warnings, all genuine rule violations (unused variables,
+  components defined during render, unassociated labels) left for targeted fixes.
+- **`upload.csv` in git history.** It was tracked despite the `*.csv` ignore rule and
+  is untracked now. It contains fake data, so the history does not need rewriting.
 - **AASL and foreign keys.** `aasl.service_number` declares a foreign key to
   `people(id)`, but the army-wide seed list legitimately contains people not yet
   registered in the app. That FK must be dropped before `PRAGMA foreign_keys = ON`.
 - **Importing results into a locked run bypasses the lock** (pre-existing). The
   importer should refuse runs marked complete, as the entry page does.
 - `CHANGELOG.md` is the electron-react-boilerplate changelog, not this app's.
-- Unused dependencies after the purge: `@electron/notarize`, `@emotion/react`,
-  `@emotion/styled`, `@mui/icons-material`, `@radix-ui/react-dropdown-menu`,
-  `@radix-ui/react-navigation-menu`, `@radix-ui/react-separator`,
-  `@radix-ui/react-tooltip`, `dataframe-js`, `electron-debug`, `flowbite`,
-  `framer-motion`, `json2csv`, `os-browserify`. `@mui/material` survives only in
-  `DnsTable`, `ResultTable` and the renderer entry point. Removing these needs a working Electron
-  install locally to re-run `postinstall`, which this machine does not have.
+- Removed the 11 dependencies nothing imported after the purge: `@mui/icons-material`,
+  `@radix-ui/react-dropdown-menu`, `@radix-ui/react-navigation-menu`,
+  `@radix-ui/react-separator`, `@radix-ui/react-tooltip`, `dataframe-js`,
+  `electron-debug`, `flowbite`, `framer-motion`, `json2csv`, `os-browserify`.
+  `@electron/notarize` stays (used by `.erb/scripts/notarize.js`). `@emotion/react` and
+  `@emotion/styled` stay as peer dependencies of `@mui/material`, which `DnsTable`,
+  `ResultTable` and the renderer entry point still use; replacing those two tables with
+  the design-system `DataTable` (part of 5.6) lets MUI and Emotion go too.
 
 ---
 
