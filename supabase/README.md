@@ -30,6 +30,34 @@ npx supabase stop
 `seed.sql` creates one published demo meeting for tests and the site. It is
 never applied to a hosted project.
 
+## Edge functions
+
+- `POST /functions/v1/ping`, header `x-api-key`: checks the key, records the
+  installation and returns the meeting the key is bound to, the supported
+  contract versions and the batch limits. The app's "Test connection".
+- `POST /functions/v1/ingest`, header `x-api-key`: one batch of outbox
+  events (see `packages/sync-contract`). Returns `accepted_up_to_event_id`,
+  `applied`, `duplicates`, `rejected[]` and `server_time`.
+
+Error codes the worker acts on: 401 (missing, unknown or revoked key), 403
+(`meeting_mismatch`, or an installation bound to another meeting), 409
+(`schema_version_unsupported`, with `supported`), 413 (`body_too_large` or
+`too_many_events`), 429 (`rate_limited`, with `retry_after_seconds`), 500
+(`retryable: true`, the batch rolled back).
+
+Local run: `npx supabase functions serve --no-verify-jwt`, then
+
+```bash
+curl -s -X POST http://127.0.0.1:54321/functions/v1/ping \
+  -H 'x-api-key: awsa_demomeet_localdevelopmentkey000000000000'
+```
+
+That key is seeded for local development only. Unit tests for the pure
+envelope checks: `deno test supabase/functions/tests` (CI installs Deno).
+Deployment to a hosted project: `supabase functions deploy ingest ping
+--no-verify-jwt` via `.github/workflows/deploy.yml` once the repository has
+`SUPABASE_ACCESS_TOKEN`; until then, through the Supabase tools.
+
 ## Migrations
 
 Files in `migrations/` are named `<version>_<name>.sql` where the version

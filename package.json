@@ -79,7 +79,8 @@
       ".erb/dll",
       "<rootDir>/packages/",
       "<rootDir>/apps/",
-      "<rootDir>/.claude/"
+      "<rootDir>/.claude/",
+      "<rootDir>/supabase/"
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"

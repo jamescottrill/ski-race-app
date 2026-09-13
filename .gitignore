@@ -32,3 +32,6 @@ npm-debug.log.*
 *.pdf
 new_ui
 *.zip
+
+# Deno installs the npm dependencies of the edge functions here for type-checking
+supabase/functions/node_modules
