@@ -1,4 +1,8 @@
 {
   "lock": false,
-  "fmt": { "singleQuote": true, "lineWidth": 100 }
+  "fmt": {
+    "singleQuote": true,
+    "lineWidth": 100
+  },
+  "nodeModulesDir": "auto"
 }
