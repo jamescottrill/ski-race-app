@@ -10,6 +10,8 @@ import {
   Calendar,
   FileText,
   Activity,
+  Settings,
+  MapPin,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -17,12 +19,26 @@ import {
   Card,
   CardContent,
   Button,
+  Badge,
   cn,
 } from '../design-system';
+import { COMPETITION_LEVEL_LABELS } from '../../shared/competition';
+
+// '2026-01-05' to '2026-01-10' as '5 Jan to 10 Jan 2026'
+const formatDateRange = (start, end) => {
+  const format = (value, withYear) =>
+    new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      ...(withYear ? { year: 'numeric' } : {}),
+    });
+  if (start && end) return `${format(start, false)} to ${format(end, true)}`;
+  return format(start || end, true);
+};
 
 function CompetitionManagementPageNew() {
   const { competitionId } = useParams();
-  const [competitionName, setCompetitionName] = useState('');
+  const [competition, setCompetition] = useState(null);
   const [stats, setStats] = useState({
     competitors: 0,
     races: 0,
@@ -37,13 +53,14 @@ function CompetitionManagementPageNew() {
   }, [competitionId]);
 
   const fetchCompetitionDetails = async () => {
-    const query = 'SELECT competition_name FROM competitions WHERE id = ?';
+    const query = `SELECT competition_name, level, season, start_date, end_date, venue
+                   FROM competitions WHERE id = ?`;
     const params = [competitionId];
 
     try {
       const result = await window.api.select(query, params);
       if (result && result[0]) {
-        setCompetitionName(result[0].competition_name);
+        setCompetition(result[0]);
       } else {
         console.error('Competition not found');
         navigate('/');
@@ -185,18 +202,61 @@ function CompetitionManagementPageNew() {
   return (
     <PageContainer>
       <PageHeader
-        title={competitionName || 'Competition Dashboard'}
+        title={competition?.competition_name || 'Competition Dashboard'}
         subtitle="Manage all aspects of your competition"
         actions={
-          <Button
-            variant="outline"
-            onClick={() => navigate('/')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-          >
-            Change Competition
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/competition/${competitionId}/settings`)}
+              leftIcon={<Settings className="w-4 h-4" />}
+            >
+              Settings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Change Competition
+            </Button>
+          </>
         }
       />
+
+      {/* Where the competition sits on the ladder; prompts for the level
+          when a competition predates the field */}
+      {competition && (
+        <div className="flex flex-wrap items-center gap-2 -mt-2 mb-6">
+          {competition.level ? (
+            <Badge variant="primary">
+              {COMPETITION_LEVEL_LABELS[competition.level] || competition.level}
+            </Badge>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate(`/competition/${competitionId}/settings`)}
+              title="Set the level in the competition settings"
+            >
+              <Badge variant="warning">Level not set</Badge>
+            </button>
+          )}
+          {competition.season && (
+            <Badge variant="info">Season {competition.season}</Badge>
+          )}
+          {(competition.start_date || competition.end_date) && (
+            <span className="text-sm text-neutral-600">
+              {formatDateRange(competition.start_date, competition.end_date)}
+            </span>
+          )}
+          {competition.venue && (
+            <span className="flex items-center gap-1 text-sm text-neutral-600">
+              <MapPin className="w-4 h-4" />
+              {competition.venue}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-4 mb-8">

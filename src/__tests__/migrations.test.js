@@ -76,6 +76,11 @@ function createLegacyDatabase(db) {
       PRIMARY KEY (service_number, season),
       FOREIGN KEY (service_number) REFERENCES people(id)
     );
+    CREATE TABLE competition_team_members (
+      competition_id TEXT, team_id TEXT, race_id TEXT, racer_id TEXT,
+      PRIMARY KEY (competition_id, team_id, race_id, racer_id),
+      FOREIGN KEY (team_id) REFERENCES competition_team(team_id)
+    );
     INSERT INTO people VALUES ('30000001', 'Ann', 'Archer');
     INSERT INTO competitions VALUES ('c1', 'Corps Championships');
     INSERT INTO competition_competitor VALUES ('c1', '30000001', 120.5);
@@ -84,8 +89,20 @@ function createLegacyDatabase(db) {
     INSERT INTO race_run VALUES ('c1', 'r1', 1, 1);
     INSERT INTO race_results VALUES ('c1', 'r1', 1, '30000001', 61.23);
     INSERT INTO aasl VALUES ('99999999', 45.5, '2024-25');
+    INSERT INTO competition_team_members VALUES (NULL, 't1', 'r1', '30000001');
   `);
 }
+
+const COMPETITION_METADATA = [
+  'level',
+  'season',
+  'start_date',
+  'end_date',
+  'venue',
+  'remote_meeting_id',
+  'sync_enabled',
+  'updated_at',
+];
 
 describeWithSqlite('schema migrations', () => {
   it('brings a fresh database to the latest version with every baseline table', () => {
@@ -103,6 +120,15 @@ describeWithSqlite('schema migrations', () => {
     expect(columns(db, 'competition_competitor')).toContain('training_group');
     expect(tableExists(db, 'result_events')).toBe(true);
     expect(foreignKeys(db, 'aasl')).toEqual([]);
+    expect(columns(db, 'competitions')).toEqual(
+      expect.arrayContaining(COMPETITION_METADATA),
+    );
+    expect(columns(db, 'competition_competitor')).toEqual(
+      expect.arrayContaining(['army_qual_opt_out', 'do_not_publish']),
+    );
+    expect(columns(db, 'races')).toEqual(
+      expect.arrayContaining(['status', 'official_at', 'dsq_notice_posted_at']),
+    );
   });
 
   it('upgrades a legacy database in place, keeping its rows', () => {
@@ -114,6 +140,7 @@ describeWithSqlite('schema migrations', () => {
 
     expect(applied).toEqual([
       { version: 1, name: 'baseline-columns-and-fk-repair' },
+      { version: 2, name: 'competition-metadata-and-race-status' },
     ]);
     expect(getUserVersion(db)).toBe(LATEST_SCHEMA_VERSION);
 
@@ -164,6 +191,26 @@ describeWithSqlite('schema migrations', () => {
     // Tables the legacy database never had are created from the baseline
     expect(tableExists(db, 'competition_final_seed_list')).toBe(true);
     expect(tableExists(db, 'result_events')).toBe(true);
+
+    // Version 2: metadata columns with their defaults on existing rows
+    expect(db.prepare('SELECT * FROM competitions').get()).toMatchObject({
+      competition_name: 'Corps Championships',
+      level: null,
+      season: null,
+      sync_enabled: 0,
+    });
+    expect(race.status).toBe('scheduled');
+    expect(
+      db.prepare('SELECT * FROM competition_competitor').get(),
+    ).toMatchObject({ army_qual_opt_out: 0, do_not_publish: 0 });
+    // ... and the team membership row written without a competition id is
+    // repaired from its team
+    expect(db.prepare('SELECT * FROM competition_team_members').get()).toEqual({
+      competition_id: 'c1',
+      team_id: 't1',
+      race_id: 'r1',
+      racer_id: '30000001',
+    });
   });
 
   it('is a no-op when run again', () => {

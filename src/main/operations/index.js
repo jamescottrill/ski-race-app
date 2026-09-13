@@ -14,6 +14,7 @@ const { normaliseParams } = require('../utils/sqlParams');
 const results = require('./results');
 const startList = require('./startList');
 const people = require('./people');
+const competitions = require('./competitions');
 
 const OPERATIONS = {
   'results.saveFields': results.saveFields,
@@ -23,6 +24,8 @@ const OPERATIONS = {
   'startList.regenerate': startList.regenerate,
   'startList.saveBibOrder': startList.saveBibOrder,
   'people.merge': people.merge,
+  'competitions.create': competitions.create,
+  'competitions.update': competitions.update,
 };
 
 function createTx(db) {
