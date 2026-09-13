@@ -15,6 +15,7 @@ const results = require('./results');
 const startList = require('./startList');
 const people = require('./people');
 const competitions = require('./competitions');
+const sync = require('./sync');
 
 const OPERATIONS = {
   'results.saveFields': results.saveFields,
@@ -26,6 +27,7 @@ const OPERATIONS = {
   'people.merge': people.merge,
   'competitions.create': competitions.create,
   'competitions.update': competitions.update,
+  'sync.snapshotCompetition': sync.snapshotCompetition,
 };
 
 function createTx(db) {

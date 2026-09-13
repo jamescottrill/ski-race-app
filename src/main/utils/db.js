@@ -16,6 +16,16 @@ let activeDatabase = null;
 
 const preferences = AppPreferences.loadPreferences();
 
+// The preferences file is shared with the sync settings, which are written
+// after start-up, so the path is merged into a fresh copy rather than
+// saving this module's start-up snapshot over them
+function saveDatabasePath(databasePath) {
+  const current = AppPreferences.loadPreferences();
+  current.databasePath = databasePath;
+  AppPreferences.savePreferences(current);
+  preferences.databasePath = databasePath;
+}
+
 function selectDatabaseFile() {
   const result = dialog.showOpenDialogSync({
     title: 'Select or Create Database File',
@@ -25,8 +35,7 @@ function selectDatabaseFile() {
 
   if (result && result.length > 0) {
     const [selectedPath] = result;
-    preferences.databasePath = selectedPath;
-    AppPreferences.savePreferences(preferences);
+    saveDatabasePath(selectedPath);
     return selectedPath;
   }
   return undefined;
@@ -160,12 +169,27 @@ class DatabaseWrapper {
 
   // Runs a named operation (see ../operations) in one transaction
   operation(name, payload) {
-    return runOperation(this.db, name, payload);
+    const result = runOperation(this.db, name, payload);
+    // Lets the sync worker learn that something changed; a failure in the
+    // hook must never turn a committed operation into an error
+    if (typeof this.onOperationCommitted === 'function') {
+      try {
+        this.onOperationCommitted(name, payload);
+      } catch (error) {
+        console.error('Operation hook failed:', error.message);
+      }
+    }
+    return result;
   }
 
   // Checkpoints the WAL into the main file and releases the handle, so a
   // plain file copy of the .db taken after quitting is complete
   close() {
+    // Stop background work (the sync worker) before the handle goes away
+    if (typeof this.onClose === 'function') {
+      this.onClose();
+      this.onClose = null;
+    }
     if (this.db && this.db.open) {
       this.db.close();
     }
@@ -251,8 +275,7 @@ function importDatabase() {
       return null;
     }
 
-    preferences.databasePath = importPath;
-    AppPreferences.savePreferences(preferences);
+    saveDatabasePath(importPath);
 
     dialog.showMessageBoxSync({
       type: 'info',

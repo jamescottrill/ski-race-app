@@ -46,6 +46,36 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('db-operation', name, payload),
 });
 
+// Sync with the central results service (src/main/sync); the renderer never
+// sees the API key itself, only whether one is set and its last characters
+contextBridge.exposeInMainWorld('sync', {
+  getSettings: (competitionId: string) =>
+    ipcRenderer.invoke('sync-settings-get', competitionId),
+  setSettings: (competitionId: string, patch: object) =>
+    ipcRenderer.invoke('sync-settings-set', competitionId, patch),
+  testConnection: (competitionId: string, overrides?: object) =>
+    ipcRenderer.invoke('sync-test-connection', competitionId, overrides),
+  syncNow: (competitionId: string) =>
+    ipcRenderer.invoke('sync-now', competitionId),
+  publishAll: (competitionId: string) =>
+    ipcRenderer.invoke('sync-publish-all', competitionId),
+  getStatus: () => ipcRenderer.invoke('sync-status-get'),
+  getLog: (competitionId: string, options?: object) =>
+    ipcRenderer.invoke('sync-log', competitionId, options),
+  retryEvents: (competitionId: string, ids: number[]) =>
+    ipcRenderer.invoke('sync-retry-events', competitionId, ids),
+  discardEvents: (competitionId: string, ids: number[]) =>
+    ipcRenderer.invoke('sync-discard-events', competitionId, ids),
+  onStatus: (callback: (status: unknown) => void) => {
+    const subscription = (_event: IpcRendererEvent, status: unknown) =>
+      callback(status);
+    ipcRenderer.on('sync-status', subscription);
+    return () => {
+      ipcRenderer.removeListener('sync-status', subscription);
+    };
+  },
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   // Event delegation for blur events on dynamically loaded inputs
   document.addEventListener(
