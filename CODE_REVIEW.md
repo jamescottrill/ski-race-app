@@ -33,10 +33,14 @@ the recommended order in §5 unless stated.
   wrapper now normalises any boolean it is handed, and the page reads the result.
 - **Re-uploading an existing competitor reset their age category** because the update
   path ignored the birth year. Fixed.
-- **The team start list page has never been routed.** `GenerateStartListTeamNew.js`
-  (and its predecessor) appears in no route file, old or new, and nothing links to it.
-  It was kept out of the purge because it is a distinct feature rather than a superseded
-  copy. Decision needed: wire it up (route plus a link on team races) or delete it.
+- **The team start list page had never been routed, and has now been deleted.**
+  `GenerateStartListTeam.js` was created in e7ae8e6 and never imported by anything; the
+  UI migration then generated a `*New` copy of it. Its only team-specific content was two
+  titles: the team-table joins and the female/HC team filter in its SQL were commented
+  out, so it was a stale snapshot of the individual start list page, lacking the edit
+  mode, two-run PDF and completed-run detection the live page gained later. Every race,
+  team or individual, uses the routed start list page. If team races need a different
+  start order, build it into that page behind an `is_team` branch.
 - **Tooling was unrunnable.** `npm test` demanded a production build, `npm run lint`
   crashed in ts-node, and `tsc` was hidden behind a bogus `typeRoots`. All three run now
   and there is an `npm run typecheck` script. Lint still reports ~3,250 errors and ~300
