@@ -40,6 +40,31 @@ the local file is named after the recorded version so the two histories
 match. Keep every migration additive and idempotent where possible; never
 edit an applied migration, add a new one.
 
+## Realtime
+
+`apply_sync_events()` broadcasts one message per batch on the private topic
+`meeting:<id>` through `realtime.send()`, and a policy on `realtime.messages`
+lets anyone listen to a published meeting's topic. A freshly created hosted
+project has neither the function nor the table until its Realtime service has
+initialised, so the policy migration creates the policy only when the table
+exists and the broadcast swallows failures. If the policy is missing on a
+project, re-run that statement once Realtime is up. The public site never
+depends on broadcasts: it polls as well.
+
+## Security advisor notes
+
+Two findings are by design and stay:
+
+- `security_definer_view` on every `public_*` view: they are the public
+  surface, owned by `postgres`, with explicit column lists, over base tables
+  that the public roles cannot read at all. Organiser views
+  (`admin_scoring_drift`, `cutoff_inputs`) run as the caller;
+  `race_result_rows` runs as its owner, because a nested invoker view is
+  checked against the querying role, and filters itself to published
+  meetings or the caller's own.
+- `authenticated_security_definer_function_executable` on the `admin_*`
+  RPCs: every one checks the caller's role itself before doing anything.
+
 ## Access model
 
 - Row level security is on for every table; `anon` and `authenticated`
