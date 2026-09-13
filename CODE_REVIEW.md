@@ -94,6 +94,54 @@ the recommended order in §5 unless stated.
   sync worker drains when live results go to a server: read unsynced rows in id order,
   post, set `synced_at`. Nothing reads it yet.
 
+### Seed points audit (2026-09-13)
+
+The seed points pipeline was checked by running the real query modules and the full
+seed list calculation against an in-memory SQLite built for the edge cases. Fixed:
+
+- Winning both runs of the seeding race scored no points (`NOT 0 AND NOT 0` read as "no
+  result"); a finisher with no arrival seed scored nothing (NULL comparisons); missing
+  points sorted to the top; a race created without touching the type dropdown was saved
+  as "Slalom" and matched no factor; two-run races awarded points to one-run finishers;
+  after four races a competitor missing the fourth gained a phantom zero in their best
+  three; the seed list crashed for any competitor with no row in the latest race, and
+  for races with no finishers; the competitor edit form loaded the arrival seed under the
+  wrong column name and silently reset it to 2000 on every save.
+- The seed list calculation (`utils/FetchSeedList.js`) is rewritten in plain JavaScript
+  against the B13 exceptions as written: race points are awarded only when the seeding
+  rule cannot be applied, matched by seed-list position (tied rank) to the finisher in
+  that position plus 20% or 10 points; below the last finisher, the last finisher plus
+  20% or the competitor's own seed points, whichever is greater; a non-starter (NS) gets
+  the matched points without penalty once per meeting; awards are flagged and carried
+  forward. Lists are built incrementally (one pass per race) instead of recursively, so
+  the old per-competitor recomputation is gone, and danfojs with it. The individual
+  combination results page now passes `awardPenalties: false` (B13.d).
+- Competitors with no points anywhere (no arrival corps or army seed, no AASL entry)
+  are ordered in the **seeding race start list** by a new `training_group` on the
+  competition entry: behind every seeded competitor, banded by group (1 first, no group
+  last) and shuffled within each band (`utils/startOrder.js`). The group is set on the
+  CSV upload, the registration form and the edit forms. It plays no part in the seed
+  list itself: a missing arrival seed is 2000 there, as agreed. A blank arrival seed is
+  now stored as NULL rather than 2000.
+
+Assumptions and open points:
+
+- B13.c does not say what a non-starter seeded below the last finisher receives; the
+  code gives the last finisher's points or their own, whichever is greater, with no
+  penalty. Confirm.
+- B13.d also excludes awarded points from **final seed lists**. The seed list page still
+  finalises the list it displays, awards included, because the rule does not say what a
+  competitor with insufficient real data gets in a final list. Decide, then it is a
+  one-line switch (`awardPenalties: false`) plus a rule for those competitors.
+- CPP: T2 is set equal to T1, so the formula collapses to (2·T1 − T3)/divisor. The
+  header comment defines T2 over a different set (the same reference skiers who finished
+  in the top ten). Check against the rulebook.
+- A competitor with an AASL entry but no arrival corps seed is treated as seeded (not
+  grouped) and scores 2000 in the seed list; using their AASL points instead is a small
+  change if wanted.
+- Operations and seed list tests run against Node's built-in SQLite (`node:sqlite`,
+  Node 22.13+) and skip themselves on older Node.
+
 ---
 
 ## Executive summary
