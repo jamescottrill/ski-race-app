@@ -7,6 +7,60 @@ future requirement to push live results and overall completion results to a serv
 
 ---
 
+## Status (updated 2026-09-13)
+
+Work is on branch `claude/approach-base-code-review-xwni12`. Section numbers refer to
+the recommended order in §5 unless stated.
+
+| Item | Status |
+|---|---|
+| 5.1 Silent loss on results entry | Done (ff6b98f) |
+| 5.2 Transaction wrapper | Done (090b31a) |
+| 5.3 Destructive sequences in transactions | Done (0de2e43); the three importers followed in this round |
+| 5.4 Backups, preferences, migrations, FK repair | Done (090b31a). FK enforcement stays off deliberately; see the AASL note below before turning it on |
+| §1.5 Clean shutdown | Done: the connection is closed on quit and before a menu-triggered relaunch, so the WAL is checkpointed into the `.db` file |
+| 5.5 Dead-code purge | Done: 52 unreachable source files, 6 root codegen scripts, 5 migration docs and the unused jest setup script removed; `upload.csv` and the UI zip untracked |
+| 5.6 De-duplicate the results components, with tests on the scoring logic | Not started |
+| 5.7 Named-operation IPC layer and event log | Not started |
+| §4 Dependency consolidation | Not started; unused packages listed below |
+
+### Findings since the original review
+
+- **Competitor CSV upload had been silently broken since the move to better-sqlite3
+  (06a5b45).** better-sqlite3 rejects JS booleans as bound parameters, the upload bound
+  checkbox/CSV flags directly, and the page never inspected the result, so every row
+  failed and was counted as a success. Fixed: flags are bound as 0/1, the main-process
+  wrapper now normalises any boolean it is handed, and the page reads the result.
+- **Re-uploading an existing competitor reset their age category** because the update
+  path ignored the birth year. Fixed.
+- **The team start list page has never been routed.** `GenerateStartListTeamNew.js`
+  (and its predecessor) appears in no route file, old or new, and nothing links to it.
+  It was kept out of the purge because it is a distinct feature rather than a superseded
+  copy. Decision needed: wire it up (route plus a link on team races) or delete it.
+- **Tooling was unrunnable.** `npm test` demanded a production build, `npm run lint`
+  crashed in ts-node, and `tsc` was hidden behind a bogus `typeRoots`. All three run now
+  and there is an `npm run typecheck` script. Lint still reports ~3,250 errors and ~300
+  warnings, 70% of them Prettier formatting; a one-off `prettier --write` as its own
+  commit would clear most of it.
+- **Personal data in git history.** `upload.csv` (names and service numbers) was
+  tracked despite the `*.csv` ignore rule. It is untracked now but remains in history;
+  decide whether that history needs rewriting.
+- **AASL and foreign keys.** `aasl.service_number` declares a foreign key to
+  `people(id)`, but the army-wide seed list legitimately contains people not yet
+  registered in the app. That FK must be dropped before `PRAGMA foreign_keys = ON`.
+- **Importing results into a locked run bypasses the lock** (pre-existing). The
+  importer should refuse runs marked complete, as the entry page does.
+- `CHANGELOG.md` is the electron-react-boilerplate changelog, not this app's.
+- Unused dependencies after the purge: `@electron/notarize`, `@emotion/react`,
+  `@emotion/styled`, `@mui/icons-material`, `@radix-ui/react-dropdown-menu`,
+  `@radix-ui/react-navigation-menu`, `@radix-ui/react-separator`,
+  `@radix-ui/react-tooltip`, `dataframe-js`, `electron-debug`, `flowbite`,
+  `framer-motion`, `json2csv`, `os-browserify`. `@mui/material` survives only in
+  `DnsTable`, `ResultTable` and the renderer entry point. Removing these needs a working Electron
+  install locally to re-run `postinstall`, which this machine does not have.
+
+---
+
 ## Executive summary
 
 The app is functionally rich but structurally fragile in exactly the two places you asked
