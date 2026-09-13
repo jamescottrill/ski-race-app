@@ -218,6 +218,9 @@ function GenerateSeedListNew() {
               {row.original.team_name}
             </div>
           )}
+          {row.original.aasl_points != null ? (
+            <div className="text-xs text-neutral-500">seeded from AASL</div>
+          ) : null}
           {row.original.arrival_corps_seed == null &&
           row.original.arrival_army_seed == null &&
           row.original.aasl_points == null ? (

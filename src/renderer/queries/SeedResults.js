@@ -128,16 +128,26 @@ const seedingPoints = `
                              ROUND((run_2_time - min2time) / min2time * factor,2) AS seed_2
                       FROM data)
             SELECT
-              s.racer_id,
+              racer_id,
               race_id,
               total_time,
               is_ns,
               CASE
-                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < COALESCE(cc.arrival_corps_seed, 2000) THEN seed_1
-                WHEN COALESCE(seed_2, 999999) < COALESCE(cc.arrival_corps_seed, 2000) THEN seed_2
-                ELSE COALESCE(cc.arrival_corps_seed, 2000) END AS seed_point
-            FROM seeds s
-            JOIN competition_competitor cc ON cc.racer_id = s.racer_id AND cc.competition_id = s.competition_id
+                WHEN COALESCE(seed_1, 999999) < COALESCE(seed_2, 999999) AND COALESCE(seed_1, 999999) < initial_points THEN seed_1
+                WHEN COALESCE(seed_2, 999999) < initial_points THEN seed_2
+                ELSE initial_points END AS seed_point
+            FROM (
+              -- Initial points: the latest AASL entry (the base list), else the
+              -- entered arrival seed, else 2000
+              SELECT s.*,
+                     COALESCE((SELECT a.seed_points FROM aasl a
+                               WHERE a.service_number = s.racer_id
+                               ORDER BY a.season DESC LIMIT 1),
+                              cc.arrival_corps_seed,
+                              2000) AS initial_points
+              FROM seeds s
+              JOIN competition_competitor cc ON cc.racer_id = s.racer_id AND cc.competition_id = s.competition_id
+            )
           ORDER BY total_time NULLS LAST
         `;
 

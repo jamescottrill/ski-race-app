@@ -8,8 +8,9 @@
  * out; the SQL lives in ../queries.
  *
  * Rules implemented:
- * - Initial points are the arrival corps seed (2000 when absent). The
- *   seeding race scores the best of run 1, run 2 and the initial points.
+ * - Initial points are the competitor's AASL points (the base list under B3),
+ *   else the entered arrival corps seed, else 2000. The seeding race scores
+ *   the best of run 1, run 2 and the initial points.
  * - After c championship races the seed points are: c = 1 the better of
  *   initial points and the race; c = 2 the mean of the best two of initial
  *   points and both races; c = 3 the mean of the best two races (initial
@@ -79,8 +80,11 @@ const getRaceResults = async (race) =>
     ? select(raceResultsOneRunQuery, [race.race_id])
     : select(raceResultsTwoRunQuery, [race.race_id, race.race_id]);
 
+// B3: the Army Alpine Seed List is the base list, so a competitor's AASL
+// points come first; failing that the arrival seed the race secretary
+// entered; failing that 2000
 const initialPoints = (person) =>
-  person.arrival_corps_seed ?? DEFAULT_SEED_POINTS;
+  person.aasl_points ?? person.arrival_corps_seed ?? DEFAULT_SEED_POINTS;
 
 /**
  * How many results the rule for c championship races needs, and whether the

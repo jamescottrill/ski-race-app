@@ -107,6 +107,23 @@ describeWithSqlite('seeding race queries', () => {
     expect(rows.Y.seed_point).toBe(79.22);
   });
 
+  it('uses the latest AASL entry as the cap before the entered arrival seed', () => {
+    const db = openDatabase();
+    const aasl = (id, points, season) =>
+      db
+        .prepare(
+          `INSERT INTO aasl (service_number, first_name, last_name, seed_points, season) VALUES (?, ?, 'R', ?, ?)`,
+        )
+        .run(id, id, points, season);
+    aasl('N', 50, '2026');
+    aasl('N', 999, '2020');
+    aasl('X', 20, '2026'); // X also has an entered arrival seed of 200
+    const rows = byRacer(db.prepare(seedingPoints).all('SEED', 'SEED'));
+    expect(rows.N.seed_point).toBe(50);
+    expect(rows.X.seed_point).toBe(20);
+    expect(rows.W.seed_point).toBe(0);
+  });
+
   it('awards two-run race points only to competitors who completed both runs', () => {
     const db = openDatabase();
     db.exec(`DELETE FROM race_results WHERE run_number = 2 AND racer_id = 'X'`);

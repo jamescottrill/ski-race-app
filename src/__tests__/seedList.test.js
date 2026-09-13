@@ -181,6 +181,26 @@ describeWithSqlite('fetchSeedList', () => {
     ]);
   });
 
+  it('takes initial points from the AASL first, then the entered arrival seed', async () => {
+    db.prepare(
+      `INSERT INTO aasl (service_number, first_name, last_name, seed_points, season) VALUES ('N', 'N', 'R', 50, '2026')`,
+    ).run();
+    db.prepare(
+      `INSERT INTO aasl (service_number, first_name, last_name, seed_points, season) VALUES ('W', 'W', 'R', 30, '2026')`,
+    ).run();
+    // W has an entered arrival seed of 100, but the AASL says 30
+    expect(summary(await fetchSeedList('C', []), []).slice(0, 3)).toEqual([
+      [1, 'W', 30],
+      [2, 'N', 50],
+      [3, 'X', 200],
+    ]);
+    const byId = Object.fromEntries(
+      (await fetchSeedList('C', ['SEED'])).map((r) => [r.racer_id, r]),
+    );
+    // N: best of run 1 (80.8), run 2 (59.41) and AASL (50)
+    expect(byId.N.SEED).toBe(50);
+  });
+
   it('scores the seeding race as the best of both runs and the arrival seed', async () => {
     expect(summary(await fetchSeedList('C', ['SEED']), ['SEED'])).toEqual([
       [1, 'W', 0, 0],
