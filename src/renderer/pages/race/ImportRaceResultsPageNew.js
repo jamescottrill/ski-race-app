@@ -6,7 +6,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import {
@@ -17,9 +17,17 @@ import {
   Button,
   Badge,
   DataTable,
-  Select
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import {
+  buildImportRows,
+  buildImportOperations,
+} from '../../utils/RaceResultsImport';
+import {
+  handleDatabaseError,
+  showSuccess,
+  showWarning,
+} from '../../utils/ErrorHandler';
 
 export default function ImportRaceResultsPageNew() {
   const { competitionId, raceId } = useParams();
@@ -36,7 +44,7 @@ export default function ImportRaceResultsPageNew() {
     time: '',
     time1: '',
     time2: '',
-    status: ''
+    status: '',
   });
   const [previewData, setPreviewData] = useState([]);
   const [importStatus, setImportStatus] = useState(null);
@@ -101,25 +109,42 @@ export default function ImportRaceResultsPageNew() {
       error: (error) => {
         console.error('CSV parse error:', error);
         setImportStatus({ type: 'error', message: 'Failed to parse CSV file' });
-      }
+      },
     });
   };
 
   const autoDetectColumns = (headers, data) => {
-    const lowerHeaders = headers.map(h => h.toLowerCase());
+    const lowerHeaders = headers.map((h) => h.toLowerCase());
     const mapping = { bib: '', time: '', time1: '', time2: '', status: '' };
 
     lowerHeaders.forEach((header, index) => {
       const originalHeader = headers[index];
-      if (header.includes('bib') || header.includes('number') || header === 'no' || header === '#') {
+      if (
+        header.includes('bib') ||
+        header.includes('number') ||
+        header === 'no' ||
+        header === '#'
+      ) {
         mapping.bib = originalHeader;
-      } else if (header.includes('time1') || header.includes('run1') || header.includes('run 1')) {
+      } else if (
+        header.includes('time1') ||
+        header.includes('run1') ||
+        header.includes('run 1')
+      ) {
         mapping.time1 = originalHeader;
-      } else if (header.includes('time2') || header.includes('run2') || header.includes('run 2')) {
+      } else if (
+        header.includes('time2') ||
+        header.includes('run2') ||
+        header.includes('run 2')
+      ) {
         mapping.time2 = originalHeader;
       } else if (header.includes('time') && !mapping.time) {
         mapping.time = originalHeader;
-      } else if (header.includes('status') || header.includes('dnf') || header.includes('dsq')) {
+      } else if (
+        header.includes('status') ||
+        header.includes('dnf') ||
+        header.includes('dsq')
+      ) {
         mapping.status = originalHeader;
       }
     });
@@ -131,199 +156,63 @@ export default function ImportRaceResultsPageNew() {
     setColumnMapping(mapping);
   };
 
-  const parseTime = (timeStr) => {
-    if (!timeStr || timeStr === '') return null;
-
-    const str = String(timeStr).trim().toUpperCase();
-
-    if (str === 'DNF' || str === 'DSQ' || str === 'DNS' || str === 'NS') {
-      return { status: str, time: null };
-    }
-
-    const cleaned = str.replace(',', '.');
-
-    if (cleaned.includes(':')) {
-      const parts = cleaned.split(':');
-      if (parts.length === 2) {
-        const minutes = parseFloat(parts[0]) || 0;
-        const seconds = parseFloat(parts[1]) || 0;
-        return { status: null, time: (minutes * 60 + seconds).toFixed(2) };
-      }
-    }
-
-    const parsed = parseFloat(cleaned);
-    if (!isNaN(parsed)) {
-      return { status: null, time: parsed.toFixed(2) };
-    }
-
-    return null;
-  };
-
   const generatePreview = useCallback(() => {
     if (!csvData || !columnMapping.bib) return;
 
-    const bibToCompetitor = {};
-    competitors.forEach(c => {
-      bibToCompetitor[c.bib_number] = c;
-    });
-
-    const preview = csvData.map((row, index) => {
-      const bibValue = row[columnMapping.bib];
-      const bib = parseInt(bibValue, 10);
-      const competitor = bibToCompetitor[bib];
-
-      let time1Data = null;
-      let time2Data = null;
-
-      if (importMode === 'single') {
-        const timeCol = columnMapping.time || columnMapping.time1;
-        if (timeCol && row[timeCol]) {
-          const parsed = parseTime(row[timeCol]);
-          if (selectedRun === '1') {
-            time1Data = parsed;
-          } else {
-            time2Data = parsed;
-          }
-        }
-      } else {
-        if (columnMapping.time1 && row[columnMapping.time1]) {
-          time1Data = parseTime(row[columnMapping.time1]);
-        }
-        if (columnMapping.time2 && row[columnMapping.time2]) {
-          time2Data = parseTime(row[columnMapping.time2]);
-        }
-      }
-
-      let statusOverride = null;
-      if (columnMapping.status && row[columnMapping.status]) {
-        const statusVal = String(row[columnMapping.status]).toUpperCase().trim();
-        if (['DNF', 'DSQ', 'DNS', 'NS'].includes(statusVal)) {
-          statusOverride = statusVal;
-        }
-      }
-
-      return {
-        rowIndex: index,
-        bib,
-        competitor,
-        matched: !!competitor,
-        competitorName: competitor ? `${competitor.last_name}, ${competitor.first_name}` : 'Not found',
-        time1: time1Data?.time || null,
-        time2: time2Data?.time || null,
-        status1: statusOverride || time1Data?.status || null,
-        status2: statusOverride || time2Data?.status || null,
-        rawData: row
-      };
-    });
-
-    setPreviewData(preview);
+    setPreviewData(
+      buildImportRows({
+        csvData,
+        columnMapping,
+        importMode,
+        selectedRun,
+        competitors,
+      }),
+    );
   }, [csvData, columnMapping, importMode, selectedRun, competitors]);
 
   useEffect(() => {
     generatePreview();
   }, [generatePreview]);
 
-  const ensureRaceRunExists = async (runNumber) => {
-    const checkRunQuery = `
-      SELECT COUNT(*) as count
-      FROM race_run
-      WHERE competition_id = ? AND race_id = ? AND run_number = ?
-    `;
-    const runExists = await window.api.select(checkRunQuery, [competitionId, raceId, runNumber]);
-
-    if (runExists[0].count === 0) {
-      const runId = `${raceId}-run-${runNumber}`;
-      const insertRunQuery = `
-        INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
-        VALUES (?, ?, ?, ?, 0)
-      `;
-      await window.api.insert(insertRunQuery, [competitionId, raceId, runId, runNumber]);
-    }
-  };
-
-  const importRunResult = async (racerId, runNumber, time, status) => {
-    await ensureRaceRunExists(runNumber);
-
-    const checkQuery = `
-      SELECT COUNT(*) as count
-      FROM race_results
-      WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
-    `;
-    const exists = await window.api.select(checkQuery, [competitionId, raceId, runNumber, racerId]);
-
-    const isDnf = status === 'DNF' ? 1 : 0;
-    const isDsq = status === 'DSQ' ? 1 : 0;
-    const isDns = status === 'DNS' ? 1 : 0;
-    const isNs = status === 'NS' ? 1 : 0;
-
-    if (exists[0].count > 0) {
-      const updateQuery = `
-        UPDATE race_results
-        SET race_time = ?, is_dnf = ?, is_dsq = ?, is_dns = ?, is_ns = ?
-        WHERE competition_id = ? AND race_id = ? AND run_number = ? AND racer_id = ?
-      `;
-      await window.api.insert(updateQuery, [
-        time, isDnf, isDsq, isDns, isNs,
-        competitionId, raceId, runNumber, racerId
-      ]);
-    } else {
-      const insertQuery = `
-        INSERT INTO race_results (
-          competition_id, race_id, run_number, racer_id,
-          race_time, is_dnf, is_dsq, is_dns, is_ns
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      await window.api.insert(insertQuery, [
-        competitionId, raceId, runNumber, racerId,
-        time, isDnf, isDsq, isDns, isNs
-      ]);
-    }
-  };
-
   const handleImport = async () => {
-    if (!previewData.length) return;
+    const importable = previewData.filter((row) => row.importable);
+    if (importable.length === 0) return;
 
     setImportStatus({ type: 'importing', message: 'Importing results...' });
+    const skippedCount = previewData.length - importable.length;
 
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const row of previewData) {
-      if (!row.matched) {
-        errorCount++;
-        continue;
-      }
-
-      try {
-        const racerId = row.competitor.competitor_id;
-
-        if (importMode === 'single') {
-          const runNumber = parseInt(selectedRun, 10);
-          const time = runNumber === 1 ? row.time1 : row.time2;
-          const status = runNumber === 1 ? row.status1 : row.status2;
-
-          if (time !== null || status !== null) {
-            await importRunResult(racerId, runNumber, time, status);
-          }
-        } else {
-          if (row.time1 !== null || row.status1 !== null) {
-            await importRunResult(racerId, 1, row.time1, row.status1);
-          }
-          if (row.time2 !== null || row.status2 !== null) {
-            await importRunResult(racerId, 2, row.time2, row.status2);
-          }
-        }
-        successCount++;
-      } catch (error) {
-        console.error('Failed to import row:', error);
-        errorCount++;
-      }
+    try {
+      // One transaction: either every result lands or none does
+      await window.api.transaction(
+        buildImportOperations({ competitionId, raceId, rows: importable }),
+      );
+      const resultCount = importable.reduce(
+        (total, row) => total + Object.keys(row.runs).length,
+        0,
+      );
+      const summary = `Imported ${resultCount} result(s) for ${importable.length} competitor(s)`;
+      setImportStatus({
+        type: 'complete',
+        message:
+          skippedCount > 0
+            ? `${summary}. ${skippedCount} row(s) were skipped, see the problems listed above.`
+            : summary,
+      });
+      showSuccess(summary);
+      if (skippedCount > 0) showWarning(`${skippedCount} row(s) skipped`);
+    } catch (error) {
+      handleDatabaseError('import race results', error);
+      setImportStatus({
+        type: 'error',
+        message: `Import failed and nothing was written: ${error.message}`,
+      });
     }
+  };
 
-    setImportStatus({
-      type: 'complete',
-      message: `Import complete: ${successCount} successful, ${errorCount} failed`
-    });
+  const renderRun = (run) => {
+    if (!run) return <span className="text-neutral-400">-</span>;
+    if (run.status) return <Badge variant="warning">{run.status}</Badge>;
+    return <span className="font-mono">{run.time.toFixed(2)}</span>;
   };
 
   const previewColumns = [
@@ -332,54 +221,60 @@ export default function ImportRaceResultsPageNew() {
       accessorKey: 'bib',
       cell: ({ row }) => (
         <span className="font-mono font-bold">{row.original.bib}</span>
-      )
+      ),
     },
     {
       header: 'Competitor',
       accessorKey: 'competitorName',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          {row.original.matched ? (
+          {row.original.competitor ? (
             <CheckCircle className="w-4 h-4 text-success" />
           ) : (
             <AlertCircle className="w-4 h-4 text-danger" />
           )}
-          <span className={row.original.matched ? '' : 'text-danger'}>
+          <span className={row.original.competitor ? '' : 'text-danger'}>
             {row.original.competitorName}
           </span>
         </div>
-      )
+      ),
     },
     {
       header: 'Run 1',
-      accessorKey: 'time1',
-      cell: ({ row }) => {
-        const { time1, status1 } = row.original;
-        if (status1) return <Badge variant="warning">{status1}</Badge>;
-        if (time1) return <span className="font-mono">{time1}</span>;
-        return <span className="text-neutral-400">-</span>;
-      }
+      accessorKey: 'runs.1',
+      cell: ({ row }) => renderRun(row.original.runs[1]),
     },
     {
       header: 'Run 2',
-      accessorKey: 'time2',
-      cell: ({ row }) => {
-        const { time2, status2 } = row.original;
-        if (status2) return <Badge variant="warning">{status2}</Badge>;
-        if (time2) return <span className="font-mono">{time2}</span>;
-        return <span className="text-neutral-400">-</span>;
-      }
-    }
+      accessorKey: 'runs.2',
+      cell: ({ row }) => renderRun(row.original.runs[2]),
+    },
+    {
+      header: 'Problems',
+      accessorKey: 'problems',
+      cell: ({ row }) =>
+        row.original.problems.length > 0 ? (
+          <span className="text-danger text-sm">
+            {row.original.problems.join('; ')}
+          </span>
+        ) : (
+          <span className="text-neutral-400">-</span>
+        ),
+    },
   ];
 
-  const matchedCount = previewData.filter(r => r.matched).length;
-  const unmatchedCount = previewData.filter(r => !r.matched).length;
+  const importableCount = previewData.filter((r) => r.importable).length;
+  const problemRows = previewData.filter((r) => !r.importable);
 
   return (
     <PageContainer>
       <PageHeader
         title="Import Race Results"
-        subtitle={raceDetails ? `${raceDetails.race_name} - ${raceDetails.race_type}` : 'Loading...'}
+        subtitle={
+          raceDetails
+            ? `${raceDetails.race_name} - ${raceDetails.race_type}`
+            : 'Loading...'
+        }
         actions={
           <Button
             variant="outline"
@@ -394,7 +289,9 @@ export default function ImportRaceResultsPageNew() {
       <div className="space-y-6">
         <Card>
           <CardContent>
-            <h3 className="text-lg font-semibold mb-4">Step 1: Upload CSV File</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Step 1: Upload CSV File
+            </h3>
             <div className="border-2 border-dashed border-neutral-300 rounded-lg p-8 text-center">
               <input
                 type="file"
@@ -412,7 +309,9 @@ export default function ImportRaceResultsPageNew() {
                   <p className="font-medium text-neutral-700">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-sm text-neutral-500">CSV file with bib numbers and times</p>
+                  <p className="text-sm text-neutral-500">
+                    CSV file with bib numbers and times
+                  </p>
                 </div>
                 <Button variant="outline" as="span">
                   <Upload className="w-4 h-4 mr-2" />
@@ -433,7 +332,9 @@ export default function ImportRaceResultsPageNew() {
         {csvData && (
           <Card>
             <CardContent>
-              <h3 className="text-lg font-semibold mb-4">Step 2: Configure Import</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Step 2: Configure Import
+              </h3>
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
@@ -506,12 +407,19 @@ export default function ImportRaceResultsPageNew() {
                   </label>
                   <select
                     value={columnMapping.bib}
-                    onChange={(e) => setColumnMapping(prev => ({ ...prev, bib: e.target.value }))}
+                    onChange={(e) =>
+                      setColumnMapping((prev) => ({
+                        ...prev,
+                        bib: e.target.value,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                   >
                     <option value="">Select column...</option>
-                    {csvHeaders.map(header => (
-                      <option key={header} value={header}>{header}</option>
+                    {csvHeaders.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -523,12 +431,20 @@ export default function ImportRaceResultsPageNew() {
                     </label>
                     <select
                       value={columnMapping.time || columnMapping.time1}
-                      onChange={(e) => setColumnMapping(prev => ({ ...prev, time: e.target.value, time1: e.target.value }))}
+                      onChange={(e) =>
+                        setColumnMapping((prev) => ({
+                          ...prev,
+                          time: e.target.value,
+                          time1: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                     >
                       <option value="">Select column...</option>
-                      {csvHeaders.map(header => (
-                        <option key={header} value={header}>{header}</option>
+                      {csvHeaders.map((header) => (
+                        <option key={header} value={header}>
+                          {header}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -540,12 +456,19 @@ export default function ImportRaceResultsPageNew() {
                       </label>
                       <select
                         value={columnMapping.time1}
-                        onChange={(e) => setColumnMapping(prev => ({ ...prev, time1: e.target.value }))}
+                        onChange={(e) =>
+                          setColumnMapping((prev) => ({
+                            ...prev,
+                            time1: e.target.value,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                       >
                         <option value="">Select column...</option>
-                        {csvHeaders.map(header => (
-                          <option key={header} value={header}>{header}</option>
+                        {csvHeaders.map((header) => (
+                          <option key={header} value={header}>
+                            {header}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -555,12 +478,19 @@ export default function ImportRaceResultsPageNew() {
                       </label>
                       <select
                         value={columnMapping.time2}
-                        onChange={(e) => setColumnMapping(prev => ({ ...prev, time2: e.target.value }))}
+                        onChange={(e) =>
+                          setColumnMapping((prev) => ({
+                            ...prev,
+                            time2: e.target.value,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                       >
                         <option value="">Select column...</option>
-                        {csvHeaders.map(header => (
-                          <option key={header} value={header}>{header}</option>
+                        {csvHeaders.map((header) => (
+                          <option key={header} value={header}>
+                            {header}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -573,12 +503,19 @@ export default function ImportRaceResultsPageNew() {
                   </label>
                   <select
                     value={columnMapping.status}
-                    onChange={(e) => setColumnMapping(prev => ({ ...prev, status: e.target.value }))}
+                    onChange={(e) =>
+                      setColumnMapping((prev) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                   >
                     <option value="">None</option>
-                    {csvHeaders.map(header => (
-                      <option key={header} value={header}>{header}</option>
+                    {csvHeaders.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -588,7 +525,10 @@ export default function ImportRaceResultsPageNew() {
                 <Info className="w-5 h-5 text-info mt-0.5" />
                 <div className="text-sm text-neutral-600">
                   <p className="font-medium">Time Format</p>
-                  <p>Accepts: seconds (e.g., 45.23), minutes:seconds (e.g., 1:23.45), or status codes (DNF, DSQ, DNS)</p>
+                  <p>
+                    Accepts: seconds (e.g., 45.23), minutes:seconds (e.g.,
+                    1:23.45), or status codes (DNF, DSQ, DNS)
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -599,14 +539,38 @@ export default function ImportRaceResultsPageNew() {
           <Card>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Step 3: Preview & Import</h3>
+                <h3 className="text-lg font-semibold">
+                  Step 3: Preview & Import
+                </h3>
                 <div className="flex gap-3">
-                  <Badge variant="success">{matchedCount} matched</Badge>
-                  {unmatchedCount > 0 && (
-                    <Badge variant="danger">{unmatchedCount} not found</Badge>
+                  <Badge variant="success">{importableCount} ready</Badge>
+                  {problemRows.length > 0 && (
+                    <Badge variant="danger">
+                      {problemRows.length} with problems
+                    </Badge>
                   )}
                 </div>
               </div>
+
+              {problemRows.length > 0 && (
+                <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-md text-sm">
+                  <p className="font-medium text-danger mb-1">
+                    {problemRows.length} row(s) will be skipped:
+                  </p>
+                  <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
+                    {problemRows.slice(0, 20).map((row) => (
+                      <li key={row.rowIndex}>
+                        Row {row.rowNumber} (bib{' '}
+                        {row.bib === '' ? '?' : row.bib}):{' '}
+                        {row.problems.join('; ')}
+                      </li>
+                    ))}
+                    {problemRows.length > 20 && (
+                      <li>... and {problemRows.length - 20} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
               <DataTable
                 columns={previewColumns}
@@ -615,11 +579,15 @@ export default function ImportRaceResultsPageNew() {
               />
 
               {importStatus && (
-                <div className={`mt-4 p-3 rounded-md flex items-center gap-2 ${
-                  importStatus.type === 'error' ? 'bg-danger/10 border border-danger/20 text-danger' :
-                  importStatus.type === 'complete' ? 'bg-success/10 border border-success/20 text-success' :
-                  'bg-info/10 border border-info/20 text-info'
-                }`}>
+                <div
+                  className={`mt-4 p-3 rounded-md flex items-center gap-2 ${
+                    importStatus.type === 'error'
+                      ? 'bg-danger/10 border border-danger/20 text-danger'
+                      : importStatus.type === 'complete'
+                        ? 'bg-success/10 border border-success/20 text-success'
+                        : 'bg-info/10 border border-info/20 text-info'
+                  }`}
+                >
                   {importStatus.type === 'complete' ? (
                     <CheckCircle className="w-5 h-5" />
                   ) : importStatus.type === 'error' ? (
@@ -635,15 +603,21 @@ export default function ImportRaceResultsPageNew() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={matchedCount === 0 || importStatus?.type === 'importing'}
+                  disabled={
+                    importableCount === 0 || importStatus?.type === 'importing'
+                  }
                   leftIcon={<Upload className="w-4 h-4" />}
                 >
-                  Import {matchedCount} Results
+                  Import {importableCount} Competitor(s)
                 </Button>
                 {importStatus?.type === 'complete' && (
                   <Button
                     variant="outline"
-                    onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results`)}
+                    onClick={() =>
+                      navigate(
+                        `/competition/${competitionId}/race/${raceId}/results`,
+                      )
+                    }
                   >
                     View Results
                   </Button>

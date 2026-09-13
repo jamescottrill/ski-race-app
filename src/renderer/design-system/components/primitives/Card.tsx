@@ -8,19 +8,29 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, elevated = true, interactive = false, noPadding = false, ...props }, ref) => (
+  (
+    {
+      className,
+      elevated = true,
+      interactive = false,
+      noPadding = false,
+      ...props
+    },
+    ref,
+  ) => (
     <div
       ref={ref}
       className={cn(
         'rounded-lg border border-border bg-surface',
         elevated && 'shadow-md',
-        interactive && 'transition-all hover:shadow-lg hover:scale-[1.01] cursor-pointer',
+        interactive &&
+          'transition-all hover:shadow-lg hover:scale-[1.01] cursor-pointer',
         !noPadding && 'p-6',
-        className
+        className,
       )}
       {...props}
     />
-  )
+  ),
 );
 Card.displayName = 'Card';
 
@@ -44,7 +54,7 @@ const CardTitle = React.forwardRef<
     ref={ref}
     className={cn(
       'text-xl font-semibold leading-none tracking-tight text-neutral-900',
-      className
+      className,
     )}
     {...props}
   />
@@ -70,7 +80,7 @@ interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
 const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, noPadding = false, ...props }, ref) => (
     <div ref={ref} className={cn('', className)} {...props} />
-  )
+  ),
 );
 CardContent.displayName = 'CardContent';
 
@@ -86,4 +96,11 @@ const CardFooter = React.forwardRef<
 ));
 CardFooter.displayName = 'CardFooter';
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+};

@@ -13,7 +13,7 @@ import {
   Plus,
   List,
   Home,
-  Mountain
+  Mountain,
 } from 'lucide-react';
 import { cn } from '../design-system/utils/cn';
 
@@ -27,9 +27,9 @@ const SidebarNew = () => {
   });
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
@@ -47,7 +47,7 @@ const SidebarNew = () => {
           'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-md transition-all',
           active
             ? 'bg-primary-700 text-white shadow-sm'
-            : 'text-neutral-700 hover:bg-neutral-100 hover:text-primary-700'
+            : 'text-neutral-700 hover:bg-neutral-100 hover:text-primary-700',
         )}
       >
         <Icon className="w-4 h-4" />
@@ -75,11 +75,7 @@ const SidebarNew = () => {
             <ChevronRight className="w-4 h-4 text-neutral-500" />
           )}
         </button>
-        {expanded && (
-          <div className="mt-1 ml-7 space-y-1">
-            {children}
-          </div>
-        )}
+        {expanded && <div className="mt-1 ml-7 space-y-1">{children}</div>}
       </div>
     );
   };
@@ -100,11 +96,7 @@ const SidebarNew = () => {
         </div>
 
         <div className="space-y-2">
-          <NavItem
-            icon={Home}
-            label="Select Competition"
-            path="/"
-          />
+          <NavItem icon={Home} label="Select Competition" path="/" />
         </div>
       </div>
     );
@@ -137,11 +129,7 @@ const SidebarNew = () => {
         <div className="h-px bg-border my-4" />
 
         {/* Competitors Section */}
-        <NavSection
-          title="Competitors"
-          icon={Users}
-          sectionKey="competitors"
-        >
+        <NavSection title="Competitors" icon={Users} sectionKey="competitors">
           <NavItem
             icon={UserCog}
             label="Manage"
@@ -170,11 +158,7 @@ const SidebarNew = () => {
         </NavSection>
 
         {/* Races Section */}
-        <NavSection
-          title="Races"
-          icon={Trophy}
-          sectionKey="races"
-        >
+        <NavSection title="Races" icon={Trophy} sectionKey="races">
           <NavItem
             icon={List}
             label="View Races"

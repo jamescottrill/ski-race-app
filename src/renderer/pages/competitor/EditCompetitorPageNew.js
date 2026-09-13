@@ -8,7 +8,7 @@ import {
   Shield,
   Calendar,
   Hash,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -19,7 +19,7 @@ import {
   TextField,
   SimpleSelect,
   Checkbox,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -46,7 +46,6 @@ function EditCompetitorPageNew() {
     regiment: '',
   });
 
-
   const fetchCompetitorDetails = async () => {
     if (!competitorId) return;
 
@@ -62,7 +61,10 @@ function EditCompetitorPageNew() {
         WHERE p.id = ? AND cc.competition_id = ?
       `;
 
-      const result = await window.api.select(personQuery, [competitorId, competitionId]);
+      const result = await window.api.select(personQuery, [
+        competitorId,
+        competitionId,
+      ]);
 
       if (result && result.length > 0) {
         const competitor = result[0];
@@ -107,7 +109,7 @@ function EditCompetitorPageNew() {
       const birthYear = parseInt(value);
       const age = currentYear - birthYear;
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         isJunior: birthYear >= 2004,
         isSenior: birthYear <= 2003 && birthYear > 1991,
@@ -138,18 +140,21 @@ function EditCompetitorPageNew() {
         // Check if new service number already exists
         const existingPerson = await window.api.select(
           'SELECT id, first_name, last_name FROM people WHERE id = ?',
-          [formData.serviceNumber]
+          [formData.serviceNumber],
         );
         if (existingPerson.length > 0) {
           const person = existingPerson[0];
           alert(
-            `A person with service number ${formData.serviceNumber} already exists: ${person.first_name} ${person.last_name}`
+            `A person with service number ${formData.serviceNumber} already exists: ${person.first_name} ${person.last_name}`,
           );
           return;
         }
 
         const peopleQuery = `UPDATE people SET id = ? WHERE id = ?`;
-        await window.api.insert(peopleQuery, [formData.serviceNumber, competitorId]);
+        await window.api.insert(peopleQuery, [
+          formData.serviceNumber,
+          competitorId,
+        ]);
         const queries = [];
         for (const table of [
           'competition_team_members',
@@ -159,7 +164,9 @@ function EditCompetitorPageNew() {
           'competition_final_seed_list',
         ]) {
           const query = `UPDATE ${table} SET racer_id = ? WHERE racer_id = ?`;
-          queries.push(window.api.insert(query, [formData.serviceNumber, competitorId]));
+          queries.push(
+            window.api.insert(query, [formData.serviceNumber, competitorId]),
+          );
         }
         await Promise.all(queries);
       }
@@ -195,7 +202,11 @@ function EditCompetitorPageNew() {
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to remove this competitor from the competition?')) {
+    if (
+      window.confirm(
+        'Are you sure you want to remove this competitor from the competition?',
+      )
+    ) {
       try {
         const query = `DELETE FROM competition_competitor WHERE racer_id = ? AND competition_id = ?`;
         await window.api.delete(query, [competitorId, competitionId]);
@@ -443,7 +454,9 @@ function EditCompetitorPageNew() {
         <div className="col-span-1">
           <Card className="sticky top-4">
             <CardContent>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-4">Edit Guidelines</h3>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                Edit Guidelines
+              </h3>
               <div className="space-y-4 text-sm">
                 <div className="p-3 bg-info/10 rounded-lg">
                   <div className="flex items-start gap-2">
@@ -451,7 +464,8 @@ function EditCompetitorPageNew() {
                     <div>
                       <p className="font-medium text-info">Age Categories</p>
                       <p className="text-neutral-600 mt-1">
-                        Age categories are automatically calculated based on date of birth and cannot be edited manually.
+                        Age categories are automatically calculated based on
+                        date of birth and cannot be edited manually.
                       </p>
                     </div>
                   </div>
@@ -460,9 +474,12 @@ function EditCompetitorPageNew() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
                     <div>
-                      <p className="font-medium text-warning">Removing Competitor</p>
+                      <p className="font-medium text-warning">
+                        Removing Competitor
+                      </p>
                       <p className="text-neutral-600 mt-1">
-                        This only removes them from this competition, not from the system.
+                        This only removes them from this competition, not from
+                        the system.
                       </p>
                     </div>
                   </div>

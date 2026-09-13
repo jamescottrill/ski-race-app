@@ -11,7 +11,7 @@ export interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElemen
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, label, error, helperText, id, ...props }, ref) => {
     const inputId = id || React.useId();
-    
+
     return (
       <div className="space-y-2">
         <div className="flex items-start">
@@ -32,10 +32,10 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
                   'peer-checked:bg-primary-700 peer-checked:border-primary-700',
                   'peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2',
                   'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
-                  error 
-                    ? 'border-danger' 
+                  error
+                    ? 'border-danger'
                     : 'border-neutral-300 hover:border-neutral-400',
-                  className
+                  className,
                 )}
               >
                 <Check className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" />
@@ -43,7 +43,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             </div>
           </div>
           {label && (
-            <label 
+            <label
               htmlFor={inputId}
               className="ml-3 text-sm font-medium text-neutral-700 cursor-pointer select-none"
             >
@@ -51,17 +51,15 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             </label>
           )}
         </div>
-        
-        {error && (
-          <p className="text-sm text-danger ml-8">{error}</p>
-        )}
-        
+
+        {error && <p className="text-sm text-danger ml-8">{error}</p>}
+
         {helperText && !error && (
           <p className="text-sm text-neutral-500 ml-8">{helperText}</p>
         )}
       </div>
     );
-  }
+  },
 );
 
 Checkbox.displayName = 'Checkbox';

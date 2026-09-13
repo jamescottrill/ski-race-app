@@ -117,7 +117,10 @@ function TeamResultsNew() {
               .slice(0, countingMembers)
               .map((m) => parseFloat(m.total_time) || 999);
 
-            if (topTimes.length >= countingMembers && !topTimes.some((t) => t >= 999)) {
+            if (
+              topTimes.length >= countingMembers &&
+              !topTimes.some((t) => t >= 999)
+            ) {
               const raceTotal = topTimes.reduce((sum, t) => sum + t, 0);
               teamResult[race.id] = raceTotal;
               totalPoints += raceTotal;
@@ -214,15 +217,15 @@ function TeamResultsNew() {
             <Users className="w-4 h-4 text-primary-400" />
             <span className="font-medium">{row.original.team_name || '-'}</span>
           </div>
-        )
+        ),
       },
       {
         header: 'Members',
         accessorKey: 'member_count',
         cell: ({ row }) => (
           <div className="text-center">{row.original.member_count || 0}</div>
-        )
-      }
+        ),
+      },
     ];
 
     const raceColumns = raceList.map((race) => ({
@@ -235,7 +238,7 @@ function TeamResultsNew() {
             {value !== null && value !== undefined ? value.toFixed(2) : '-'}
           </div>
         );
-      }
+      },
     }));
 
     const totalColumn = {
@@ -248,7 +251,7 @@ function TeamResultsNew() {
             {row.original.total_points?.toFixed(2) || '0.00'}
           </span>
         </div>
-      )
+      ),
     };
 
     return [...baseColumns, ...raceColumns, totalColumn];
@@ -259,7 +262,9 @@ function TeamResultsNew() {
     totalTeams: teamResults.length,
     completedRaces: races.length,
     leadingScore:
-      teamResults.length > 0 ? teamResults[0]?.total_points?.toFixed(2) || 0 : 0,
+      teamResults.length > 0
+        ? teamResults[0]?.total_points?.toFixed(2) || 0
+        : 0,
   };
 
   return (
@@ -294,7 +299,9 @@ function TeamResultsNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-700">{stats.totalTeams}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {stats.totalTeams}
+              </p>
               <p className="text-sm text-neutral-600">Total Teams</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
@@ -303,7 +310,9 @@ function TeamResultsNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-success">{stats.completedRaces}</p>
+              <p className="text-2xl font-bold text-success">
+                {stats.completedRaces}
+              </p>
               <p className="text-sm text-neutral-600">Completed Races</p>
             </div>
             <Trophy className="w-8 h-8 text-success/30" />
@@ -312,7 +321,9 @@ function TeamResultsNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-warning">{stats.leadingScore}</p>
+              <p className="text-2xl font-bold text-warning">
+                {stats.leadingScore}
+              </p>
               <p className="text-sm text-neutral-600">Leading Score</p>
             </div>
             <Star className="w-8 h-8 text-warning/30" />
@@ -331,7 +342,8 @@ function TeamResultsNew() {
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <Trophy className="w-12 h-12 text-neutral-300" />
               <p className="text-neutral-500">
-                No team standings available. Teams need at least 3 members who have completed all individual races.
+                No team standings available. Teams need at least 3 members who
+                have completed all individual races.
               </p>
             </div>
           ) : (

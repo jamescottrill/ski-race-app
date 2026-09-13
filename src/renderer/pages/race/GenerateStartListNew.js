@@ -8,7 +8,7 @@ import {
   Users,
   Trophy,
   Save,
-  Edit2
+  Edit2,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -20,7 +20,7 @@ import {
   Badge,
   Input,
   Label,
-  Checkbox
+  Checkbox,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
@@ -28,7 +28,11 @@ import { startListPdf } from '../../utils/StartListPdf';
 import { startListTwoRunPdf } from '../../utils/StartListTwoRunPdf';
 import { getRaceDetails } from '../../utils/RaceDetails';
 import { shuffleArray } from '../../utils/GenericUtils';
-import { handleDatabaseError, handlePdfError, showSuccess } from '../../utils/ErrorHandler';
+import {
+  handleDatabaseError,
+  handlePdfError,
+  showSuccess,
+} from '../../utils/ErrorHandler';
 import toast from 'react-hot-toast';
 
 export default function GenerateStartListNew() {
@@ -51,7 +55,7 @@ export default function GenerateStartListNew() {
   const [editMode, setEditMode] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  function refreshPage(){
+  function refreshPage() {
     navigate(`/competition/${competitionId}/race/${raceId}/start-list`);
   }
 
@@ -146,12 +150,6 @@ export default function GenerateStartListNew() {
     try {
       setLoading(true);
 
-      // Clear existing start list for this race
-      await window.api.delete(
-        `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
-        [competitionId, raceId],
-      );
-
       let filteredSeedList = seedList.filter(
         (competitor) => !struckOutCompetitors[competitor.racer_id],
       );
@@ -163,8 +161,12 @@ export default function GenerateStartListNew() {
 
         // Process women's list
         if (womenSeedList.length > raceDetails.randomise_top_women) {
-          const topWomen = shuffleArray(womenSeedList.slice(0, raceDetails.randomise_top_women));
-          const restWomen = womenSeedList.slice(raceDetails.randomise_top_women);
+          const topWomen = shuffleArray(
+            womenSeedList.slice(0, raceDetails.randomise_top_women),
+          );
+          const restWomen = womenSeedList.slice(
+            raceDetails.randomise_top_women,
+          );
           filteredSeedList = [...topWomen, ...restWomen];
         } else {
           filteredSeedList = shuffleArray(womenSeedList);
@@ -172,41 +174,57 @@ export default function GenerateStartListNew() {
 
         // Process men's list
         if (menSeedList.length > raceDetails.randomise_top) {
-          const topMen = shuffleArray(menSeedList.slice(0, raceDetails.randomise_top));
+          const topMen = shuffleArray(
+            menSeedList.slice(0, raceDetails.randomise_top),
+          );
           const restMen = menSeedList.slice(raceDetails.randomise_top);
           const menList = [...topMen, ...restMen];
           filteredSeedList = [...filteredSeedList, ...menList];
         } else {
-          filteredSeedList = [...filteredSeedList, ...shuffleArray(menSeedList)];
+          filteredSeedList = [
+            ...filteredSeedList,
+            ...shuffleArray(menSeedList),
+          ];
         }
       } else {
         // Mixed start list
         if (filteredSeedList.length > raceDetails.randomise_top) {
-          const topCompetitors = shuffleArray(filteredSeedList.slice(0, raceDetails.randomise_top));
-          const restCompetitors = filteredSeedList.slice(raceDetails.randomise_top);
+          const topCompetitors = shuffleArray(
+            filteredSeedList.slice(0, raceDetails.randomise_top),
+          );
+          const restCompetitors = filteredSeedList.slice(
+            raceDetails.randomise_top,
+          );
           filteredSeedList = [...topCompetitors, ...restCompetitors];
         } else {
           filteredSeedList = shuffleArray(filteredSeedList);
         }
       }
 
-      // Insert into race_competitor table
-      const insertPromises = filteredSeedList.map((competitor, i) => {
-        const bibNumber = i + 1;
-        return window.api.insert(
-          `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
-           VALUES (?, ?, ?, ?, ?)`,
-          [
+      // Clear and rebuild the start list in one atomic transaction, so a
+      // failure part-way can never leave the race with a missing or
+      // partially-written start list
+      const operations = [
+        {
+          type: 'delete',
+          query: `DELETE FROM race_competitor WHERE competition_id = ? AND race_id = ?`,
+          params: [competitionId, raceId],
+        },
+        ...filteredSeedList.map((competitor, i) => ({
+          type: 'insert',
+          query: `INSERT INTO race_competitor (competition_id, race_id, racer_id, bib_number, seed_points)
+                  VALUES (?, ?, ?, ?, ?)`,
+          params: [
             competitionId,
             raceId,
             competitor.racer_id,
-            bibNumber,
+            i + 1,
             competitor.seed_points || 0,
           ],
-        );
-      });
+        })),
+      ];
 
-      await Promise.all(insertPromises);
+      await window.api.transaction(operations);
       await getStartList();
       showSuccess('Start list generated successfully!');
     } catch (error) {
@@ -228,10 +246,13 @@ export default function GenerateStartListNew() {
     if (isNaN(bibNumber) || bibNumber < 1) return;
 
     const newList = [...list];
-    const competitorIndex = newList.findIndex(c => c.racer_id === racerId);
+    const competitorIndex = newList.findIndex((c) => c.racer_id === racerId);
     if (competitorIndex === -1) return;
 
-    newList[competitorIndex] = { ...newList[competitorIndex], bib_number: bibNumber };
+    newList[competitorIndex] = {
+      ...newList[competitorIndex],
+      bib_number: bibNumber,
+    };
     newList.sort((a, b) => a.bib_number - b.bib_number);
 
     setList(newList);
@@ -244,14 +265,20 @@ export default function GenerateStartListNew() {
 
       const allCompetitors = raceDetails.women_separate
         ? [...(womenStartList || []), ...(startList || [])]
-        : (startList || []);
+        : startList || [];
 
-      for (const competitor of allCompetitors) {
-        await window.api.insert(
-          `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
-          [competitor.bib_number, competitionId, raceId, competitor.racer_id]
-        );
-      }
+      await window.api.transaction(
+        allCompetitors.map((competitor) => ({
+          type: 'update',
+          query: `UPDATE race_competitor SET bib_number = ? WHERE competition_id = ? AND race_id = ? AND racer_id = ?`,
+          params: [
+            competitor.bib_number,
+            competitionId,
+            raceId,
+            competitor.racer_id,
+          ],
+        })),
+      );
 
       setHasChanges(false);
       setEditMode(false);
@@ -295,21 +322,27 @@ export default function GenerateStartListNew() {
     {
       header: 'Bib',
       accessorKey: 'bib_number',
-      cell: ({ row }) => (
+      cell: ({ row }) =>
         isEditMode ? (
           <Input
             type="number"
             min="1"
             value={row.original.bib_number}
-            onChange={(e) => handleBibChange(list, setList, row.original.racer_id, e.target.value)}
+            onChange={(e) =>
+              handleBibChange(
+                list,
+                setList,
+                row.original.racer_id,
+                e.target.value,
+              )
+            }
             className="w-16 font-mono text-center"
           />
         ) : (
           <Badge variant="primary" className="font-mono">
             {row.original.bib_number}
           </Badge>
-        )
-      )
+        ),
     },
     {
       header: 'Name',
@@ -318,11 +351,15 @@ export default function GenerateStartListNew() {
         <div>
           <div className="font-medium">
             {row.original.last_name}, {row.original.first_name}
-            {row.original.title && <span className="ml-2 text-neutral-500">{row.original.title}</span>}
+            {row.original.title && (
+              <span className="ml-2 text-neutral-500">
+                {row.original.title}
+              </span>
+            )}
           </div>
           <div className="text-xs text-neutral-500">{row.original.team}</div>
         </div>
-      )
+      ),
     },
     {
       header: 'Category',
@@ -338,20 +375,22 @@ export default function GenerateStartListNew() {
 
         return (
           <Badge variant="secondary" className="mr-1">
-            {categories.join("")}
+            {categories.join('')}
           </Badge>
         );
-      }
+      },
     },
     {
       header: 'Seed Points',
       accessorKey: 'seed_points',
       cell: ({ row }) => (
         <span className="font-mono">
-          {row.original.seed_points ? row.original.seed_points.toFixed(2) : '0.00'}
+          {row.original.seed_points
+            ? row.original.seed_points.toFixed(2)
+            : '0.00'}
         </span>
-      )
-    }
+      ),
+    },
   ];
 
   const seedListColumns = [
@@ -363,36 +402,46 @@ export default function GenerateStartListNew() {
           checked={struckOutCompetitors[row.original.racer_id] || false}
           onCheckedChange={() => handleStrikeOut(row.original.racer_id)}
         />
-      )
+      ),
     },
     {
       header: 'Name',
       accessorKey: 'name',
       cell: ({ row }) => (
-        <div className={struckOutCompetitors[row.original.racer_id] ? 'line-through opacity-50' : ''}>
+        <div
+          className={
+            struckOutCompetitors[row.original.racer_id]
+              ? 'line-through opacity-50'
+              : ''
+          }
+        >
           <div className="font-medium">
             {row.original.last_name}, {row.original.first_name}
           </div>
           <div className="text-xs text-neutral-500">{row.original.team}</div>
         </div>
-      )
+      ),
     },
     {
       header: 'Seed Points',
       accessorKey: 'seed_points',
       cell: ({ row }) => (
-        <span className={`font-mono ${struckOutCompetitors[row.original.racer_id] ? 'line-through opacity-50' : ''}`}>
-          {row.original.seed_points ? row.original.seed_points.toFixed(2) : '0.00'}
+        <span
+          className={`font-mono ${struckOutCompetitors[row.original.racer_id] ? 'line-through opacity-50' : ''}`}
+        >
+          {row.original.seed_points
+            ? row.original.seed_points.toFixed(2)
+            : '0.00'}
         </span>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <PageContainer>
       <PageHeader
         title="Generate Start List"
-        subtitle={`${raceDetails.race_name} - ${raceDetails.women_separate ? 'Separate Women\'s Start' : 'Mixed Start'}`}
+        subtitle={`${raceDetails.race_name} - ${raceDetails.women_separate ? "Separate Women's Start" : 'Mixed Start'}`}
         actions={
           <div className="flex gap-3">
             {startListExists && (
@@ -466,28 +515,36 @@ export default function GenerateStartListNew() {
               </h3>
               <div className="mb-4 space-y-3">
                 <div>
-                  <Label htmlFor="randomise_top">Randomise Top (Men/Mixed)</Label>
+                  <Label htmlFor="randomise_top">
+                    Randomise Top (Men/Mixed)
+                  </Label>
                   <Input
                     id="randomise_top"
                     type="number"
                     value={raceDetails.randomise_top}
-                    onChange={(e) => setRaceDetails(prev => ({
-                      ...prev,
-                      randomise_top: parseInt(e.target.value)
-                    }))}
+                    onChange={(e) =>
+                      setRaceDetails((prev) => ({
+                        ...prev,
+                        randomise_top: parseInt(e.target.value),
+                      }))
+                    }
                   />
                 </div>
                 {raceDetails.women_separate && (
                   <div>
-                    <Label htmlFor="randomise_top_women">Randomise Top (Women)</Label>
+                    <Label htmlFor="randomise_top_women">
+                      Randomise Top (Women)
+                    </Label>
                     <Input
                       id="randomise_top_women"
                       type="number"
                       value={raceDetails.randomise_top_women}
-                      onChange={(e) => setRaceDetails(prev => ({
-                        ...prev,
-                        randomise_top_women: parseInt(e.target.value)
-                      }))}
+                      onChange={(e) =>
+                        setRaceDetails((prev) => ({
+                          ...prev,
+                          randomise_top_women: parseInt(e.target.value),
+                        }))
+                      }
                     />
                   </div>
                 )}
@@ -516,36 +573,51 @@ export default function GenerateStartListNew() {
                 Generate Start List
               </Button>
               <p className="text-sm text-neutral-600 mt-4">
-                Strike out competitors who won't be racing, then generate the start list.
-                The top {raceDetails.randomise_top} competitors will be randomised.
+                Strike out competitors who won't be racing, then generate the
+                start list. The top {raceDetails.randomise_top} competitors will
+                be randomised.
               </p>
             </CardContent>
           </Card>
         </div>
       ) : (
         <div className="space-y-6">
-          {raceDetails.women_separate && womenStartList && womenStartList.length > 0 && (
-            <Card>
-              <CardContent>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-pink-600" />
-                  Women's Start List
-                </h3>
-                <DataTable columns={getColumns(womenStartList, setWomenStartList, editMode)} data={womenStartList} pageSize={50} />
-              </CardContent>
-            </Card>
-          )}
+          {raceDetails.women_separate &&
+            womenStartList &&
+            womenStartList.length > 0 && (
+              <Card>
+                <CardContent>
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-pink-600" />
+                    Women's Start List
+                  </h3>
+                  <DataTable
+                    columns={getColumns(
+                      womenStartList,
+                      setWomenStartList,
+                      editMode,
+                    )}
+                    data={womenStartList}
+                    pageSize={50}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
           <Card>
             <CardContent>
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary-600" />
-                {raceDetails.women_separate ? "Men's Start List" : "Start List"}
+                {raceDetails.women_separate ? "Men's Start List" : 'Start List'}
               </h3>
               {loading ? (
                 <div className="text-center py-8">Loading start list...</div>
               ) : startList && startList.length > 0 ? (
-                <DataTable columns={getColumns(startList, setStartList, editMode)} data={startList} pageSize={50} />
+                <DataTable
+                  columns={getColumns(startList, setStartList, editMode)}
+                  data={startList}
+                  pageSize={50}
+                />
               ) : (
                 <div className="text-center py-8 text-neutral-500">
                   No start list generated yet

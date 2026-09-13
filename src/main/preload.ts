@@ -48,18 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event delegation for blur events on dynamically loaded inputs
   document.addEventListener(
     'blur',
-    function (event): void {
-      if (!event.target) return;
-      if (!event.target.classList) return;
-      if (!event.target.classList.contains('race-time-input')) return;
+    function (event: FocusEvent): void {
       const input = event.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      if (!input.classList.contains('race-time-input')) return;
       const value = input.value.padStart(6, '0');
       if (value.length === 0) return;
       const timeRegex = /^([0-5][0-9])(:|\.)?([0-5][0-9])(:|\.)?\d{0,2}$/;
       if (!timeRegex.test(value)) {
         input.focus();
-      } else {
-        return;
       }
     },
     true,

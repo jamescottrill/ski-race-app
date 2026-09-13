@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import {
-  Upload,
-  ArrowLeft,
-  FileSpreadsheet,
-  Check,
-  AlertCircle,
-  X
-} from 'lucide-react';
+import { Upload, ArrowLeft, FileSpreadsheet, Check, X } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -18,10 +11,12 @@ import {
   TextField,
   DataTable,
   Badge,
-  cn
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { importAASLEntries } from '../../utils/AASLManagement';
+import {
+  importAASLEntries,
+  validateAASLEntries,
+} from '../../utils/AASLManagement';
 import toast from 'react-hot-toast';
 
 export default function ImportAASLPage() {
@@ -38,7 +33,7 @@ export default function ImportAASLPage() {
     lastName: '',
     gender: '',
     category: '',
-    seedPoints: ''
+    seedPoints: '',
   });
 
   const handleFileChange = (e) => {
@@ -64,7 +59,14 @@ export default function ImportAASLPage() {
           setHeaders(headerRow);
           autoDetectColumns(headerRow);
 
-          const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== ''));
+          // Keep each row's spreadsheet number so problems can be reported
+          // against the row the user sees, even after blank rows are dropped
+          const dataRows = jsonData
+            .slice(1)
+            .map((cells, index) => ({ cells, rowNumber: index + 2 }))
+            .filter(({ cells }) =>
+              cells.some((cell) => cell !== null && cell !== ''),
+            );
           setParsedData(dataRows);
         }
       } catch (error) {
@@ -77,17 +79,25 @@ export default function ImportAASLPage() {
 
   const autoDetectColumns = (headers) => {
     const mapping = { ...columnMapping };
-    const lowerHeaders = headers.map(h => String(h).toLowerCase());
+    const lowerHeaders = headers.map((h) => String(h).toLowerCase());
 
     lowerHeaders.forEach((header, index) => {
       const originalHeader = headers[index];
-      if (header.includes('service') || header.includes('number') || header.includes('id')) {
+      if (
+        header.includes('service') ||
+        header.includes('number') ||
+        header.includes('id')
+      ) {
         mapping.serviceNumber = originalHeader;
       }
       if (header.includes('first') || header === 'forename') {
         mapping.firstName = originalHeader;
       }
-      if (header.includes('last') || header.includes('surname') || header === 'name') {
+      if (
+        header.includes('last') ||
+        header.includes('surname') ||
+        header === 'name'
+      ) {
         mapping.lastName = originalHeader;
       }
       if (header.includes('gender') || header.includes('sex')) {
@@ -96,7 +106,11 @@ export default function ImportAASLPage() {
       if (header.includes('category') || header.includes('cat')) {
         mapping.category = originalHeader;
       }
-      if (header.includes('seed') || header.includes('point') || header.includes('aasl')) {
+      if (
+        header.includes('seed') ||
+        header.includes('point') ||
+        header.includes('aasl')
+      ) {
         mapping.seedPoints = originalHeader;
       }
     });
@@ -105,69 +119,77 @@ export default function ImportAASLPage() {
   };
 
   const handleMappingChange = (field, value) => {
-    setColumnMapping(prev => ({ ...prev, [field]: value }));
+    setColumnMapping((prev) => ({ ...prev, [field]: value }));
   };
 
   const getMappedData = () => {
-    return parsedData.map((row, index) => {
+    return parsedData.map(({ cells, rowNumber }) => {
       const getColumnValue = (column) => {
         const colIndex = headers.indexOf(column);
-        return colIndex >= 0 ? row[colIndex] : '';
+        return colIndex >= 0 ? cells[colIndex] : '';
       };
 
       return {
-        rowIndex: index,
-        serviceNumber: String(getColumnValue(columnMapping.serviceNumber) || '').trim(),
+        rowNumber,
+        serviceNumber: String(
+          getColumnValue(columnMapping.serviceNumber) || '',
+        ).trim(),
         firstName: String(getColumnValue(columnMapping.firstName) || '').trim(),
         lastName: String(getColumnValue(columnMapping.lastName) || '').trim(),
-        gender: String(getColumnValue(columnMapping.gender) || '').trim().toUpperCase().charAt(0),
+        gender: String(getColumnValue(columnMapping.gender) || '')
+          .trim()
+          .toUpperCase()
+          .charAt(0),
         category: String(getColumnValue(columnMapping.category) || '').trim(),
-        seedPoints: parseFloat(getColumnValue(columnMapping.seedPoints)) || 0,
-        isValid: !!getColumnValue(columnMapping.serviceNumber) && !!getColumnValue(columnMapping.seedPoints)
+        seedPoints: getColumnValue(columnMapping.seedPoints),
       };
     });
   };
 
-  const handleImport = async () => {
-    const mappedData = getMappedData();
-    const validData = mappedData.filter(row => row.isValid);
+  // Validation runs on every render so the preview and the import agree
+  const previewData = validateAASLEntries(getMappedData());
+  const validCount = previewData.filter((r) => r.isValid).length;
+  const invalidRows = previewData.filter((r) => !r.isValid);
 
-    if (validData.length === 0) {
+  const handleImport = async () => {
+    if (validCount === 0) {
       toast.error('No valid entries to import');
       return;
     }
 
     setImporting(true);
     try {
-      const result = await importAASLEntries(validData, season);
-
-      if (result.success) {
-        toast.success(`Imported ${result.successCount} new entries, updated ${result.updateCount} existing`);
-        navigate('/aasl');
+      // importAASLEntries writes every valid row in one transaction; a throw
+      // means nothing was written
+      const result = await importAASLEntries(previewData, season);
+      toast.success(
+        `Imported ${result.successCount} new entries, updated ${result.updateCount} existing`,
+      );
+      if (result.skippedCount > 0) {
+        toast(`${result.skippedCount} invalid row(s) were skipped`, {
+          icon: '⚠️',
+        });
       } else {
-        toast.error(`Import completed with ${result.errorCount} errors`);
+        navigate('/aasl');
       }
     } catch (error) {
       console.error('Import failed:', error);
-      toast.error('Import failed: ' + error.message);
+      toast.error(`Import failed and nothing was written: ${error.message}`);
     } finally {
       setImporting(false);
     }
   };
 
-  const previewData = getMappedData();
-  const validCount = previewData.filter(r => r.isValid).length;
-  const invalidCount = previewData.filter(r => !r.isValid).length;
-
   const columns = [
     {
       header: 'Valid',
       accessorKey: 'isValid',
-      cell: ({ row }) => (
-        row.original.isValid
-          ? <Check className="w-4 h-4 text-success-600" />
-          : <X className="w-4 h-4 text-danger-600" />
-      )
+      cell: ({ row }) =>
+        row.original.isValid ? (
+          <Check className="w-4 h-4 text-success-600" />
+        ) : (
+          <X className="w-4 h-4 text-danger-600" />
+        ),
     },
     { header: 'Service Number', accessorKey: 'serviceNumber' },
     { header: 'First Name', accessorKey: 'firstName' },
@@ -177,8 +199,25 @@ export default function ImportAASLPage() {
     {
       header: 'Seed Points',
       accessorKey: 'seedPoints',
-      cell: ({ row }) => row.original.seedPoints.toFixed(2)
-    }
+      cell: ({ row }) =>
+        Number.isNaN(row.original.seedPoints) ? (
+          <span className="text-danger">
+            {String(row.original.rawSeedPoints ?? '')}
+          </span>
+        ) : (
+          row.original.seedPoints.toFixed(2)
+        ),
+    },
+    {
+      header: 'Problems',
+      accessorKey: 'problems',
+      cell: ({ row }) =>
+        row.original.problems.length > 0 ? (
+          <span className="text-danger text-sm">
+            {row.original.problems.join('; ')}
+          </span>
+        ) : null,
+    },
   ];
 
   return (
@@ -201,7 +240,9 @@ export default function ImportAASLPage() {
         {/* Step 1: Upload File */}
         <Card>
           <CardContent>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Step 1: Upload Excel File</h3>
+            <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+              Step 1: Upload Excel File
+            </h3>
             <div className="border-2 border-dashed border-neutral-300 rounded-lg p-8 text-center">
               <FileSpreadsheet className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
               <input
@@ -218,7 +259,9 @@ export default function ImportAASLPage() {
                 Choose a file
               </label>
               <span className="text-neutral-600"> or drag and drop</span>
-              <p className="text-sm text-neutral-500 mt-2">Excel files (.xlsx, .xls) or CSV</p>
+              <p className="text-sm text-neutral-500 mt-2">
+                Excel files (.xlsx, .xls) or CSV
+              </p>
               {file && (
                 <p className="mt-4 text-sm text-success-600 font-medium">
                   Selected: {file.name}
@@ -232,10 +275,14 @@ export default function ImportAASLPage() {
         {parsedData.length > 0 && (
           <Card>
             <CardContent>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-4">Step 2: Configure Column Mapping</h3>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                Step 2: Configure Column Mapping
+              </h3>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Season</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Season
+                  </label>
                   <TextField
                     value={season}
                     onChange={(e) => setSeason(e.target.value)}
@@ -250,7 +297,7 @@ export default function ImportAASLPage() {
                   lastName: 'Last Name',
                   gender: 'Gender',
                   category: 'Category',
-                  seedPoints: 'Seed Points *'
+                  seedPoints: 'Seed Points *',
                 }).map(([key, label]) => (
                   <div key={key}>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">
@@ -280,19 +327,38 @@ export default function ImportAASLPage() {
           <Card>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-neutral-900">Step 3: Preview & Import</h3>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  Step 3: Preview & Import
+                </h3>
                 <div className="flex items-center gap-4">
                   <Badge variant="success">{validCount} valid</Badge>
-                  {invalidCount > 0 && (
-                    <Badge variant="danger">{invalidCount} invalid</Badge>
+                  {invalidRows.length > 0 && (
+                    <Badge variant="danger">{invalidRows.length} invalid</Badge>
                   )}
                 </div>
               </div>
 
-              <DataTable
-                data={previewData.slice(0, 10)}
-                columns={columns}
-              />
+              {invalidRows.length > 0 && (
+                <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-md text-sm">
+                  <p className="font-medium text-danger mb-1">
+                    {invalidRows.length} row(s) will be skipped:
+                  </p>
+                  <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
+                    {invalidRows.slice(0, 20).map((row) => (
+                      <li key={row.rowNumber}>
+                        Row {row.rowNumber}
+                        {row.serviceNumber && ` (${row.serviceNumber})`}:{' '}
+                        {row.problems.join('; ')}
+                      </li>
+                    ))}
+                    {invalidRows.length > 20 && (
+                      <li>... and {invalidRows.length - 20} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <DataTable data={previewData.slice(0, 10)} columns={columns} />
 
               {previewData.length > 10 && (
                 <p className="text-sm text-neutral-600 mt-2">

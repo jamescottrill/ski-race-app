@@ -10,11 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from '../primitives/Command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../primitives/Popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../primitives/Popover';
 
 export interface SearchableSelectProps {
   value?: string;
@@ -55,7 +51,7 @@ export function SearchableSelect({
           className={cn(
             'w-full justify-between font-normal',
             !value && 'text-neutral-500',
-            className
+            className,
           )}
         >
           {selectedOption ? selectedOption.label : placeholder}
@@ -86,7 +82,7 @@ export function SearchableSelect({
                   <Check
                     className={cn(
                       'mr-2 h-4 w-4',
-                      value === option.value ? 'opacity-100' : 'opacity-0'
+                      value === option.value ? 'opacity-100' : 'opacity-0',
                     )}
                   />
                   {option.label}
@@ -97,13 +93,7 @@ export function SearchableSelect({
         </Command>
       </PopoverContent>
       {/* Hidden input for form submission */}
-      {name && (
-        <input
-          type="hidden"
-          name={name}
-          value={value || ''}
-        />
-      )}
+      {name && <input type="hidden" name={name} value={value || ''} />}
     </Popover>
   );
 }

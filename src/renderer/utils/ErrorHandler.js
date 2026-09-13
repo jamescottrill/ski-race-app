@@ -76,8 +76,15 @@ export const showWarning = (message) => {
  * @param {string} options.successMessage - Custom success message
  * @returns {Promise<{success: boolean, data?: any, error?: Error}>}
  */
-export const withErrorHandling = async (operation, operationName, options = {}) => {
-  const { showSuccessToast = false, successMessage = 'Operation completed successfully' } = options;
+export const withErrorHandling = async (
+  operation,
+  operationName,
+  options = {},
+) => {
+  const {
+    showSuccessToast = false,
+    successMessage = 'Operation completed successfully',
+  } = options;
 
   try {
     const result = await operation();

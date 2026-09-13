@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Plus, 
-  Eye, 
+import {
+  Plus,
+  Eye,
   Trophy,
   Calendar,
   MapPin,
   ArrowLeft,
   ChartBar,
   Users,
-  User
+  User,
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
   Button,
   DataTable,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -67,14 +67,19 @@ export default function RaceLandingPageNew() {
       header: 'Type',
       accessorKey: 'race_type',
       cell: ({ row }) => (
-        <span className={cn(
-          'px-2 py-1 rounded-md text-xs font-medium',
-          row.original.race_type === 'Slalom' && 'bg-blue-100 text-blue-700',
-          row.original.race_type === 'Giant Slalom' && 'bg-purple-100 text-purple-700',
-          row.original.race_type === 'Super G' && 'bg-orange-100 text-orange-700',
-          row.original.race_type === 'Downhill' && 'bg-red-100 text-red-700',
-          row.original.race_type === 'Alpine Combined' && 'bg-green-100 text-green-700',
-        )}>
+        <span
+          className={cn(
+            'px-2 py-1 rounded-md text-xs font-medium',
+            row.original.race_type === 'Slalom' && 'bg-blue-100 text-blue-700',
+            row.original.race_type === 'Giant Slalom' &&
+              'bg-purple-100 text-purple-700',
+            row.original.race_type === 'Super G' &&
+              'bg-orange-100 text-orange-700',
+            row.original.race_type === 'Downhill' && 'bg-red-100 text-red-700',
+            row.original.race_type === 'Alpine Combined' &&
+              'bg-green-100 text-green-700',
+          )}
+        >
           {row.original.race_type}
         </span>
       ),
@@ -105,14 +110,13 @@ export default function RaceLandingPageNew() {
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-neutral-400" />
           <span className="text-sm">
-            {row.original.race_date 
+            {row.original.race_date
               ? new Date(row.original.race_date).toLocaleDateString('en-GB', {
                   day: 'numeric',
                   month: 'short',
-                  year: 'numeric'
+                  year: 'numeric',
                 })
-              : 'TBD'
-            }
+              : 'TBD'}
           </span>
         </div>
       ),
@@ -132,7 +136,8 @@ export default function RaceLandingPageNew() {
       accessorKey: 'number_runs',
       cell: ({ row }) => (
         <span className="px-2 py-1 bg-neutral-100 rounded-md text-sm font-medium">
-          {row.original.number_runs} {row.original.number_runs === 1 ? 'run' : 'runs'}
+          {row.original.number_runs}{' '}
+          {row.original.number_runs === 1 ? 'run' : 'runs'}
         </span>
       ),
     },
@@ -158,7 +163,9 @@ export default function RaceLandingPageNew() {
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/competition/${competitionId}/race/${row.original.id}/results`);
+              navigate(
+                `/competition/${competitionId}/race/${row.original.id}/results`,
+              );
             }}
             leftIcon={<ChartBar className="w-3 h-3" />}
           >
@@ -199,7 +206,9 @@ export default function RaceLandingPageNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-700">{races.length}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {races.length}
+              </p>
               <p className="text-sm text-neutral-600">Total Races</p>
             </div>
             <Trophy className="w-8 h-8 text-primary-300" />
@@ -209,7 +218,7 @@ export default function RaceLandingPageNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-success">
-                {races.filter(r => r.is_team).length}
+                {races.filter((r) => r.is_team).length}
               </p>
               <p className="text-sm text-neutral-600">Team Races</p>
             </div>
@@ -220,7 +229,7 @@ export default function RaceLandingPageNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-info">
-                {races.filter(r => !r.is_team).length}
+                {races.filter((r) => !r.is_team).length}
               </p>
               <p className="text-sm text-neutral-600">Individual</p>
             </div>
@@ -231,7 +240,7 @@ export default function RaceLandingPageNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-warning">
-                {[...new Set(races.map(r => r.race_type))].length}
+                {[...new Set(races.map((r) => r.race_type))].length}
               </p>
               <p className="text-sm text-neutral-600">Race Types</p>
             </div>
@@ -253,7 +262,9 @@ export default function RaceLandingPageNew() {
               <p className="text-neutral-500">No races created yet</p>
               <Button
                 variant="primary"
-                onClick={() => navigate(`/competition/${competitionId}/race/new`)}
+                onClick={() =>
+                  navigate(`/competition/${competitionId}/race/new`)
+                }
                 leftIcon={<Plus className="w-4 h-4" />}
               >
                 Create First Race
@@ -263,7 +274,9 @@ export default function RaceLandingPageNew() {
             <DataTable
               columns={columns}
               data={races}
-              onRowClick={(row) => navigate(`/competition/${competitionId}/race/${row.id}`)}
+              onRowClick={(row) =>
+                navigate(`/competition/${competitionId}/race/${row.id}`)
+              }
             />
           )}
         </CardContent>

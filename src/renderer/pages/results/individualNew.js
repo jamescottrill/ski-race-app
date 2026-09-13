@@ -7,7 +7,7 @@ import {
   Card,
   CardContent,
   Button,
-  DataTable
+  DataTable,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
@@ -94,7 +94,10 @@ export default function IndividualResultsNew() {
         let position = 1;
         let previousTotal = null;
         data = data.map((competitor, index) => {
-          if (previousTotal !== null && competitor.total_points !== previousTotal) {
+          if (
+            previousTotal !== null &&
+            competitor.total_points !== previousTotal
+          ) {
             position = index + 1;
           }
           previousTotal = competitor.total_points;
@@ -122,26 +125,27 @@ export default function IndividualResultsNew() {
         accessorKey: 'position',
         cell: ({ row }) => {
           return <div className="font-bold">{row.original.position}</div>;
-        }
+        },
       },
       {
         header: 'Rank',
         accessorKey: 'title',
-        cell: ({ row }) => row.original.title || '-'
+        cell: ({ row }) => row.original.title || '-',
       },
       {
         header: 'Name',
         accessorKey: 'name',
         cell: ({ row }) => (
-          <div className="font-medium">{row.original.last_name?.toUpperCase()} {row.original.first_name}
+          <div className="font-medium">
+            {row.original.last_name?.toUpperCase()} {row.original.first_name}
           </div>
-        )
+        ),
       },
       {
         header: 'Team',
         accessorKey: 'team_name',
         cell: ({ row }) => row.original.team_name || '-',
-      }
+      },
     ];
 
     const raceColumns = raceList
@@ -153,7 +157,7 @@ export default function IndividualResultsNew() {
           <div className="text-center font-mono">
             {row.original[race.id].toFixed(2) || ''}
           </div>
-        )
+        ),
       }));
 
     const totalColumn = {
@@ -165,7 +169,7 @@ export default function IndividualResultsNew() {
             {row.original.total_points.toFixed(2)}
           </div>
         );
-      }
+      },
     };
 
     return [...baseColumns, ...raceColumns, totalColumn];
@@ -224,7 +228,8 @@ export default function IndividualResultsNew() {
             <div className="text-center py-12">
               <Trophy className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
               <p className="text-neutral-600">
-                You need at least one individual race completed to see the results.
+                You need at least one individual race completed to see the
+                results.
               </p>
             </div>
           </CardContent>

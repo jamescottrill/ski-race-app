@@ -13,6 +13,7 @@ const {
   importDatabase,
   switchDatabase,
   getCurrentDatabasePath,
+  closeActiveDatabase,
 } = require('./utils/db');
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
@@ -102,6 +103,8 @@ export default class MenuBuilder {
           click: () => {
             const result = switchDatabase();
             if (result) {
+              // app.exit() skips will-quit, so release the database here
+              closeActiveDatabase();
               app.relaunch();
               app.exit(0);
             }
@@ -112,6 +115,8 @@ export default class MenuBuilder {
           click: () => {
             const result = importDatabase();
             if (result) {
+              // app.exit() skips will-quit, so release the database here
+              closeActiveDatabase();
               app.relaunch();
               app.exit(0);
             }
@@ -132,7 +137,10 @@ export default class MenuBuilder {
             if (dbPath) {
               shell.showItemInFolder(dbPath);
             } else {
-              dialog.showErrorBox('No Database', 'No database is currently open.');
+              dialog.showErrorBox(
+                'No Database',
+                'No database is currently open.',
+              );
             }
           },
         },
@@ -229,11 +237,18 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuFile, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuAbout,
+      subMenuFile,
+      subMenuEdit,
+      subMenuView,
+      subMenuWindow,
+      subMenuHelp,
+    ];
   }
 
-  buildDefaultTemplate() {
-    const templateDefault = [
+  buildDefaultTemplate(): MenuItemConstructorOptions[] {
+    const templateDefault: MenuItemConstructorOptions[] = [
       {
         label: '&File',
         submenu: [
@@ -243,6 +258,8 @@ export default class MenuBuilder {
             click: () => {
               const result = switchDatabase();
               if (result) {
+                // app.exit() skips will-quit, so release the database here
+                closeActiveDatabase();
                 app.relaunch();
                 app.exit(0);
               }
@@ -253,6 +270,8 @@ export default class MenuBuilder {
             click: () => {
               const result = importDatabase();
               if (result) {
+                // app.exit() skips will-quit, so release the database here
+                closeActiveDatabase();
                 app.relaunch();
                 app.exit(0);
               }
@@ -273,7 +292,10 @@ export default class MenuBuilder {
               if (dbPath) {
                 shell.showItemInFolder(dbPath);
               } else {
-                dialog.showErrorBox('No Database', 'No database is currently open.');
+                dialog.showErrorBox(
+                  'No Database',
+                  'No database is currently open.',
+                );
               }
             },
           },

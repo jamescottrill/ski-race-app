@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Calendar, MapPin, Users, Clock, Flag } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  Calendar,
+  MapPin,
+  Users,
+  Clock,
+  Flag,
+} from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -14,7 +22,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent
+  TabsContent,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -51,7 +59,7 @@ export default function EditRacePageNew() {
     course_name: '',
     start_altitude: '',
     finish_altitude: '',
-    homologation: ''
+    homologation: '',
     // Note: course_setter, number_of_gates, and forerunners are stored per run in race_run table
   });
 
@@ -105,7 +113,7 @@ export default function EditRacePageNew() {
           course_name: race.course_name || '',
           start_altitude: race.start_altitude || '',
           finish_altitude: race.finish_altitude || '',
-          homologation: race.homologation || ''
+          homologation: race.homologation || '',
           // Note: course_setter, number_of_gates, and forerunners are loaded from race_run table
         });
       }
@@ -118,9 +126,9 @@ export default function EditRacePageNew() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -197,7 +205,9 @@ export default function EditRacePageNew() {
     return (
       <PageContainer>
         <PageHeader title="Loading..." />
-        <Card><CardContent>Loading race details...</CardContent></Card>
+        <Card>
+          <CardContent>Loading race details...</CardContent>
+        </Card>
       </PageContainer>
     );
   }
@@ -241,7 +251,9 @@ export default function EditRacePageNew() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="race_name" required>Race Name</Label>
+                    <Label htmlFor="race_name" required>
+                      Race Name
+                    </Label>
                     <Input
                       id="race_name"
                       name="race_name"
@@ -253,7 +265,9 @@ export default function EditRacePageNew() {
                   </div>
 
                   <div>
-                    <Label htmlFor="race_type" required>Race Type</Label>
+                    <Label htmlFor="race_type" required>
+                      Race Type
+                    </Label>
                     <SimpleSelect
                       id="race_type"
                       name="race_type"
@@ -316,12 +330,16 @@ export default function EditRacePageNew() {
                       placeholder="15"
                       min="1"
                     />
-                    <p className="text-xs text-neutral-500 mt-1">Top N bibs randomised in Run 1, reversed in Run 2</p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      Top N bibs randomised in Run 1, reversed in Run 2
+                    </p>
                   </div>
 
                   {formData.women_separate && (
                     <div>
-                      <Label htmlFor="flip_count_women">Flip Count (Women)</Label>
+                      <Label htmlFor="flip_count_women">
+                        Flip Count (Women)
+                      </Label>
                       <Input
                         id="flip_count_women"
                         name="flip_count_women"
@@ -402,10 +420,14 @@ export default function EditRacePageNew() {
                       id="chief_of_race"
                       name="chief_of_race"
                       value={formData.chief_of_race}
-                      onChange={(value) => handleInputChange({ target: { name: 'chief_of_race', value } })}
-                      options={people.map(person => ({
+                      onChange={(value) =>
+                        handleInputChange({
+                          target: { name: 'chief_of_race', value },
+                        })
+                      }
+                      options={people.map((person) => ({
                         value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
+                        label: `${person.last_name}, ${person.first_name}`,
                       }))}
                       placeholder="Select Chief of Race"
                       searchPlaceholder="Search people..."
@@ -419,10 +441,14 @@ export default function EditRacePageNew() {
                       id="tech_delegate"
                       name="tech_delegate"
                       value={formData.tech_delegate}
-                      onChange={(value) => handleInputChange({ target: { name: 'tech_delegate', value } })}
-                      options={people.map(person => ({
+                      onChange={(value) =>
+                        handleInputChange({
+                          target: { name: 'tech_delegate', value },
+                        })
+                      }
+                      options={people.map((person) => ({
                         value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
+                        label: `${person.last_name}, ${person.first_name}`,
                       }))}
                       placeholder="Select Tech Delegate"
                       searchPlaceholder="Search people..."
@@ -436,10 +462,14 @@ export default function EditRacePageNew() {
                       id="referee"
                       name="referee"
                       value={formData.referee}
-                      onChange={(value) => handleInputChange({ target: { name: 'referee', value } })}
-                      options={people.map(person => ({
+                      onChange={(value) =>
+                        handleInputChange({
+                          target: { name: 'referee', value },
+                        })
+                      }
+                      options={people.map((person) => ({
                         value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
+                        label: `${person.last_name}, ${person.first_name}`,
                       }))}
                       placeholder="Select Referee"
                       searchPlaceholder="Search people..."
@@ -453,10 +483,14 @@ export default function EditRacePageNew() {
                       id="asst_referee"
                       name="asst_referee"
                       value={formData.asst_referee}
-                      onChange={(value) => handleInputChange({ target: { name: 'asst_referee', value } })}
-                      options={people.map(person => ({
+                      onChange={(value) =>
+                        handleInputChange({
+                          target: { name: 'asst_referee', value },
+                        })
+                      }
+                      options={people.map((person) => ({
                         value: person.id.toString(),
-                        label: `${person.last_name}, ${person.first_name}`
+                        label: `${person.last_name}, ${person.first_name}`,
                       }))}
                       placeholder="Select Assistant Referee"
                       searchPlaceholder="Search people..."
@@ -521,8 +555,10 @@ export default function EditRacePageNew() {
                   <div className="col-span-2">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Run-specific details (gates, course setter, forerunners) are configured separately for each race run.
-                        Use the Race Runs management page to set these details.
+                        <strong>Note:</strong> Run-specific details (gates,
+                        course setter, forerunners) are configured separately
+                        for each race run. Use the Race Runs management page to
+                        set these details.
                       </p>
                     </div>
                   </div>
@@ -558,7 +594,9 @@ export default function EditRacePageNew() {
                   </div>
 
                   <div>
-                    <Label htmlFor="temp_start">Temperature at Start (°C)</Label>
+                    <Label htmlFor="temp_start">
+                      Temperature at Start (°C)
+                    </Label>
                     <Input
                       id="temp_start"
                       name="temp_start"
@@ -570,7 +608,9 @@ export default function EditRacePageNew() {
                   </div>
 
                   <div>
-                    <Label htmlFor="temp_finish">Temperature at Finish (°C)</Label>
+                    <Label htmlFor="temp_finish">
+                      Temperature at Finish (°C)
+                    </Label>
                     <Input
                       id="temp_finish"
                       name="temp_finish"

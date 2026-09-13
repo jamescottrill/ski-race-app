@@ -25,7 +25,14 @@ const resultsTwoPdf = (
         { width: 'auto', text: 'Venue: ' },
         { width: '*', text: raceDetails.venue },
         { width: 'auto', text: 'Date: ' },
-        { width: '*', text: new Date(raceDetails.race_date).toLocaleString('default', { day: "numeric", month: 'long', year: "numeric" }) },
+        {
+          width: '*',
+          text: new Date(raceDetails.race_date).toLocaleString('default', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }),
+        },
       ],
       columnGap: 10,
     },
@@ -46,8 +53,12 @@ const resultsTwoPdf = (
     },
     {
       columns: [
-        { width: 100,  text: 'TD: ', style: 'key' },
-        { width: '*', text: raceDetails.tech_delegate.trim() || 'N/A', style: 'text' },
+        { width: 100, text: 'TD: ', style: 'key' },
+        {
+          width: '*',
+          text: raceDetails.tech_delegate.trim() || 'N/A',
+          style: 'text',
+        },
         { width: 120, text: 'Start Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.start_altitude, style: 'text' },
       ],
@@ -56,7 +67,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Referee: ', style: 'key' },
-        { width: '*', text: raceDetails.referee.trim() || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.referee.trim() || 'N/A',
+          style: 'text',
+        },
         { width: 120, text: 'Finish Height (m): ', style: 'key' },
         { width: '*', text: raceDetails.finish_altitude, style: 'text' },
       ],
@@ -65,7 +80,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Assistant Referee: ', style: 'key' },
-        { width: '*', text: raceDetails.asst_referee.trim() || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.asst_referee.trim() || 'N/A',
+          style: 'text',
+        },
         { width: 120, text: 'Vertical Difference (m): ', style: 'key' },
         { width: '*', text: raceDetails.altitude_difference, style: 'text' },
       ],
@@ -74,7 +93,11 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Chief of Race: ', style: 'key' },
-        { width: '*', text: raceDetails.chief_of_race.trim()  || 'N/A', style: 'text' },
+        {
+          width: '*',
+          text: raceDetails.chief_of_race.trim() || 'N/A',
+          style: 'text',
+        },
         { width: 120, text: 'Homologation: ', style: 'key' },
         { width: '*', text: raceDetails.homologation, style: 'text' },
       ],
@@ -99,7 +122,7 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Number of Gates: ', style: 'key' },
-        { width: '*', text: raceDetails.run1_number_gates , style: 'text' },
+        { width: '*', text: raceDetails.run1_number_gates, style: 'text' },
         { width: '*', text: raceDetails.run2_number_gates, style: 'text' },
       ],
       columnGap: 5,
@@ -107,7 +130,7 @@ const resultsTwoPdf = (
     {
       columns: [
         { width: 100, text: 'Turning Gates: ', style: 'key' },
-        { width: '*', text: raceDetails.run1_turning_gates , style: 'text' },
+        { width: '*', text: raceDetails.run1_turning_gates, style: 'text' },
         { width: '*', text: raceDetails.run2_turning_gates, style: 'text' },
       ],
       columnGap: 5,
@@ -125,7 +148,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: 'Forerunners: ', style: 'key' },
         { width: 10, text: 'A: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_a.trim() , style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_a.trim(), style: 'text' },
         { width: 10, text: 'A: ', style: 'key' },
         { width: '*', text: raceDetails.forerunner_2_a.trim(), style: 'text' },
       ],
@@ -135,7 +158,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'B: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_b.trim() , style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_b.trim(), style: 'text' },
         { width: 10, text: 'B: ', style: 'key' },
         { width: '*', text: raceDetails.forerunner_2_b.trim(), style: 'text' },
       ],
@@ -145,7 +168,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'C: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_c.trim() , style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_c.trim(), style: 'text' },
         { width: 10, text: 'C: ', style: 'key' },
         { width: '*', text: raceDetails.forerunner_2_c.trim(), style: 'text' },
       ],
@@ -155,7 +178,7 @@ const resultsTwoPdf = (
       columns: [
         { width: 100, text: '', style: 'key' },
         { width: 10, text: 'D: ', style: 'key' },
-        { width: '*', text: raceDetails.forerunner_1_d.trim() , style: 'text' },
+        { width: '*', text: raceDetails.forerunner_1_d.trim(), style: 'text' },
         { width: 10, text: 'D: ', style: 'key' },
         { width: '*', text: raceDetails.forerunner_2_d.trim(), style: 'text' },
       ],
@@ -188,18 +211,7 @@ const resultsTwoPdf = (
       style: 'table',
       table: {
         headerRows: 1,
-        widths: [
-          20,
-          20,
-          30,
-          '*',
-          55,
-          'auto',
-          'auto',
-          'auto',
-          'auto',
-          'auto',
-        ],
+        widths: [20, 20, 30, '*', 55, 'auto', 'auto', 'auto', 'auto', 'auto'],
         body: [
           [
             { text: 'Pos', style: 'tableHeader' },
@@ -310,8 +322,6 @@ const resultsTwoPdf = (
 
   const pdfDoc = pdfMake.createPdf(docDefinition);
 
-
-
   // Save the PDF
   pdfDoc.getBuffer((buffer) => {
     const formattedDate = getFormattedDate();
@@ -320,12 +330,12 @@ const resultsTwoPdf = (
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((r) => {
-          if (r.success) {
-            showSuccess(`PDF saved successfully to: ${r.filePath}`);
-          } else {
-            alert('PDF save cancelled.');
-          }
-        })
+        if (r.success) {
+          showSuccess(`PDF saved successfully to: ${r.filePath}`);
+        } else {
+          alert('PDF save cancelled.');
+        }
+      })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

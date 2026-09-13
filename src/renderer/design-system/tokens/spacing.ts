@@ -9,51 +9,51 @@ const BASE_UNIT = 8;
 export const spacing = {
   0: '0',
   px: '1px',
-  0.5: `${BASE_UNIT * 0.0625}rem`,  // 2px
-  1: `${BASE_UNIT * 0.125}rem`,     // 4px
-  1.5: `${BASE_UNIT * 0.1875}rem`,  // 6px
-  2: `${BASE_UNIT * 0.25}rem`,      // 8px
-  2.5: `${BASE_UNIT * 0.3125}rem`,  // 10px
-  3: `${BASE_UNIT * 0.375}rem`,     // 12px
-  3.5: `${BASE_UNIT * 0.4375}rem`,  // 14px
-  4: `${BASE_UNIT * 0.5}rem`,       // 16px
-  5: `${BASE_UNIT * 0.625}rem`,     // 20px
-  6: `${BASE_UNIT * 0.75}rem`,      // 24px
-  7: `${BASE_UNIT * 0.875}rem`,     // 28px
-  8: `${BASE_UNIT * 1}rem`,         // 32px
-  9: `${BASE_UNIT * 1.125}rem`,     // 36px
-  10: `${BASE_UNIT * 1.25}rem`,     // 40px
-  11: `${BASE_UNIT * 1.375}rem`,    // 44px
-  12: `${BASE_UNIT * 1.5}rem`,      // 48px
-  14: `${BASE_UNIT * 1.75}rem`,     // 56px
-  16: `${BASE_UNIT * 2}rem`,        // 64px
-  20: `${BASE_UNIT * 2.5}rem`,      // 80px
-  24: `${BASE_UNIT * 3}rem`,        // 96px
-  28: `${BASE_UNIT * 3.5}rem`,      // 112px
-  32: `${BASE_UNIT * 4}rem`,        // 128px
-  36: `${BASE_UNIT * 4.5}rem`,      // 144px
-  40: `${BASE_UNIT * 5}rem`,        // 160px
-  44: `${BASE_UNIT * 5.5}rem`,      // 176px
-  48: `${BASE_UNIT * 6}rem`,        // 192px
-  52: `${BASE_UNIT * 6.5}rem`,      // 208px
-  56: `${BASE_UNIT * 7}rem`,        // 224px
-  60: `${BASE_UNIT * 7.5}rem`,      // 240px
-  64: `${BASE_UNIT * 8}rem`,        // 256px
-  72: `${BASE_UNIT * 9}rem`,        // 288px
-  80: `${BASE_UNIT * 10}rem`,       // 320px
-  96: `${BASE_UNIT * 12}rem`,       // 384px
+  0.5: `${BASE_UNIT * 0.0625}rem`, // 2px
+  1: `${BASE_UNIT * 0.125}rem`, // 4px
+  1.5: `${BASE_UNIT * 0.1875}rem`, // 6px
+  2: `${BASE_UNIT * 0.25}rem`, // 8px
+  2.5: `${BASE_UNIT * 0.3125}rem`, // 10px
+  3: `${BASE_UNIT * 0.375}rem`, // 12px
+  3.5: `${BASE_UNIT * 0.4375}rem`, // 14px
+  4: `${BASE_UNIT * 0.5}rem`, // 16px
+  5: `${BASE_UNIT * 0.625}rem`, // 20px
+  6: `${BASE_UNIT * 0.75}rem`, // 24px
+  7: `${BASE_UNIT * 0.875}rem`, // 28px
+  8: `${BASE_UNIT * 1}rem`, // 32px
+  9: `${BASE_UNIT * 1.125}rem`, // 36px
+  10: `${BASE_UNIT * 1.25}rem`, // 40px
+  11: `${BASE_UNIT * 1.375}rem`, // 44px
+  12: `${BASE_UNIT * 1.5}rem`, // 48px
+  14: `${BASE_UNIT * 1.75}rem`, // 56px
+  16: `${BASE_UNIT * 2}rem`, // 64px
+  20: `${BASE_UNIT * 2.5}rem`, // 80px
+  24: `${BASE_UNIT * 3}rem`, // 96px
+  28: `${BASE_UNIT * 3.5}rem`, // 112px
+  32: `${BASE_UNIT * 4}rem`, // 128px
+  36: `${BASE_UNIT * 4.5}rem`, // 144px
+  40: `${BASE_UNIT * 5}rem`, // 160px
+  44: `${BASE_UNIT * 5.5}rem`, // 176px
+  48: `${BASE_UNIT * 6}rem`, // 192px
+  52: `${BASE_UNIT * 6.5}rem`, // 208px
+  56: `${BASE_UNIT * 7}rem`, // 224px
+  60: `${BASE_UNIT * 7.5}rem`, // 240px
+  64: `${BASE_UNIT * 8}rem`, // 256px
+  72: `${BASE_UNIT * 9}rem`, // 288px
+  80: `${BASE_UNIT * 10}rem`, // 320px
+  96: `${BASE_UNIT * 12}rem`, // 384px
 } as const;
 
 // Border Radius
 export const borderRadius = {
   none: '0',
-  sm: '0.125rem',    // 2px
+  sm: '0.125rem', // 2px
   DEFAULT: '0.25rem', // 4px
-  md: '0.375rem',    // 6px
-  lg: '0.5rem',      // 8px
-  xl: '0.75rem',     // 12px
-  '2xl': '1rem',     // 16px
-  '3xl': '1.5rem',   // 24px
+  md: '0.375rem', // 6px
+  lg: '0.5rem', // 8px
+  xl: '0.75rem', // 12px
+  '2xl': '1rem', // 16px
+  '3xl': '1.5rem', // 24px
   full: '9999px',
 } as const;
 

@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Trophy,
-  Users,
-  User,
-  ArrowLeft,
-  Calendar,
-  MapPin
-} from 'lucide-react';
+import { Trophy, Users, User, ArrowLeft, Calendar, MapPin } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
   Card,
   CardContent,
-  Button
+  Button,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -29,7 +22,8 @@ function ResultsPageNew() {
     const fetchData = async () => {
       try {
         // Fetch competition name
-        const compQuery = 'SELECT competition_name FROM competitions WHERE id = ?';
+        const compQuery =
+          'SELECT competition_name FROM competitions WHERE id = ?';
         const compResult = await window.api.select(compQuery, [competitionId]);
         setCompetitionName(compResult[0].competition_name);
 
@@ -50,7 +44,9 @@ function ResultsPageNew() {
           GROUP BY r.race_id, r.race_name, r.race_date, r.venue, r.is_seeding, r.is_team
           ORDER BY r.race_date ASC
         `;
-        const racesResult = await window.api.select(racesQuery, [competitionId]);
+        const racesResult = await window.api.select(racesQuery, [
+          competitionId,
+        ]);
         setRaces(racesResult);
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -92,8 +88,7 @@ function ResultsPageNew() {
                 console.log('Called');
                 console.log(`/competition/${competitionId}/results/team`);
                 navigate(`/competition/${competitionId}/results/team`);
-              }
-              }
+              }}
               leftIcon={<Users className="w-4 h-4" />}
             >
               Team Standings
@@ -127,7 +122,11 @@ function ResultsPageNew() {
               key={race.race_id}
               interactive
               className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => navigate(`/competition/${competitionId}/race/${race.race_id}/results`)}
+              onClick={() =>
+                navigate(
+                  `/competition/${competitionId}/race/${race.race_id}/results`,
+                )
+              }
             >
               <CardContent>
                 <div className="flex items-start justify-between mb-4">

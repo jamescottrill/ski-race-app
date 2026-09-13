@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Users,
   TrendingUp,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -14,7 +14,7 @@ import {
   Card,
   CardContent,
   Button,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { getAASLSeasons, getAASLStats } from '../../utils/AASLManagement';
@@ -94,7 +94,9 @@ export default function AASLManagementPage() {
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900">View AASL</h3>
-              <p className="text-sm text-neutral-600">Browse seed list entries</p>
+              <p className="text-sm text-neutral-600">
+                Browse seed list entries
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -116,7 +118,9 @@ export default function AASLManagementPage() {
         <Card>
           <CardContent>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-neutral-900">Season Statistics</h3>
+              <h3 className="text-lg font-semibold text-neutral-900">
+                Season Statistics
+              </h3>
               <select
                 className="px-3 py-2 border border-neutral-300 rounded-md text-sm"
                 value={selectedSeason || ''}
@@ -137,7 +141,9 @@ export default function AASLManagementPage() {
                     <Users className="w-4 h-4" />
                     <span className="text-sm">Total Skiers</span>
                   </div>
-                  <p className="text-2xl font-bold text-neutral-900">{stats.total}</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {stats.total}
+                  </p>
                 </div>
 
                 <div className="p-4 bg-neutral-50 rounded-lg">
@@ -176,7 +182,9 @@ export default function AASLManagementPage() {
         <Card>
           <CardContent className="text-center py-12">
             <Calendar className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">No AASL Data</h3>
+            <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+              No AASL Data
+            </h3>
             <p className="text-neutral-600 mb-4">
               Import an AASL Excel file to get started.
             </p>

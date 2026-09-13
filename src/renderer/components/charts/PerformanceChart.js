@@ -10,7 +10,10 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { RACE_TYPE_COLOURS, RACE_TYPE_NAMES } from '../../queries/CompetitorHistory';
+import {
+  RACE_TYPE_COLOURS,
+  RACE_TYPE_NAMES,
+} from '../../queries/CompetitorHistory';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -22,10 +25,16 @@ const CustomTooltip = ({ active, payload, label }) => {
         </p>
         <div className="mt-2 space-y-1">
           <p className="text-sm text-neutral-600">
-            Average: <span className="font-bold text-primary-700">{data.avgPoints.toFixed(2)} pts</span>
+            Average:{' '}
+            <span className="font-bold text-primary-700">
+              {data.avgPoints.toFixed(2)} pts
+            </span>
           </p>
           <p className="text-sm text-neutral-600">
-            Best: <span className="font-bold text-green-600">{data.bestPoints.toFixed(2)} pts</span>
+            Best:{' '}
+            <span className="font-bold text-green-600">
+              {data.bestPoints.toFixed(2)} pts
+            </span>
           </p>
           <p className="text-sm text-neutral-600">
             Races: <span className="font-medium">{data.count}</span>
@@ -47,7 +56,8 @@ export default function PerformanceChart({ data }) {
   }
 
   const validData = data.filter(
-    (race) => race.calculated_seed_points != null && race.calculated_seed_points >= 0
+    (race) =>
+      race.calculated_seed_points != null && race.calculated_seed_points >= 0,
   );
 
   if (validData.length === 0) {

@@ -4,7 +4,7 @@ import SidebarNew from './SidebarNew';
 
 export default function LayoutNew({ children }) {
   return (
-    <AppShell 
+    <AppShell
       sidebar={<SidebarNew />}
       className="bg-gradient-to-br from-alpine-ice to-neutral-50"
     >

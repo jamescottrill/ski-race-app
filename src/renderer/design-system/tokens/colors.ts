@@ -13,7 +13,7 @@ export const colors = {
     700: '#1E3A5F',
     900: '#0A1628',
   },
-  
+
   // Alpine Theme
   alpine: {
     white: '#FFFFFF',
@@ -21,14 +21,14 @@ export const colors = {
     shadow: '#64748B',
     rock: '#475569',
   },
-  
+
   // Competition Colors
   competition: {
     gold: '#FFB800',
     silver: '#C0C0C0',
     bronze: '#CD7F32',
   },
-  
+
   // Semantic Colors
   semantic: {
     success: '#10B981',
@@ -36,7 +36,7 @@ export const colors = {
     danger: '#EF4444',
     info: '#3B82F6',
   },
-  
+
   // Neutral Colors
   neutral: {
     0: '#FFFFFF',
@@ -52,7 +52,7 @@ export const colors = {
     900: '#111827',
     950: '#030712',
   },
-  
+
   // System Colors
   background: '#FAFBFC',
   surface: '#FFFFFF',

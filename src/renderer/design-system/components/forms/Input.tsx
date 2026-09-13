@@ -11,17 +11,20 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({
-    className,
-    label,
-    error,
-    helperText,
-    fullWidth,
-    leftIcon,
-    rightIcon,
-    type = 'text',
-    ...props
-  }, ref) => {
+  (
+    {
+      className,
+      label,
+      error,
+      helperText,
+      fullWidth,
+      leftIcon,
+      rightIcon,
+      type = 'text',
+      ...props
+    },
+    ref,
+  ) => {
     const inputId = props.id || props.name;
 
     return (
@@ -31,7 +34,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             htmlFor={inputId}
             className={cn(
               'block text-sm font-medium mb-1',
-              error ? 'text-danger' : 'text-neutral-700'
+              error ? 'text-danger' : 'text-neutral-700',
             )}
           >
             {label}
@@ -61,11 +64,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               !leftIcon && rightIcon && 'pl-3',
               leftIcon && !rightIcon && 'pr-3',
               fullWidth && 'w-full',
-              className
+              className,
             )}
             id={inputId}
             aria-invalid={!!error}
-            aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
+            aria-describedby={
+              error
+                ? `${inputId}-error`
+                : helperText
+                  ? `${inputId}-helper`
+                  : undefined
+            }
             {...props}
           />
           {rightIcon && (
@@ -86,7 +95,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';

@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Users,
-  ArrowLeft,
-  Search,
-  Edit2,
-  Trash2,
-  Save,
-  X
-} from 'lucide-react';
+import { Users, ArrowLeft, Search, Edit2, Trash2, Save, X } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -18,7 +10,7 @@ import {
   DataTable,
   Badge,
   Input,
-  Label
+  Label,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -38,7 +30,7 @@ export default function EditCompetitorsPageNew() {
   }, [competitionId]);
 
   useEffect(() => {
-    const filtered = competitors.filter(comp => {
+    const filtered = competitors.filter((comp) => {
       const searchLower = searchTerm.toLowerCase();
       return (
         comp.first_name?.toLowerCase().includes(searchLower) ||
@@ -91,7 +83,7 @@ export default function EditCompetitorsPageNew() {
       last_name: competitor.last_name,
       regiment: competitor.regiment,
       arrival_corps_seed: competitor.arrival_corps_seed,
-      arrival_army_seed: competitor.arrival_army_seed
+      arrival_army_seed: competitor.arrival_army_seed,
     });
   };
 
@@ -100,7 +92,7 @@ export default function EditCompetitorsPageNew() {
       // Update person table
       await window.api.insert(
         'UPDATE people SET first_name = ?, last_name = ? WHERE id = ?',
-        [editForm.first_name, editForm.last_name, editingId]
+        [editForm.first_name, editForm.last_name, editingId],
       );
 
       // Update competition_competitor table
@@ -114,8 +106,8 @@ export default function EditCompetitorsPageNew() {
           editForm.arrival_corps_seed,
           editForm.arrival_army_seed,
           editingId,
-          competitionId
-        ]
+          competitionId,
+        ],
       );
 
       setEditingId(null);
@@ -127,11 +119,15 @@ export default function EditCompetitorsPageNew() {
   };
 
   const handleDelete = async (competitor) => {
-    if (window.confirm(`Are you sure you want to remove ${competitor.first_name} ${competitor.last_name} from this competition?`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to remove ${competitor.first_name} ${competitor.last_name} from this competition?`,
+      )
+    ) {
       try {
         await window.api.delete(
           'DELETE FROM competition_competitor WHERE racer_id = ? AND competition_id = ?',
-          [competitor.id, competitionId]
+          [competitor.id, competitionId],
         );
         await fetchCompetitors();
       } catch (error) {
@@ -151,13 +147,17 @@ export default function EditCompetitorsPageNew() {
             <div className="flex gap-2">
               <Input
                 value={editForm.first_name}
-                onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, first_name: e.target.value })
+                }
                 placeholder="First"
                 className="w-32"
               />
               <Input
                 value={editForm.last_name}
-                onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, last_name: e.target.value })
+                }
                 placeholder="Last"
                 className="w-32"
               />
@@ -168,14 +168,19 @@ export default function EditCompetitorsPageNew() {
           <div>
             <div className="font-medium">
               {row.original.first_name} {row.original.last_name}
-              {row.original.title && <span className="ml-2 text-neutral-500">({row.original.title})</span>}
+              {row.original.title && (
+                <span className="ml-2 text-neutral-500">
+                  ({row.original.title})
+                </span>
+              )}
             </div>
             <div className="text-xs text-neutral-500">
-              {row.original.gender} • DOB: {row.original.birth_year || 'Unknown'}
+              {row.original.gender} • DOB:{' '}
+              {row.original.birth_year || 'Unknown'}
             </div>
           </div>
         );
-      }
+      },
     },
     {
       header: 'Category',
@@ -191,12 +196,16 @@ export default function EditCompetitorsPageNew() {
 
         return categories.length > 0 ? (
           <div className="flex gap-1">
-            {categories.map(cat => (
-              <Badge key={cat} variant="secondary" size="sm">{cat}</Badge>
+            {categories.map((cat) => (
+              <Badge key={cat} variant="secondary" size="sm">
+                {cat}
+              </Badge>
             ))}
           </div>
-        ) : <span className="text-neutral-400">-</span>;
-      }
+        ) : (
+          <span className="text-neutral-400">-</span>
+        );
+      },
     },
     {
       header: 'Regiment',
@@ -206,13 +215,15 @@ export default function EditCompetitorsPageNew() {
           return (
             <Input
               value={editForm.regiment}
-              onChange={(e) => setEditForm({...editForm, regiment: e.target.value})}
+              onChange={(e) =>
+                setEditForm({ ...editForm, regiment: e.target.value })
+              }
               className="w-40"
             />
           );
         }
         return <span className="text-sm">{row.original.regiment || '-'}</span>;
-      }
+      },
     },
     {
       header: 'Seeds',
@@ -224,14 +235,24 @@ export default function EditCompetitorsPageNew() {
               <Input
                 type="number"
                 value={editForm.arrival_corps_seed}
-                onChange={(e) => setEditForm({...editForm, arrival_corps_seed: e.target.value})}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    arrival_corps_seed: e.target.value,
+                  })
+                }
                 placeholder="Corps"
                 className="w-20"
               />
               <Input
                 type="number"
                 value={editForm.arrival_army_seed}
-                onChange={(e) => setEditForm({...editForm, arrival_army_seed: e.target.value})}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    arrival_army_seed: e.target.value,
+                  })
+                }
                 placeholder="Army"
                 className="w-20"
               />
@@ -241,12 +262,12 @@ export default function EditCompetitorsPageNew() {
         return (
           <div className="text-sm">
             <span className="font-mono">
-              C: {row.original.arrival_corps_seed || '-'} /
-              A: {row.original.arrival_army_seed || '-'}
+              C: {row.original.arrival_corps_seed || '-'} / A:{' '}
+              {row.original.arrival_army_seed || '-'}
             </span>
           </div>
         );
-      }
+      },
     },
     {
       header: 'Actions',
@@ -294,8 +315,8 @@ export default function EditCompetitorsPageNew() {
             </Button>
           </div>
         );
-      }
-    }
+      },
+    },
   ];
 
   return (
@@ -339,11 +360,17 @@ export default function EditCompetitorsPageNew() {
             <div className="p-8 text-center">
               <Users className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
               <p className="text-neutral-600">
-                {searchTerm ? 'No competitors match your search' : 'No competitors registered'}
+                {searchTerm
+                  ? 'No competitors match your search'
+                  : 'No competitors registered'}
               </p>
             </div>
           ) : (
-            <DataTable columns={columns} data={filteredCompetitors} pageSize={20} />
+            <DataTable
+              columns={columns}
+              data={filteredCompetitors}
+              pageSize={20}
+            />
           )}
         </CardContent>
       </Card>

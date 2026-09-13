@@ -19,7 +19,10 @@ export default function MyRoutesNew() {
       <Route path="/new-competition" element={<CreateCompetitionPageNew />} />
       <Route path="/admin/merge-people" element={<MergePeoplePageNew />} />
       <Route path="/competitor/find" element={<FindCompetitorPage />} />
-      <Route path="/competitor/:competitorId/profile" element={<CompetitorProfilePage />} />
+      <Route
+        path="/competitor/:competitorId/profile"
+        element={<CompetitorProfilePage />}
+      />
       <Route
         path="/competition/:competitionId"
         element={

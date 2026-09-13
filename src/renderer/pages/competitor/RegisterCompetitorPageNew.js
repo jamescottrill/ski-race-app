@@ -8,7 +8,7 @@ import {
   Shield,
   Calendar,
   Hash,
-  Users
+  Users,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -20,7 +20,7 @@ import {
   SimpleSelect,
   SearchableSelect,
   Checkbox,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -134,7 +134,7 @@ function RegisterCompetitorPageNew() {
 
     if (name === 'birthYear') {
       const ageCategory = calculateAgeCategory(value);
-      setFormData(prev => ({ ...prev, ...ageCategory }));
+      setFormData((prev) => ({ ...prev, ...ageCategory }));
     }
   };
 
@@ -152,12 +152,12 @@ function RegisterCompetitorPageNew() {
       // Check if service number already exists
       const existingPerson = await window.api.select(
         'SELECT id, first_name, last_name FROM people WHERE id = ?',
-        [racerId]
+        [racerId],
       );
       if (existingPerson.length > 0) {
         const person = existingPerson[0];
         alert(
-          `A person with service number ${racerId} already exists: ${person.first_name} ${person.last_name}`
+          `A person with service number ${racerId} already exists: ${person.first_name} ${person.last_name}`,
         );
         return;
       }
@@ -220,7 +220,11 @@ function RegisterCompetitorPageNew() {
           INSERT INTO competition_team_members (competition_id, team_id, racer_id)
           VALUES (?, ?, ?)
         `;
-        await window.api.insert(teamQuery, [competitionId, formData.team, racerId]);
+        await window.api.insert(teamQuery, [
+          competitionId,
+          formData.team,
+          racerId,
+        ]);
       }
 
       navigate(-1);
@@ -274,7 +278,9 @@ function RegisterCompetitorPageNew() {
                 {/* Personal Details */}
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">Personal Details</h3>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                      Personal Details
+                    </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <TextField
                         label="First Name"
@@ -332,7 +338,9 @@ function RegisterCompetitorPageNew() {
 
                   {/* Military Details */}
                   <div>
-                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">Military Details</h3>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                      Military Details
+                    </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <TextField
                         label="Regiment/Unit"
@@ -375,7 +383,9 @@ function RegisterCompetitorPageNew() {
 
                   {/* Competition Categories */}
                   <div>
-                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">Competition Categories</h3>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                      Competition Categories
+                    </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <TextField
                         label="Arrival Seed Points"
@@ -456,7 +466,9 @@ function RegisterCompetitorPageNew() {
         <div className="col-span-1">
           <Card className="sticky top-4">
             <CardContent>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-4">Registration Guide</h3>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                Registration Guide
+              </h3>
               <div className="space-y-4 text-sm">
                 <div>
                   <div className="flex items-center gap-2 text-primary-700 font-medium mb-2">
@@ -464,7 +476,8 @@ function RegisterCompetitorPageNew() {
                     Existing Competitors
                   </div>
                   <p className="text-neutral-600">
-                    Search for competitors already in the system to avoid duplicates.
+                    Search for competitors already in the system to avoid
+                    duplicates.
                   </p>
                 </div>
                 <div>
@@ -473,7 +486,8 @@ function RegisterCompetitorPageNew() {
                     Age Categories
                   </div>
                   <p className="text-neutral-600">
-                    Age categories are automatically calculated based on date of birth.
+                    Age categories are automatically calculated based on date of
+                    birth.
                   </p>
                 </div>
                 <div>
@@ -482,7 +496,8 @@ function RegisterCompetitorPageNew() {
                     Seed Points
                   </div>
                   <p className="text-neutral-600">
-                    Default arrival seed is 2000. Army seed is optional and based on previous performance.
+                    Default arrival seed is 2000. Army seed is optional and
+                    based on previous performance.
                   </p>
                 </div>
                 <div>
@@ -491,7 +506,8 @@ function RegisterCompetitorPageNew() {
                     Team Assignment
                   </div>
                   <p className="text-neutral-600">
-                    Competitors can be assigned to teams during or after registration.
+                    Competitors can be assigned to teams during or after
+                    registration.
                   </p>
                 </div>
               </div>

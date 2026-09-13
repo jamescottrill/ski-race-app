@@ -8,7 +8,7 @@ import {
   MapPin,
   Users,
   Timer,
-  Mountain
+  Mountain,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -19,9 +19,10 @@ import {
   TextField,
   SimpleSelect,
   Checkbox,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
+import { handleDatabaseError } from '../../utils/ErrorHandler';
 import { v4 as uuid4 } from 'uuid';
 
 export default function CreateRacePageNew() {
@@ -104,22 +105,30 @@ export default function CreateRacePageNew() {
     ];
 
     try {
-      await window.api.insert(query, params);
-
-      // Create race_run entries for each run
+      // Create the race and its runs atomically so a failure can't leave a
+      // race behind with missing runs
       const numRuns = parseInt(formData.numberRuns, 10) || 1;
+      const operations = [{ type: 'insert', query, params }];
       for (let runNumber = 1; runNumber <= numRuns; runNumber++) {
-        const runId = `${raceId}-run-${runNumber}`;
-        const runQuery = `
-          INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
-          VALUES (?, ?, ?, ?, 0)
-        `;
-        await window.api.insert(runQuery, [competitionId, raceId, runId, runNumber]);
+        operations.push({
+          type: 'insert',
+          query: `
+            INSERT INTO race_run (competition_id, race_id, run_id, run_number, is_complete)
+            VALUES (?, ?, ?, ?, 0)
+          `,
+          params: [
+            competitionId,
+            raceId,
+            `${raceId}-run-${runNumber}`,
+            runNumber,
+          ],
+        });
       }
+      await window.api.transaction(operations);
 
       navigate(`/competition/${competitionId}/race/${raceId}`);
     } catch (error) {
-      console.error('Failed to create race:', error);
+      handleDatabaseError('create race', error);
     }
   };
 
@@ -243,16 +252,16 @@ export default function CreateRacePageNew() {
                   />
                   <TextField
                     label="Start Altitude (m)"
-                    name="altStart"
+                    name="startAltitude"
                     type="number"
-                    value={formData.altStart}
+                    value={formData.startAltitude}
                     onChange={handleChange}
                   />
                   <TextField
                     label="Finish Altitude (m)"
-                    name="altFinish"
+                    name="finishAltitude"
                     type="number"
-                    value={formData.altFinish}
+                    value={formData.finishAltitude}
                     onChange={handleChange}
                   />
                   <TextField
@@ -361,15 +370,20 @@ export default function CreateRacePageNew() {
           <div className="col-span-1">
             <Card className="sticky top-4">
               <CardContent>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Race Configuration</h3>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+                  Race Configuration
+                </h3>
                 <div className="space-y-4 text-sm">
                   <div className="p-3 bg-primary-50 rounded-lg">
                     <div className="flex items-start gap-2">
                       <Trophy className="w-4 h-4 text-primary-600 mt-0.5" />
                       <div>
-                        <p className="font-medium text-primary-700">Race Types</p>
+                        <p className="font-medium text-primary-700">
+                          Race Types
+                        </p>
                         <p className="text-neutral-600 mt-1">
-                          Select the appropriate discipline. This affects scoring and seeding calculations.
+                          Select the appropriate discipline. This affects
+                          scoring and seeding calculations.
                         </p>
                       </div>
                     </div>
@@ -381,7 +395,8 @@ export default function CreateRacePageNew() {
                       <div>
                         <p className="font-medium text-info">Number of Runs</p>
                         <p className="text-neutral-600 mt-1">
-                          Slalom and GS typically have 2 runs. Speed events usually have 1 run.
+                          Slalom and GS typically have 2 runs. Speed events
+                          usually have 1 run.
                         </p>
                       </div>
                     </div>

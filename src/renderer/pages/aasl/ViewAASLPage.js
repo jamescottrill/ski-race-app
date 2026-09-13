@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Search,
-  Trash2,
-  Download
-} from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download } from 'lucide-react';
 import {
   PageContainer,
   PageHeader,
@@ -15,10 +10,14 @@ import {
   TextField,
   DataTable,
   Badge,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
-import { getAllAASLEntries, getAASLSeasons, deleteAASLBySeason } from '../../utils/AASLManagement';
+import {
+  getAllAASLEntries,
+  getAASLSeasons,
+  deleteAASLBySeason,
+} from '../../utils/AASLManagement';
 import toast from 'react-hot-toast';
 
 export default function ViewAASLPage() {
@@ -56,14 +55,14 @@ export default function ViewAASLPage() {
     if (!selectedSeason) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete all AASL entries for season ${selectedSeason}? This cannot be undone.`
+      `Are you sure you want to delete all AASL entries for season ${selectedSeason}? This cannot be undone.`,
     );
 
     if (confirmed) {
       const result = await deleteAASLBySeason(selectedSeason);
       if (result.success) {
         toast.success(`Deleted ${result.deleted} entries`);
-        const updatedSeasons = seasons.filter(s => s !== selectedSeason);
+        const updatedSeasons = seasons.filter((s) => s !== selectedSeason);
         setSeasons(updatedSeasons);
         setSelectedSeason(updatedSeasons[0] || '');
         setEntries([]);
@@ -73,7 +72,7 @@ export default function ViewAASLPage() {
     }
   };
 
-  const filteredEntries = entries.filter(entry => {
+  const filteredEntries = entries.filter((entry) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -87,16 +86,17 @@ export default function ViewAASLPage() {
     {
       header: 'Pos',
       accessorKey: 'position',
-      cell: ({ row }) => row.index + 1
+      cell: ({ row }) => row.index + 1,
     },
     {
       header: 'Service Number',
-      accessorKey: 'service_number'
+      accessorKey: 'service_number',
     },
     {
       header: 'Name',
       accessorKey: 'name',
-      cell: ({ row }) => `${row.original.last_name?.toUpperCase() || ''}, ${row.original.first_name || ''}`
+      cell: ({ row }) =>
+        `${row.original.last_name?.toUpperCase() || ''}, ${row.original.first_name || ''}`,
     },
     {
       header: 'Gender',
@@ -105,11 +105,11 @@ export default function ViewAASLPage() {
         <Badge variant={row.original.gender === 'F' ? 'warning' : 'primary'}>
           {row.original.gender || '-'}
         </Badge>
-      )
+      ),
     },
     {
       header: 'Category',
-      accessorKey: 'category'
+      accessorKey: 'category',
     },
     {
       header: 'Seed Points',
@@ -118,8 +118,8 @@ export default function ViewAASLPage() {
         <span className="font-mono font-medium">
           {row.original.seed_points?.toFixed(2) || '-'}
         </span>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -143,7 +143,9 @@ export default function ViewAASLPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Season</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Season
+                </label>
                 <select
                   className="px-3 py-2 border border-neutral-300 rounded-md text-sm min-w-32"
                   value={selectedSeason}
@@ -157,7 +159,9 @@ export default function ViewAASLPage() {
                 </select>
               </div>
               <div className="flex-1 max-w-sm">
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Search</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Search
+                </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
                   <input
@@ -199,10 +203,7 @@ export default function ViewAASLPage() {
             </div>
           ) : (
             <>
-              <DataTable
-                data={filteredEntries}
-                columns={columns}
-              />
+              <DataTable data={filteredEntries} columns={columns} />
               <p className="text-sm text-neutral-600 mt-4">
                 Showing {filteredEntries.length} of {entries.length} entries
               </p>

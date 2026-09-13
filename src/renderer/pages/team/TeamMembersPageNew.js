@@ -43,7 +43,7 @@ export default function TeamMembersPageNew() {
       const teamResult = await window.api.select(
         `SELECT team_name, is_corps, is_reserve FROM competition_team
          WHERE competition_id = ? AND team_id = ?`,
-        [competitionId, teamId]
+        [competitionId, teamId],
       );
 
       if (teamResult.length > 0) {
@@ -56,7 +56,7 @@ export default function TeamMembersPageNew() {
          FROM races
          WHERE competition_id = ? AND is_team = 1
          ORDER BY race_date, race_name`,
-        [competitionId]
+        [competitionId],
       );
       setRaces(racesResult);
 
@@ -84,7 +84,7 @@ export default function TeamMembersPageNew() {
          LEFT JOIN competition_competitor cc ON cc.competition_id = ctm.competition_id AND cc.racer_id = ctm.racer_id
          WHERE ctm.competition_id = ? AND ctm.team_id = ? AND ctm.race_id = ?
          ORDER BY p.last_name, p.first_name`,
-        [competitionId, teamId, selectedRaceId]
+        [competitionId, teamId, selectedRaceId],
       );
       setTeamMembers(result);
     } catch (error) {
@@ -109,7 +109,7 @@ export default function TeamMembersPageNew() {
              WHERE competition_id = ? AND team_id = ? AND race_id = ?
            )
          ORDER BY p.last_name, p.first_name`,
-        [competitionId, competitionId, teamId, selectedRaceId]
+        [competitionId, competitionId, teamId, selectedRaceId],
       );
       setAvailableCompetitors(result);
     } catch (error) {
@@ -122,13 +122,15 @@ export default function TeamMembersPageNew() {
       await window.api.insert(
         `INSERT INTO competition_team_members (competition_id, team_id, race_id, racer_id)
          VALUES (?, ?, ?, ?)`,
-        [competitionId, teamId, selectedRaceId, racerId]
+        [competitionId, teamId, selectedRaceId, racerId],
       );
       await fetchTeamMembers();
       await fetchAvailableCompetitors();
     } catch (error) {
       console.error('Failed to add team member:', error);
-      alert('Failed to add team member. They may already be assigned to another team for this race.');
+      alert(
+        'Failed to add team member. They may already be assigned to another team for this race.',
+      );
     }
   };
 
@@ -137,7 +139,7 @@ export default function TeamMembersPageNew() {
       await window.api.delete(
         `DELETE FROM competition_team_members
          WHERE competition_id = ? AND team_id = ? AND race_id = ? AND racer_id = ?`,
-        [competitionId, teamId, selectedRaceId, racerId]
+        [competitionId, teamId, selectedRaceId, racerId],
       );
       await fetchTeamMembers();
       await fetchAvailableCompetitors();
@@ -155,7 +157,7 @@ export default function TeamMembersPageNew() {
       (c) =>
         c.last_name?.toLowerCase().includes(term) ||
         c.first_name?.toLowerCase().includes(term) ||
-        c.service_number?.toString().toLowerCase().includes(term)
+        c.service_number?.toString().toLowerCase().includes(term),
     );
   }, [availableCompetitors, searchTerm]);
 
@@ -167,7 +169,7 @@ export default function TeamMembersPageNew() {
         <span className="font-medium">
           {row.original.last_name}, {row.original.first_name}
         </span>
-      )
+      ),
     },
     {
       header: 'Service Number',
@@ -185,8 +187,8 @@ export default function TeamMembersPageNew() {
         >
           Remove
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   const availableColumns = [
@@ -197,11 +199,11 @@ export default function TeamMembersPageNew() {
         <span className="font-medium">
           {row.original.last_name}, {row.original.first_name}
         </span>
-      )
+      ),
     },
     {
       header: 'Service Number',
-      accessorKey: 'service_number'
+      accessorKey: 'service_number',
     },
     {
       header: 'Actions',
@@ -215,8 +217,8 @@ export default function TeamMembersPageNew() {
         >
           Add
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   if (loading) {
@@ -229,7 +231,7 @@ export default function TeamMembersPageNew() {
     );
   }
 
-  const selectedRace = races.find(r => r.race_id === selectedRaceId);
+  const selectedRace = races.find((r) => r.race_id === selectedRaceId);
 
   return (
     <PageContainer>
@@ -256,7 +258,8 @@ export default function TeamMembersPageNew() {
             </label>
             {races.length === 0 ? (
               <p className="text-neutral-500 text-sm">
-                No team races have been created yet. Create a team race first to assign members.
+                No team races have been created yet. Create a team race first to
+                assign members.
               </p>
             ) : (
               <select
@@ -264,7 +267,7 @@ export default function TeamMembersPageNew() {
                 onChange={(e) => setSelectedRaceId(e.target.value)}
                 className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                {races.map(race => (
+                {races.map((race) => (
                   <option key={race.race_id} value={race.race_id}>
                     {race.race_name} ({race.race_type})
                   </option>
@@ -274,8 +277,9 @@ export default function TeamMembersPageNew() {
           </div>
           {selectedRace && (
             <p className="mt-2 text-xs text-neutral-500">
-              Assign racers to {team?.team_name} for the {selectedRace.race_name}.
-              Each racer can only be on one team per race.
+              Assign racers to {team?.team_name} for the{' '}
+              {selectedRace.race_name}. Each racer can only be on one team per
+              race.
             </p>
           )}
         </CardContent>
@@ -298,10 +302,16 @@ export default function TeamMembersPageNew() {
               {teamMembers.length === 0 ? (
                 <div className="p-8 text-center">
                   <Users className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-500">No members assigned for this race</p>
+                  <p className="text-neutral-500">
+                    No members assigned for this race
+                  </p>
                 </div>
               ) : (
-                <DataTable columns={memberColumns} data={teamMembers} pageSize={10} />
+                <DataTable
+                  columns={memberColumns}
+                  data={teamMembers}
+                  pageSize={10}
+                />
               )}
             </CardContent>
           </Card>

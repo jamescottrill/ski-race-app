@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
+import {
+  Users,
   ArrowLeft,
   Plus,
   Trash2,
   UserPlus,
-  UserMinus
+  UserMinus,
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import {
   DataTable,
   Badge,
   SimpleSelect,
-  Label
+  Label,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -110,7 +110,10 @@ export default function RaceTeamManagementNew() {
         )
         ORDER BY p.last_name, p.first_name
       `;
-      const result = await window.api.select(query, [competitionId, competitionId]);
+      const result = await window.api.select(query, [
+        competitionId,
+        competitionId,
+      ]);
       setAvailableCompetitors(result);
     } catch (error) {
       console.error('Failed to fetch available competitors:', error);
@@ -119,11 +122,11 @@ export default function RaceTeamManagementNew() {
 
   const handleAddMember = async (competitorId) => {
     if (!selectedTeam) return;
-    
+
     try {
       await window.api.insert(
         'INSERT INTO competition_team_members (team_id, racer_id) VALUES (?, ?)',
-        [selectedTeam, competitorId]
+        [selectedTeam, competitorId],
       );
       await fetchTeamMembers(selectedTeam);
       await fetchAvailableCompetitors();
@@ -134,11 +137,11 @@ export default function RaceTeamManagementNew() {
 
   const handleRemoveMember = async (competitorId) => {
     if (!selectedTeam) return;
-    
+
     try {
       await window.api.delete(
         'DELETE FROM competition_team_members WHERE team_id = ? AND racer_id = ?',
-        [selectedTeam, competitorId]
+        [selectedTeam, competitorId],
       );
       await fetchTeamMembers(selectedTeam);
       await fetchAvailableCompetitors();
@@ -155,13 +158,17 @@ export default function RaceTeamManagementNew() {
         <div>
           <div className="font-medium">
             {row.original.first_name} {row.original.last_name}
-            {row.original.title && <span className="ml-2 text-neutral-400">({row.original.title})</span>}
+            {row.original.title && (
+              <span className="ml-2 text-neutral-400">
+                ({row.original.title})
+              </span>
+            )}
           </div>
           <div className="text-xs text-neutral-500">
             {row.original.regiment} • {row.original.gender}
           </div>
         </div>
-      )
+      ),
     },
     {
       header: 'Actions',
@@ -175,8 +182,8 @@ export default function RaceTeamManagementNew() {
         >
           Remove
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   const availableColumns = [
@@ -187,13 +194,17 @@ export default function RaceTeamManagementNew() {
         <div>
           <div className="font-medium">
             {row.original.first_name} {row.original.last_name}
-            {row.original.title && <span className="ml-2 text-neutral-400">({row.original.title})</span>}
+            {row.original.title && (
+              <span className="ml-2 text-neutral-400">
+                ({row.original.title})
+              </span>
+            )}
           </div>
           <div className="text-xs text-neutral-500">
             {row.original.regiment} • {row.original.gender}
           </div>
         </div>
-      )
+      ),
     },
     {
       header: 'Actions',
@@ -207,8 +218,8 @@ export default function RaceTeamManagementNew() {
         >
           Add
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -226,7 +237,7 @@ export default function RaceTeamManagementNew() {
           </Button>
         }
       />
-      
+
       <div className="mb-6">
         <Card>
           <CardContent>
@@ -237,7 +248,7 @@ export default function RaceTeamManagementNew() {
               onChange={(e) => setSelectedTeam(e.target.value)}
             >
               <option value="">Select a team</option>
-              {teams.map(team => (
+              {teams.map((team) => (
                 <option key={team.team_id} value={team.team_id}>
                   {team.team_name} ({team.member_count} members)
                 </option>
@@ -255,23 +266,23 @@ export default function RaceTeamManagementNew() {
                 <Users className="w-5 h-5 text-primary-500" />
                 Team Members ({teamMembers.length})
               </h3>
-              <DataTable 
-                columns={memberColumns} 
-                data={teamMembers} 
+              <DataTable
+                columns={memberColumns}
+                data={teamMembers}
                 pageSize={10}
               />
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent>
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-success" />
                 Available Competitors ({availableCompetitors.length})
               </h3>
-              <DataTable 
-                columns={availableColumns} 
-                data={availableCompetitors} 
+              <DataTable
+                columns={availableColumns}
+                data={availableCompetitors}
                 pageSize={10}
               />
             </CardContent>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import {
@@ -18,11 +18,12 @@ import {
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import {
-  createCompetitor,
-  competitorExists,
-  updateCompetitor,
-  personExists,
+  buildCreateCompetitorOperations,
+  buildUpdateCompetitorOperations,
+  findExistingPeople,
+  findExistingCompetitionEntries,
 } from '../../utils/CompetitorManagement';
+import { validateCompetitorRows } from '../../utils/CompetitorImport';
 import {
   handleDatabaseError,
   showSuccess,
@@ -37,6 +38,15 @@ export default function UploadCompetitorsPageNew() {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [competitors, setCompetitors] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Validate the whole file up front so the preview shows exactly what will
+  // be written and what will be skipped
+  const rows = useMemo(
+    () => validateCompetitorRows(competitors),
+    [competitors],
+  );
+  const importableCount = rows.filter((row) => row.importable).length;
+  const problemRows = rows.filter((row) => !row.importable);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -135,99 +145,70 @@ export default function UploadCompetitorsPageNew() {
       return;
     }
 
-    if (competitors.length === 0) {
-      setUploadStatus({ type: 'error', message: 'No competitors found in file' });
+    const importable = rows.filter((row) => row.importable);
+    if (importable.length === 0) {
+      setUploadStatus({
+        type: 'error',
+        message:
+          'No rows can be imported. Fix the problems listed below and try again.',
+      });
       return;
     }
 
     setIsProcessing(true);
     setUploadStatus({ type: 'info', message: 'Importing competitors...' });
 
-    let successCount = 0;
-    let errorCount = 0;
-    let updateCount = 0;
-
     try {
-      for (const competitor of competitors) {
-        // Map CSV columns to formData structure
-        const formData = {
-          firstName: competitor.firstName || competitor['First Name'] || '',
-          lastName: competitor.lastName || competitor['Last Name'] || '',
-          title: competitor.title || competitor.Title || '',
-          birthYear:
-            competitor.birthYear ||
-            competitor['Birth Year'] ||
-            competitor.yearOfBirth ||
-            '',
-          country: competitor.country || competitor.Country || 'GBR',
-          serviceNumber: competitor.serviceNumber || competitor['Service Number'] || '',
-          gender: (competitor.gender || competitor.Gender || 'M').toUpperCase(),
-          regiment:
-            competitor.regiment ||
-            competitor.Regiment ||
-            competitor.unit ||
-            competitor.Unit ||
-            '',
-          arrivalSeed: competitor.arrivalSeed || competitor['Arrival Seed'] || 2000,
-          isNovice: competitor.novice === 'Y' || competitor.Novice === 'Y',
-          isReserve: competitor.reserve === 'Y' || competitor.Reserve === 'Y',
-          isFemale:
-            (competitor.gender || competitor.Gender || 'M').toUpperCase() ===
-            'F',
-        };
+      const serviceNumbers = importable.map(
+        (row) => row.competitor.serviceNumber,
+      );
+      const existingPeople = await findExistingPeople(serviceNumbers);
+      const existingEntries = await findExistingCompetitionEntries(
+        competitionId,
+        serviceNumbers,
+      );
 
-        if (!formData.firstName || !formData.lastName) {
-          console.warn('Skipping competitor with missing name:', competitor);
-          errorCount++;
-          continue;
-        }
-        if (!formData.serviceNumber) {
-          console.warn('Skipping competitor with missing Service Number:', competitor);
-          errorCount++;
-          continue;
-        }
+      // Every row is written in one transaction, so a failure part-way
+      // leaves the competition exactly as it was
+      const operations = importable.flatMap(({ competitor }) =>
+        existingPeople.has(competitor.serviceNumber)
+          ? buildUpdateCompetitorOperations(
+              competitor,
+              competitor.serviceNumber,
+              existingEntries.has(competitor.serviceNumber),
+              competitionId,
+            )
+          : buildCreateCompetitorOperations(competitor, competitionId),
+      );
+      await window.api.transaction(operations);
 
-        try {
-          // Check if competitor exists
-          const [cExists] = await competitorExists(formData.serviceNumber, competitionId);
-          const [pExists, personId] = await personExists(formData.serviceNumber);
-          if (pExists) {
-            // Update existing competitor
-            await updateCompetitor(formData, personId, cExists, competitionId);
-            updateCount++;
-          } else {
-            // Create new competitor
-            await createCompetitor(formData, competitionId);
-            successCount++;
-          }
-        } catch (error) {
-          console.error('Failed to import competitor:', formData.firstName, formData.lastName, error);
-          errorCount++;
-        }
-      }
+      const updateCount = importable.filter((row) =>
+        existingPeople.has(row.competitor.serviceNumber),
+      ).length;
+      const createCount = importable.length - updateCount;
+      const skippedCount = rows.length - importable.length;
+      const summary = `Imported ${createCount} new and updated ${updateCount} existing competitor(s)`;
 
-      // Show results
-      if (errorCount === 0) {
+      showSuccess(summary);
+      if (skippedCount > 0) {
         setUploadStatus({
-          type: 'success',
-          message: `Successfully imported ${successCount} new and updated ${updateCount} existing competitor(s)!`
+          type: 'info',
+          message: `${summary}. ${skippedCount} row(s) were skipped, see the problems listed below.`,
         });
-        showSuccess(`Imported ${successCount + updateCount} competitor(s)`);
-
+        showWarning(`${skippedCount} row(s) skipped`);
+      } else {
+        setUploadStatus({ type: 'success', message: summary });
         // Navigate back after a short delay
         setTimeout(() => {
           navigate(-1);
         }, 2000);
-      } else {
-        setUploadStatus({
-          type: 'error',
-          message: `Imported ${successCount + updateCount} competitor(s) with ${errorCount} error(s)`
-        });
-        showWarning(`${errorCount} competitor(s) failed to import`);
       }
     } catch (error) {
       handleDatabaseError('import competitors', error);
-      setUploadStatus({ type: 'error', message: 'Failed to import competitors: ' + error.message });
+      setUploadStatus({
+        type: 'error',
+        message: `Import failed and nothing was written: ${error.message}`,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -280,30 +261,66 @@ export default function UploadCompetitorsPageNew() {
             </div>
 
             {uploadStatus && (
-              <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
-                uploadStatus.type === 'success' ? 'bg-success/10 text-success' :
-                uploadStatus.type === 'error' ? 'bg-danger/10 text-danger' :
-                'bg-info/10 text-info'
-              }`}>
-                {uploadStatus.type === 'success' && <CheckCircle className="w-5 h-5" />}
-                {uploadStatus.type === 'error' && <AlertCircle className="w-5 h-5" />}
+              <div
+                className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
+                  uploadStatus.type === 'success'
+                    ? 'bg-success/10 text-success'
+                    : uploadStatus.type === 'error'
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-info/10 text-info'
+                }`}
+              >
+                {uploadStatus.type === 'success' && (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {uploadStatus.type === 'error' && (
+                  <AlertCircle className="w-5 h-5" />
+                )}
                 <span>{uploadStatus.message}</span>
               </div>
             )}
 
-            {competitors.length > 0 && (
+            {rows.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-semibold mb-2">Preview ({competitors.length} competitor{competitors.length !== 1 ? 's' : ''})</h4>
+                <h4 className="text-sm font-semibold mb-2">
+                  Preview: {importableCount} ready to import
+                  {problemRows.length > 0 &&
+                    `, ${problemRows.length} with problems`}
+                </h4>
+                {problemRows.length > 0 && (
+                  <div className="mb-3 p-3 bg-danger/10 border border-danger/20 rounded-md text-sm">
+                    <p className="font-medium text-danger mb-1">
+                      These rows will be skipped:
+                    </p>
+                    <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
+                      {problemRows.slice(0, 20).map((row) => (
+                        <li key={row.rowNumber}>
+                          Row {row.rowNumber}
+                          {(row.competitor.firstName ||
+                            row.competitor.lastName) &&
+                            ` (${row.competitor.firstName} ${row.competitor.lastName})`}
+                          : {row.problems.join('; ')}
+                        </li>
+                      ))}
+                      {problemRows.length > 20 && (
+                        <li>... and {problemRows.length - 20} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
                 <div className="max-h-48 overflow-y-auto border rounded p-2 bg-neutral-50">
                   <ul className="text-sm space-y-1">
-                    {competitors.slice(0, 10).map((comp, idx) => (
-                      <li key={idx} className="text-neutral-700">
-                        {comp.firstName || comp['First Name']} {comp.lastName || comp['Last Name']}
-                        {(comp.birthYear || comp['Birth Year']) && ` (${comp.birthYear || comp['Birth Year']})`}
+                    {rows.slice(0, 10).map((row) => (
+                      <li key={row.rowNumber} className="text-neutral-700">
+                        {row.competitor.firstName} {row.competitor.lastName}
+                        {row.competitor.birthYear &&
+                          ` (${row.competitor.birthYear})`}
                       </li>
                     ))}
-                    {competitors.length > 10 && (
-                      <li className="text-neutral-500 italic">... and {competitors.length - 10} more</li>
+                    {rows.length > 10 && (
+                      <li className="text-neutral-500 italic">
+                        ... and {rows.length - 10} more
+                      </li>
                     )}
                   </ul>
                 </div>
@@ -311,14 +328,18 @@ export default function UploadCompetitorsPageNew() {
             )}
 
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={handleBack} disabled={isProcessing}>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={isProcessing}
+              >
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 onClick={handleUpload}
                 leftIcon={<Upload className="w-4 h-4" />}
-                disabled={!file || competitors.length === 0 || isProcessing}
+                disabled={!file || importableCount === 0 || isProcessing}
               >
                 {isProcessing ? 'Importing...' : 'Import Competitors'}
               </Button>
@@ -343,19 +364,51 @@ export default function UploadCompetitorsPageNew() {
               Your CSV file should include the following columns:
             </p>
             <ul className="text-sm space-y-1 text-neutral-600">
-              <li>• <strong>firstName</strong> or <strong>First Name</strong> (required)</li>
-              <li>• <strong>lastName</strong> or <strong>Last Name</strong> (required)</li>
-              <li>• <strong>birthYear</strong> or <strong>Birth Year</strong> (YYYY format)</li>
-              <li>• <strong>gender</strong> or <strong>Gender</strong> (M/F)</li>
-              <li>• <strong>serviceNumber</strong> or <strong>Service Number</strong></li>
-              <li>• <strong>regiment</strong> or <strong>Regiment</strong> (unit name)</li>
-              <li>• <strong>country</strong> or <strong>Country</strong> (GBR, USA, etc.)</li>
-              <li>• <strong>title</strong> or <strong>Title</strong> (rank)</li>
-              <li>• <strong>novice</strong> or <strong>Novice</strong> (Y/N)</li>
-              <li>• <strong>reserve</strong> or <strong>Reserve</strong> (Y/N)</li>
+              <li>
+                • <strong>firstName</strong> or <strong>First Name</strong>{' '}
+                (required)
+              </li>
+              <li>
+                • <strong>lastName</strong> or <strong>Last Name</strong>{' '}
+                (required)
+              </li>
+              <li>
+                • <strong>birthYear</strong> or <strong>Birth Year</strong>{' '}
+                (YYYY format)
+              </li>
+              <li>
+                • <strong>gender</strong> or <strong>Gender</strong> (M/F,
+                required)
+              </li>
+              <li>
+                • <strong>serviceNumber</strong> or{' '}
+                <strong>Service Number</strong> (required)
+              </li>
+              <li>
+                • <strong>regiment</strong> or <strong>Regiment</strong> (unit
+                name)
+              </li>
+              <li>
+                • <strong>country</strong> or <strong>Country</strong> (GBR,
+                USA, etc.)
+              </li>
+              <li>
+                • <strong>title</strong> or <strong>Title</strong> (rank)
+              </li>
+              <li>
+                • <strong>novice</strong> or <strong>Novice</strong> (Y/N)
+              </li>
+              <li>
+                • <strong>reserve</strong> or <strong>Reserve</strong> (Y/N)
+              </li>
+              <li>
+                • <strong>arrivalSeed</strong> or <strong>Arrival Seed</strong>{' '}
+                (defaults to 2000)
+              </li>
             </ul>
             <p className="text-xs text-neutral-500 mt-3">
-              Note: Column names are case-insensitive and can use either camelCase or Title Case with spaces.
+              Note: Column names are case-insensitive and can use either
+              camelCase or Title Case with spaces.
             </p>
           </CardContent>
         </Card>

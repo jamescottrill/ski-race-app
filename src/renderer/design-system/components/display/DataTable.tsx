@@ -11,7 +11,13 @@ import {
   ColumnFiltersState,
   VisibilityState,
 } from '@tanstack/react-table';
-import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from '../primitives/Button';
 
@@ -33,8 +39,11 @@ export function DataTable<TData, TValue>({
   onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
@@ -79,13 +88,14 @@ export function DataTable<TData, TValue>({
                           <div
                             className={cn(
                               'flex items-center gap-2',
-                              header.column.getCanSort() && 'cursor-pointer select-none hover:text-neutral-900'
+                              header.column.getCanSort() &&
+                                'cursor-pointer select-none hover:text-neutral-900',
                             )}
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                             {header.column.getCanSort() && (
                               <>
@@ -116,7 +126,7 @@ export function DataTable<TData, TValue>({
                       'transition-colors',
                       'hover:bg-neutral-50',
                       onRowClick && 'cursor-pointer',
-                      row.getIsSelected() && 'bg-primary-50'
+                      row.getIsSelected() && 'bg-primary-50',
                     )}
                     onClick={() => onRowClick && onRowClick(row.original)}
                   >
@@ -127,7 +137,7 @@ export function DataTable<TData, TValue>({
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </td>
                     ))}
@@ -152,14 +162,19 @@ export function DataTable<TData, TValue>({
       {showPagination && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-neutral-600">
-            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+            Showing{' '}
+            {table.getState().pagination.pageIndex *
+              table.getState().pagination.pageSize +
+              1}{' '}
+            to{' '}
             {Math.min(
-              (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
+              (table.getState().pagination.pageIndex + 1) *
+                table.getState().pagination.pageSize,
+              table.getFilteredRowModel().rows.length,
             )}{' '}
             of {table.getFilteredRowModel().rows.length} results
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -170,12 +185,15 @@ export function DataTable<TData, TValue>({
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
-            
+
             <div className="flex items-center gap-1">
               {Array.from({ length: table.getPageCount() }, (_, i) => i + 1)
                 .slice(
                   Math.max(0, table.getState().pagination.pageIndex - 2),
-                  Math.min(table.getPageCount(), table.getState().pagination.pageIndex + 3)
+                  Math.min(
+                    table.getPageCount(),
+                    table.getState().pagination.pageIndex + 3,
+                  ),
                 )
                 .map((page) => (
                   <button
@@ -185,14 +203,14 @@ export function DataTable<TData, TValue>({
                       'h-8 w-8 rounded-md text-sm font-medium transition-colors',
                       table.getState().pagination.pageIndex === page - 1
                         ? 'bg-primary-700 text-white'
-                        : 'hover:bg-neutral-100 text-neutral-700'
+                        : 'hover:bg-neutral-100 text-neutral-700',
                     )}
                   >
                     {page}
                   </button>
                 ))}
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"

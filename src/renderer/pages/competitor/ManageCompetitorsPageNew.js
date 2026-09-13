@@ -12,13 +12,13 @@ import {
   Eye,
   GitMerge,
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
   Button,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -74,9 +74,12 @@ function ManageCompetitorsPageNew() {
 
   const getColorClasses = (color) => {
     const colors = {
-      primary: 'bg-primary-100 text-primary-700 group-hover:bg-primary-700 group-hover:text-white',
-      success: 'bg-success/10 text-success group-hover:bg-success group-hover:text-white',
-      warning: 'bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white',
+      primary:
+        'bg-primary-100 text-primary-700 group-hover:bg-primary-700 group-hover:text-white',
+      success:
+        'bg-success/10 text-success group-hover:bg-success group-hover:text-white',
+      warning:
+        'bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white',
       info: 'bg-info/10 text-info group-hover:bg-info group-hover:text-white',
     };
     return colors[color] || colors.primary;
@@ -109,19 +112,19 @@ function ManageCompetitorsPageNew() {
               onClick={card.onClick}
             >
               <CardContent>
-                <div className={cn(
-                  'w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-all duration-300',
-                  getColorClasses(card.color)
-                )}>
+                <div
+                  className={cn(
+                    'w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-all duration-300',
+                    getColorClasses(card.color),
+                  )}
+                >
                   <Icon className="w-6 h-6" />
                 </div>
-                
+
                 <h3 className="text-lg font-semibold text-neutral-900 mb-2 group-hover:text-primary-700 transition-colors">
                   {card.title}
                 </h3>
-                <p className="text-sm text-neutral-600">
-                  {card.description}
-                </p>
+                <p className="text-sm text-neutral-600">{card.description}</p>
               </CardContent>
             </Card>
           );

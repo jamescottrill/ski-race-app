@@ -4,7 +4,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { Database, AppPreferences } from './utils/db';
+import { Database, AppPreferences, closeActiveDatabase } from './utils/db';
 
 const fs = require('fs');
 
@@ -156,28 +156,10 @@ async function createWindow() {
 
   ipcMain.handle('db-transaction', async (event, operations) => {
     try {
-      const result = await db.transaction(async () => {
-        const results = [];
-        for (const op of operations) {
-          let opResult;
-          switch (op.type) {
-            case 'select':
-              opResult = await db.all(op.query, op.params);
-              break;
-            case 'insert':
-              opResult = await db.run(op.query, op.params);
-              break;
-            case 'delete':
-              opResult = await db.delete(op.query, op.params);
-              break;
-            default:
-              throw new Error(`Unknown operation type: ${op.type}`);
-          }
-          results.push(opResult);
-        }
-        return results;
-      });
-      return { success: true, results: result };
+      // Synchronous execution inside better-sqlite3's transaction() —
+      // the batch is atomic and no other IPC call can interleave with it
+      const results = db.transaction(operations);
+      return { success: true, results };
     } catch (error: any) {
       console.error('Transaction failed:', error);
       throw error;
@@ -206,12 +188,21 @@ async function createWindow() {
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html')).catch((error: any) => {
-    dialog.showErrorBox('Load Error', `Failed to load application: ${error.message}`);
+    dialog.showErrorBox(
+      'Load Error',
+      `Failed to load application: ${error.message}`,
+    );
   });
 
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    dialog.showErrorBox('Load Error', `Page failed to load: ${errorDescription} (${errorCode})`);
-  });
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (event, errorCode, errorDescription) => {
+      dialog.showErrorBox(
+        'Load Error',
+        `Page failed to load: ${errorDescription} (${errorCode})`,
+      );
+    },
+  );
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -231,6 +222,14 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Checkpoint the WAL and release the file handle before the process exits,
+// so a copy of the .db file taken after quitting is complete. app.exit()
+// (used to relaunch after switching databases) skips this event, so the
+// menu calls closeActiveDatabase() itself before exiting.
+app.on('will-quit', () => {
+  closeActiveDatabase();
 });
 
 app

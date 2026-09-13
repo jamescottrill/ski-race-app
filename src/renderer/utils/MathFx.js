@@ -1,8 +1,8 @@
-const round = (int) =>{
-  if(typeof int !== 'number'){
+const round = (int) => {
+  if (typeof int !== 'number') {
     return null;
   }
-  return Math.round(int * 100 + Number.EPSILON)/100;
+  return Math.round(int * 100 + Number.EPSILON) / 100;
 };
 
-export {round};
+export { round };
