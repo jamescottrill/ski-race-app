@@ -2,12 +2,12 @@ import { tableStyles, teamTableLayout } from './PdfStyles';
 import { getFormattedDate } from './DateUtils';
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
-import {round} from './MathFx';
+import { round } from './MathFx';
 import { showSuccess } from './ErrorHandler';
 // pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 pdfMake.tableLayouts = {
-  teamLayout: teamTableLayout
+  teamLayout: teamTableLayout,
 };
 
 const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
@@ -80,12 +80,12 @@ const resultsTeamPdf = (raceDetails, finished, dsqTeams) => {
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((r) => {
-          if (r.success) {
-            showSuccess(`PDF saved successfully to: ${r.filePath}`);
-          } else {
-            alert('PDF save cancelled.');
-          }
-        })
+        if (r.success) {
+          showSuccess(`PDF saved successfully to: ${r.filePath}`);
+        } else {
+          alert('PDF save cancelled.');
+        }
+      })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

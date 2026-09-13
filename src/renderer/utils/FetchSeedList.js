@@ -57,7 +57,9 @@ const getRaceResult = async (competitionId, raceId) => {
     return results2;
   } catch (error) {
     console.error('Failed to get race result:', error);
-    throw new Error(`Failed to get race result for race ${raceId}: ${error.message}`);
+    throw new Error(
+      `Failed to get race result for race ${raceId}: ${error.message}`,
+    );
   }
 };
 
@@ -198,7 +200,11 @@ const calculateRacerSeedPoints = async (
             penaltyMultiply = 1;
           }
         } catch (e) {
-          console.error('Failed to check NS status for competitor:', row.racer_id, e);
+          console.error(
+            'Failed to check NS status for competitor:',
+            row.racer_id,
+            e,
+          );
         }
         if (sPoints < 50) {
           sPoints += penaltyAdd;
@@ -210,12 +216,11 @@ const calculateRacerSeedPoints = async (
         row[`${mostRecentRace}-penalty`] = true;
         // row[mostRecentRace] = `${round(sPoints)}*`;
 
-
         if (nonNullRaces.length < 2) {
           for (const raceId of raceIds) {
             if (previousSeedList[competitorRanking][raceId] !== null) {
               row[raceId] = round(previousSeedList[competitorRanking][raceId]);
-              if(previousSeedList[competitorRanking][`${raceId}-penalty`]){
+              if (previousSeedList[competitorRanking][`${raceId}-penalty`]) {
                 row[`${raceId}-penalty`] = true;
               }
               nonNullRaces.push(
@@ -247,7 +252,7 @@ const calculateRacerSeedPoints = async (
             (row[raceId] === null || Number.isNaN(row[raceId]))
           ) {
             row[raceId] = round(compSL[raceId]);
-            if(compSL[`${raceId}-penalty`]){
+            if (compSL[`${raceId}-penalty`]) {
               row[`${raceId}-penalty`] = true;
             }
             nonNullRaces.push(round(compSL[raceId]));
@@ -291,7 +296,11 @@ const calculateRacerSeedPoints = async (
               penaltyMultiply = 1;
             }
           } catch (e) {
-            console.error('Failed to check NS status for competitor:', row.racer_id, e);
+            console.error(
+              'Failed to check NS status for competitor:',
+              row.racer_id,
+              e,
+            );
           }
           if (sPoints < 50) {
             sPoints += penaltyAdd;
@@ -323,9 +332,9 @@ const calculateRacerSeedPoints = async (
           (row[raceId] === null || Number.isNaN(row[raceId]))
         ) {
           const sp = round(compSL[raceId]);
-          if (sp){
+          if (sp) {
             row[raceId] = round(sp);
-            if(compSL[`${raceId}-penalty`]){
+            if (compSL[`${raceId}-penalty`]) {
               row[`${raceId}-penalty`] = true;
             }
             nonNullRaces.push(sp);
@@ -370,7 +379,11 @@ const calculateRacerSeedPoints = async (
               penaltyMultiply = 1;
             }
           } catch (e) {
-            console.error('Failed to check NS status for competitor:', row.racer_id, e);
+            console.error(
+              'Failed to check NS status for competitor:',
+              row.racer_id,
+              e,
+            );
           }
           if (sPoints < 50) {
             sPoints += penaltyAdd;
@@ -415,7 +428,11 @@ const getPeople = async (competitionId) => {
     );
     return new dfd.DataFrame(people);
   } catch (error) {
-    console.error('Failed to get people for competition:', competitionId, error);
+    console.error(
+      'Failed to get people for competition:',
+      competitionId,
+      error,
+    );
     throw new Error(`Failed to get people: ${error.message}`);
   }
 };
@@ -433,115 +450,117 @@ const fetchSeedList = async (competitionId, raceIds) => {
       const query = `SELECT cc.arrival_corps_seed AS seed_points, cc.racer_id, p.first_name, p.last_name, p.title, p.birth_year, p.gender FROM competition_competitor cc LEFT JOIN people p ON p.id = cc.racer_id WHERE competition_id = ? ORDER BY seed_points`;
       return window.api.select(query, [competitionId]);
     }
-  const resultsPromise = [];
-  const raceTypes = await Promise.all(raceTypePromises);
-  raceTypes.forEach((raceType) => {
-    let query;
-    let values;
-    if (raceType[0].isSeeding) {
-      query = seedingPoints;
-      values = [raceType[0].raceId, raceType[0].raceId];
-    } else if (raceType[0].numRuns === 1) {
-      query = seedPointsOneRun;
-      values = [raceType[0].raceId];
-    } else if (raceType[0].numRuns === 2) {
-      query = seedPointsTwoRun;
-      values = [raceType[0].raceId, raceType[0].raceId];
-    }
-    const results = window.api.select(query, values);
-    resultsPromise.push(results);
-  });
-
-  const seedPointResults = await Promise.all(resultsPromise);
-  // Step 3: Process results into a dataframe.
-  const seedData = [];
-  seedPointResults.forEach((raceResults) => {
-    raceResults.forEach(({ race_id, racer_id, seed_point }) => {
-      seedData.push({ race_id, racer_id, seed_point });
-    });
-  });
-  if (seedData.length === 0) return [];
-  const df = new dfd.DataFrame(seedData);
-  // Step 4: Pivot the data manually
-  const uniqueRacers = [...new Set(df.racer_id.values)];
-  const uniqueRaces = [...new Set(df.race_id.values)];
-
-  // Create an initial structure for the result
-  const pivotData = uniqueRacers.map((racerId) => {
-    const row = { racer_id: racerId };
-    uniqueRaces.forEach((raceId) => {
-      row[raceId] = null; // Initialize with null values
-    });
-    row.seed_points = 0;
-    return row;
-  });
-
-  // Fill in the seed points for each racer and race
-  df.values.forEach(([race_id, racer_id, seed_point]) => {
-    const row = pivotData.find((row) => row.racer_id === racer_id);
-    if (row) {
-      row[race_id] = seed_point;
-    }
-  });
-  const pivotDf = new dfd.DataFrame(pivotData);
-
-  async function processArray(array, pivDf) {
-    const resultP = [];
-    const previousRaces = raceIds.slice(0, raceIds.length - 1);
-    const previousSeedList = await fetchSeedList(competitionId, previousRaces);
-
-    const previousRaces2 = raceIds.slice(0, raceIds.length - 2);
-    if (previousSeedList.length === 2) {
-      const sRId = await getSeedingRace(competitionId);
-      if (!raceIds.includes(sRId)) {
-        previousRaces2.unshift(sRId);
+    const resultsPromise = [];
+    const raceTypes = await Promise.all(raceTypePromises);
+    raceTypes.forEach((raceType) => {
+      let query;
+      let values;
+      if (raceType[0].isSeeding) {
+        query = seedingPoints;
+        values = [raceType[0].raceId, raceType[0].raceId];
+      } else if (raceType[0].numRuns === 1) {
+        query = seedPointsOneRun;
+        values = [raceType[0].raceId];
+      } else if (raceType[0].numRuns === 2) {
+        query = seedPointsTwoRun;
+        values = [raceType[0].raceId, raceType[0].raceId];
       }
-    }
-    const previousSeedList2 = await fetchSeedList(
-      competitionId,
-      previousRaces2,
-    );
-
-
-    array.forEach((x) => {
-      const res = calculateRacerSeedPoints(
-        x,
-        raceIds,
-        competitionId,
-        pivDf,
-        previousSeedList,
-        // previousSeedList2,
-      );
-      resultP.push(res);
+      const results = window.api.select(query, values);
+      resultsPromise.push(results);
     });
-    return Promise.all(resultP);
-  }
 
-  const totalSeed = await processArray(pivotData, pivotDf);
-  const totalSeedDf = new dfd.DataFrame(totalSeed);
-  const finalResults = dfd.merge({
-    left: peopleDf,
-    right: totalSeedDf,
-    on: ['racer_id'],
-    how: 'left',
-  });
-  finalResults.sortValues('last_name', { inplace: true, ascending: true });
-  finalResults.sortValues('seed_points', { inplace: true, ascending: true });
-  // Add position as a column to deal with ties
-  const ranks = [];
-  let rank = 1;
-  let previousValue = 0;
+    const seedPointResults = await Promise.all(resultsPromise);
+    // Step 3: Process results into a dataframe.
+    const seedData = [];
+    seedPointResults.forEach((raceResults) => {
+      raceResults.forEach(({ race_id, racer_id, seed_point }) => {
+        seedData.push({ race_id, racer_id, seed_point });
+      });
+    });
+    if (seedData.length === 0) return [];
+    const df = new dfd.DataFrame(seedData);
+    // Step 4: Pivot the data manually
+    const uniqueRacers = [...new Set(df.racer_id.values)];
+    const uniqueRaces = [...new Set(df.race_id.values)];
 
-  finalResults.seed_points.values.forEach((value, index) => {
-    if (value !== previousValue) {
-      rank = index + 1;
+    // Create an initial structure for the result
+    const pivotData = uniqueRacers.map((racerId) => {
+      const row = { racer_id: racerId };
+      uniqueRaces.forEach((raceId) => {
+        row[raceId] = null; // Initialize with null values
+      });
+      row.seed_points = 0;
+      return row;
+    });
+
+    // Fill in the seed points for each racer and race
+    df.values.forEach(([race_id, racer_id, seed_point]) => {
+      const row = pivotData.find((row) => row.racer_id === racer_id);
+      if (row) {
+        row[race_id] = seed_point;
+      }
+    });
+    const pivotDf = new dfd.DataFrame(pivotData);
+
+    async function processArray(array, pivDf) {
+      const resultP = [];
+      const previousRaces = raceIds.slice(0, raceIds.length - 1);
+      const previousSeedList = await fetchSeedList(
+        competitionId,
+        previousRaces,
+      );
+
+      const previousRaces2 = raceIds.slice(0, raceIds.length - 2);
+      if (previousSeedList.length === 2) {
+        const sRId = await getSeedingRace(competitionId);
+        if (!raceIds.includes(sRId)) {
+          previousRaces2.unshift(sRId);
+        }
+      }
+      const previousSeedList2 = await fetchSeedList(
+        competitionId,
+        previousRaces2,
+      );
+
+      array.forEach((x) => {
+        const res = calculateRacerSeedPoints(
+          x,
+          raceIds,
+          competitionId,
+          pivDf,
+          previousSeedList,
+          // previousSeedList2,
+        );
+        resultP.push(res);
+      });
+      return Promise.all(resultP);
     }
-    ranks.push(rank);
-    previousValue = value;
-  });
 
-  const withPostition = finalResults.addColumn('position', ranks);
-  return dfd.toJSON(withPostition);
+    const totalSeed = await processArray(pivotData, pivotDf);
+    const totalSeedDf = new dfd.DataFrame(totalSeed);
+    const finalResults = dfd.merge({
+      left: peopleDf,
+      right: totalSeedDf,
+      on: ['racer_id'],
+      how: 'left',
+    });
+    finalResults.sortValues('last_name', { inplace: true, ascending: true });
+    finalResults.sortValues('seed_points', { inplace: true, ascending: true });
+    // Add position as a column to deal with ties
+    const ranks = [];
+    let rank = 1;
+    let previousValue = 0;
+
+    finalResults.seed_points.values.forEach((value, index) => {
+      if (value !== previousValue) {
+        rank = index + 1;
+      }
+      ranks.push(rank);
+      previousValue = value;
+    });
+
+    const withPostition = finalResults.addColumn('position', ranks);
+    return dfd.toJSON(withPostition);
   } catch (error) {
     console.error('Failed to fetch seed list:', error);
     throw new Error(`Failed to fetch seed list: ${error.message}`);

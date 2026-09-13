@@ -18,7 +18,10 @@ import {
   Input,
   DataTable,
 } from '../../design-system';
-import { getAllCompetitors, searchCompetitors } from '../../queries/CompetitorHistory';
+import {
+  getAllCompetitors,
+  searchCompetitors,
+} from '../../queries/CompetitorHistory';
 
 export default function FindCompetitorPage() {
   const navigate = useNavigate();
@@ -47,10 +50,11 @@ export default function FindCompetitorPage() {
       return competitors;
     }
     const term = searchTerm.toLowerCase();
-    return competitors.filter((c) =>
-      `${c.first_name} ${c.last_name}`.toLowerCase().includes(term) ||
-      c.first_name?.toLowerCase().includes(term) ||
-      c.last_name?.toLowerCase().includes(term)
+    return competitors.filter(
+      (c) =>
+        `${c.first_name} ${c.last_name}`.toLowerCase().includes(term) ||
+        c.first_name?.toLowerCase().includes(term) ||
+        c.last_name?.toLowerCase().includes(term),
     );
   }, [competitors, searchTerm]);
 
@@ -153,7 +157,9 @@ export default function FindCompetitorPage() {
                   <Users className="w-5 h-5 text-primary-700" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">{competitors.length}</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {competitors.length}
+                  </p>
                   <p className="text-sm text-neutral-600">Total Competitors</p>
                 </div>
               </div>
@@ -166,7 +172,9 @@ export default function FindCompetitorPage() {
                   <Search className="w-5 h-5 text-green-700" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-neutral-900">{filteredCompetitors.length}</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {filteredCompetitors.length}
+                  </p>
                   <p className="text-sm text-neutral-600">Matching Results</p>
                 </div>
               </div>
@@ -197,7 +205,9 @@ export default function FindCompetitorPage() {
               <div className="text-center py-12">
                 <User className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
                 <p className="text-neutral-600">
-                  {searchTerm ? 'No competitors found matching your search.' : 'No competitors in database.'}
+                  {searchTerm
+                    ? 'No competitors found matching your search.'
+                    : 'No competitors in database.'}
                 </p>
               </div>
             ) : (

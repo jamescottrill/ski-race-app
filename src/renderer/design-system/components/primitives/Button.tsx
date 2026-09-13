@@ -14,14 +14,12 @@ const buttonVariants = cva(
           'bg-primary-100 text-primary-900 hover:bg-primary-300 active:scale-[0.98]',
         outline:
           'border border-border bg-background hover:bg-neutral-100 hover:text-primary-900',
-        ghost: 
-          'hover:bg-neutral-100 hover:text-primary-900',
+        ghost: 'hover:bg-neutral-100 hover:text-primary-900',
         danger:
           'bg-danger text-white hover:bg-danger/90 active:scale-[0.98] shadow-sm',
         success:
           'bg-success text-white hover:bg-success/90 active:scale-[0.98] shadow-sm',
-        link: 
-          'text-primary-700 underline-offset-4 hover:underline',
+        link: 'text-primary-700 underline-offset-4 hover:underline',
       },
       size: {
         sm: 'h-8 px-3 text-xs',
@@ -38,11 +36,12 @@ const buttonVariants = cva(
       variant: 'primary',
       size: 'md',
     },
-  }
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
@@ -51,21 +50,24 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-    className, 
-    variant, 
-    size, 
-    fullWidth,
-    asChild = false, 
-    loading = false,
-    leftIcon,
-    rightIcon,
-    children,
-    disabled,
-    ...props 
-  }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      fullWidth,
+      asChild = false,
+      loading = false,
+      leftIcon,
+      rightIcon,
+      children,
+      disabled,
+      ...props
+    },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : 'button';
-    
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, fullWidth, className }))}
@@ -106,7 +108,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
       </Comp>
     );
-  }
+  },
 );
 
 Button.displayName = 'Button';

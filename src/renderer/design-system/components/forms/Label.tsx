@@ -14,7 +14,7 @@ export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
         className={cn(
           'block text-sm font-medium mb-1',
           error ? 'text-danger' : 'text-neutral-700',
-          className
+          className,
         )}
         {...props}
       >
@@ -22,7 +22,7 @@ export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
         {required && <span className="text-danger ml-1">*</span>}
       </label>
     );
-  }
+  },
 );
 
 Label.displayName = 'Label';

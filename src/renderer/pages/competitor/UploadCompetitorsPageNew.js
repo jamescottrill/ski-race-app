@@ -41,7 +41,10 @@ export default function UploadCompetitorsPageNew() {
 
   // Validate the whole file up front so the preview shows exactly what will
   // be written and what will be skipped
-  const rows = useMemo(() => validateCompetitorRows(competitors), [competitors]);
+  const rows = useMemo(
+    () => validateCompetitorRows(competitors),
+    [competitors],
+  );
   const importableCount = rows.filter((row) => row.importable).length;
   const problemRows = rows.filter((row) => !row.importable);
 
@@ -146,7 +149,8 @@ export default function UploadCompetitorsPageNew() {
     if (importable.length === 0) {
       setUploadStatus({
         type: 'error',
-        message: 'No rows can be imported. Fix the problems listed below and try again.',
+        message:
+          'No rows can be imported. Fix the problems listed below and try again.',
       });
       return;
     }
@@ -155,7 +159,9 @@ export default function UploadCompetitorsPageNew() {
     setUploadStatus({ type: 'info', message: 'Importing competitors...' });
 
     try {
-      const serviceNumbers = importable.map((row) => row.competitor.serviceNumber);
+      const serviceNumbers = importable.map(
+        (row) => row.competitor.serviceNumber,
+      );
       const existingPeople = await findExistingPeople(serviceNumbers);
       const existingEntries = await findExistingCompetitionEntries(
         competitionId,
@@ -255,13 +261,21 @@ export default function UploadCompetitorsPageNew() {
             </div>
 
             {uploadStatus && (
-              <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
-                uploadStatus.type === 'success' ? 'bg-success/10 text-success' :
-                uploadStatus.type === 'error' ? 'bg-danger/10 text-danger' :
-                'bg-info/10 text-info'
-              }`}>
-                {uploadStatus.type === 'success' && <CheckCircle className="w-5 h-5" />}
-                {uploadStatus.type === 'error' && <AlertCircle className="w-5 h-5" />}
+              <div
+                className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
+                  uploadStatus.type === 'success'
+                    ? 'bg-success/10 text-success'
+                    : uploadStatus.type === 'error'
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-info/10 text-info'
+                }`}
+              >
+                {uploadStatus.type === 'success' && (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {uploadStatus.type === 'error' && (
+                  <AlertCircle className="w-5 h-5" />
+                )}
                 <span>{uploadStatus.message}</span>
               </div>
             )}
@@ -270,16 +284,20 @@ export default function UploadCompetitorsPageNew() {
               <div className="mt-4">
                 <h4 className="text-sm font-semibold mb-2">
                   Preview: {importableCount} ready to import
-                  {problemRows.length > 0 && `, ${problemRows.length} with problems`}
+                  {problemRows.length > 0 &&
+                    `, ${problemRows.length} with problems`}
                 </h4>
                 {problemRows.length > 0 && (
                   <div className="mb-3 p-3 bg-danger/10 border border-danger/20 rounded-md text-sm">
-                    <p className="font-medium text-danger mb-1">These rows will be skipped:</p>
+                    <p className="font-medium text-danger mb-1">
+                      These rows will be skipped:
+                    </p>
                     <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
                       {problemRows.slice(0, 20).map((row) => (
                         <li key={row.rowNumber}>
                           Row {row.rowNumber}
-                          {(row.competitor.firstName || row.competitor.lastName) &&
+                          {(row.competitor.firstName ||
+                            row.competitor.lastName) &&
                             ` (${row.competitor.firstName} ${row.competitor.lastName})`}
                           : {row.problems.join('; ')}
                         </li>
@@ -295,11 +313,14 @@ export default function UploadCompetitorsPageNew() {
                     {rows.slice(0, 10).map((row) => (
                       <li key={row.rowNumber} className="text-neutral-700">
                         {row.competitor.firstName} {row.competitor.lastName}
-                        {row.competitor.birthYear && ` (${row.competitor.birthYear})`}
+                        {row.competitor.birthYear &&
+                          ` (${row.competitor.birthYear})`}
                       </li>
                     ))}
                     {rows.length > 10 && (
-                      <li className="text-neutral-500 italic">... and {rows.length - 10} more</li>
+                      <li className="text-neutral-500 italic">
+                        ... and {rows.length - 10} more
+                      </li>
                     )}
                   </ul>
                 </div>
@@ -307,7 +328,11 @@ export default function UploadCompetitorsPageNew() {
             )}
 
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={handleBack} disabled={isProcessing}>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={isProcessing}
+              >
                 Cancel
               </Button>
               <Button
@@ -339,20 +364,51 @@ export default function UploadCompetitorsPageNew() {
               Your CSV file should include the following columns:
             </p>
             <ul className="text-sm space-y-1 text-neutral-600">
-              <li>• <strong>firstName</strong> or <strong>First Name</strong> (required)</li>
-              <li>• <strong>lastName</strong> or <strong>Last Name</strong> (required)</li>
-              <li>• <strong>birthYear</strong> or <strong>Birth Year</strong> (YYYY format)</li>
-              <li>• <strong>gender</strong> or <strong>Gender</strong> (M/F, required)</li>
-              <li>• <strong>serviceNumber</strong> or <strong>Service Number</strong> (required)</li>
-              <li>• <strong>regiment</strong> or <strong>Regiment</strong> (unit name)</li>
-              <li>• <strong>country</strong> or <strong>Country</strong> (GBR, USA, etc.)</li>
-              <li>• <strong>title</strong> or <strong>Title</strong> (rank)</li>
-              <li>• <strong>novice</strong> or <strong>Novice</strong> (Y/N)</li>
-              <li>• <strong>reserve</strong> or <strong>Reserve</strong> (Y/N)</li>
-              <li>• <strong>arrivalSeed</strong> or <strong>Arrival Seed</strong> (defaults to 2000)</li>
+              <li>
+                • <strong>firstName</strong> or <strong>First Name</strong>{' '}
+                (required)
+              </li>
+              <li>
+                • <strong>lastName</strong> or <strong>Last Name</strong>{' '}
+                (required)
+              </li>
+              <li>
+                • <strong>birthYear</strong> or <strong>Birth Year</strong>{' '}
+                (YYYY format)
+              </li>
+              <li>
+                • <strong>gender</strong> or <strong>Gender</strong> (M/F,
+                required)
+              </li>
+              <li>
+                • <strong>serviceNumber</strong> or{' '}
+                <strong>Service Number</strong> (required)
+              </li>
+              <li>
+                • <strong>regiment</strong> or <strong>Regiment</strong> (unit
+                name)
+              </li>
+              <li>
+                • <strong>country</strong> or <strong>Country</strong> (GBR,
+                USA, etc.)
+              </li>
+              <li>
+                • <strong>title</strong> or <strong>Title</strong> (rank)
+              </li>
+              <li>
+                • <strong>novice</strong> or <strong>Novice</strong> (Y/N)
+              </li>
+              <li>
+                • <strong>reserve</strong> or <strong>Reserve</strong> (Y/N)
+              </li>
+              <li>
+                • <strong>arrivalSeed</strong> or <strong>Arrival Seed</strong>{' '}
+                (defaults to 2000)
+              </li>
             </ul>
             <p className="text-xs text-neutral-500 mt-3">
-              Note: Column names are case-insensitive and can use either camelCase or Title Case with spaces.
+              Note: Column names are case-insensitive and can use either
+              camelCase or Title Case with spaces.
             </p>
           </CardContent>
         </Card>

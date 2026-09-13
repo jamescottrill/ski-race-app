@@ -51,7 +51,7 @@ export const getAASLSeasons = async () => {
 
   try {
     const result = await window.api.select(query, []);
-    return result.map(r => r.season);
+    return result.map((r) => r.season);
   } catch (error) {
     console.error('Failed to get AASL seasons:', error);
     return [];
@@ -71,7 +71,8 @@ export const validateAASLEntries = (entries) => {
     const rowNumber = entry.rowNumber ?? index + 1;
     const serviceNumber = String(entry.serviceNumber ?? '').trim();
     const rawPoints = entry.seedPoints;
-    const pointsMissing = rawPoints === '' || rawPoints === null || rawPoints === undefined;
+    const pointsMissing =
+      rawPoints === '' || rawPoints === null || rawPoints === undefined;
     const seedPoints = pointsMissing ? NaN : Number(rawPoints);
     const problems = [];
 
@@ -165,7 +166,9 @@ export const importAASLEntries = async (entries, season) => {
     `SELECT service_number FROM aasl WHERE season = ?`,
     [seasonKey],
   );
-  const existingServiceNumbers = new Set(existing.map((row) => row.service_number));
+  const existingServiceNumbers = new Set(
+    existing.map((row) => row.service_number),
+  );
 
   await window.api.transaction(
     buildAASLOperations(valid, seasonKey, new Date().toISOString()),
@@ -221,14 +224,16 @@ export const getAASLStats = async (season) => {
 
   try {
     const result = await window.api.select(query, [season]);
-    return result[0] || {
-      total: 0,
-      male: 0,
-      female: 0,
-      best_points: null,
-      worst_points: null,
-      avg_points: null
-    };
+    return (
+      result[0] || {
+        total: 0,
+        male: 0,
+        female: 0,
+        best_points: null,
+        worst_points: null,
+        avg_points: null,
+      }
+    );
   } catch (error) {
     console.error('Failed to get AASL stats:', error);
     return { total: 0 };

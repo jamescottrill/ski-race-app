@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Trophy, 
-  ChartBar, 
+import {
+  Users,
+  Trophy,
+  ChartBar,
   ListOrdered,
   ArrowLeft,
   UserPlus,
   Calendar,
   FileText,
-  Activity
+  Activity,
 } from 'lucide-react';
-import { 
-  PageContainer, 
+import {
+  PageContainer,
   PageHeader,
   Card,
   CardContent,
   Button,
-  cn
+  cn,
 } from '../design-system';
 
 function CompetitionManagementPageNew() {
@@ -27,7 +27,7 @@ function CompetitionManagementPageNew() {
     competitors: 0,
     races: 0,
     completedRaces: 0,
-    teams: 0
+    teams: 0,
   });
   const navigate = useNavigate();
 
@@ -57,22 +57,27 @@ function CompetitionManagementPageNew() {
   const fetchCompetitionStats = async () => {
     try {
       // Get competitor count
-      const competitorQuery = 'SELECT COUNT(*) as count FROM competition_competitor WHERE competition_id = ?';
-      const competitorResult = await window.api.select(competitorQuery, [competitionId]);
-      
+      const competitorQuery =
+        'SELECT COUNT(*) as count FROM competition_competitor WHERE competition_id = ?';
+      const competitorResult = await window.api.select(competitorQuery, [
+        competitionId,
+      ]);
+
       // Get race count
-      const raceQuery = 'SELECT COUNT(*) as total FROM races WHERE competition_id = ?';
+      const raceQuery =
+        'SELECT COUNT(*) as total FROM races WHERE competition_id = ?';
       const raceResult = await window.api.select(raceQuery, [competitionId]);
-      
+
       // Get team count
-      const teamQuery = 'SELECT COUNT(*) as count FROM competition_team WHERE competition_id = ?';
+      const teamQuery =
+        'SELECT COUNT(*) as count FROM competition_team WHERE competition_id = ?';
       const teamResult = await window.api.select(teamQuery, [competitionId]);
-      
+
       setStats({
         competitors: competitorResult[0]?.count || 0,
         races: raceResult[0]?.total || 0,
         completedRaces: 0, // No is_complete column in database
-        teams: teamResult[0]?.count || 0
+        teams: teamResult[0]?.count || 0,
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -86,11 +91,20 @@ function CompetitionManagementPageNew() {
       icon: Users,
       color: 'primary',
       stats: `${stats.competitors} registered`,
-      onClick: () => navigate(`/competition/${competitionId}/competitor/manage`),
+      onClick: () =>
+        navigate(`/competition/${competitionId}/competitor/manage`),
       quickActions: [
-        { label: 'Register', icon: UserPlus, path: `/competition/${competitionId}/competitor/new` },
-        { label: 'View All', icon: Users, path: `/competition/${competitionId}/competitor/list` }
-      ]
+        {
+          label: 'Register',
+          icon: UserPlus,
+          path: `/competition/${competitionId}/competitor/new`,
+        },
+        {
+          label: 'View All',
+          icon: Users,
+          path: `/competition/${competitionId}/competitor/list`,
+        },
+      ],
     },
     {
       title: 'Races',
@@ -100,9 +114,17 @@ function CompetitionManagementPageNew() {
       stats: `${stats.races} races`,
       onClick: () => navigate(`/competition/${competitionId}/race`),
       quickActions: [
-        { label: 'New Race', icon: Calendar, path: `/competition/${competitionId}/race/new` },
-        { label: 'View Races', icon: Trophy, path: `/competition/${competitionId}/race` }
-      ]
+        {
+          label: 'New Race',
+          icon: Calendar,
+          path: `/competition/${competitionId}/race/new`,
+        },
+        {
+          label: 'View Races',
+          icon: Trophy,
+          path: `/competition/${competitionId}/race`,
+        },
+      ],
     },
     {
       title: 'Results',
@@ -112,9 +134,17 @@ function CompetitionManagementPageNew() {
       stats: `${stats.completedRaces} completed`,
       onClick: () => navigate(`/competition/${competitionId}/results`),
       quickActions: [
-        { label: 'Individual', icon: Activity, path: `/competition/${competitionId}/results/individual` },
-        { label: 'Teams', icon: Users, path: `/competition/${competitionId}/results/team` }
-      ]
+        {
+          label: 'Individual',
+          icon: Activity,
+          path: `/competition/${competitionId}/results/individual`,
+        },
+        {
+          label: 'Teams',
+          icon: Users,
+          path: `/competition/${competitionId}/results/team`,
+        },
+      ],
     },
     {
       title: 'Seed List',
@@ -122,19 +152,31 @@ function CompetitionManagementPageNew() {
       icon: ListOrdered,
       color: 'info',
       stats: 'Auto-calculated',
-      onClick: () => navigate(`/competition/${competitionId}/seed-list/generate`),
+      onClick: () =>
+        navigate(`/competition/${competitionId}/seed-list/generate`),
       quickActions: [
-        { label: 'Generate', icon: FileText, path: `/competition/${competitionId}/seed-list/generate` },
-        { label: 'Export', icon: FileText, path: `/competition/${competitionId}/seed-list/generate` }
-      ]
+        {
+          label: 'Generate',
+          icon: FileText,
+          path: `/competition/${competitionId}/seed-list/generate`,
+        },
+        {
+          label: 'Export',
+          icon: FileText,
+          path: `/competition/${competitionId}/seed-list/generate`,
+        },
+      ],
     },
   ];
 
   const getColorClasses = (color) => {
     const colors = {
-      primary: 'bg-primary-100 text-primary-700 group-hover:bg-primary-700 group-hover:text-white',
-      success: 'bg-success/10 text-success group-hover:bg-success group-hover:text-white',
-      warning: 'bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white',
+      primary:
+        'bg-primary-100 text-primary-700 group-hover:bg-primary-700 group-hover:text-white',
+      success:
+        'bg-success/10 text-success group-hover:bg-success group-hover:text-white',
+      warning:
+        'bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white',
       info: 'bg-info/10 text-info group-hover:bg-info group-hover:text-white',
     };
     return colors[color] || colors.primary;
@@ -161,7 +203,9 @@ function CompetitionManagementPageNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-700">{stats.competitors}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {stats.competitors}
+              </p>
               <p className="text-sm text-neutral-600">Competitors</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
@@ -179,7 +223,9 @@ function CompetitionManagementPageNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-warning">{stats.completedRaces}</p>
+              <p className="text-2xl font-bold text-warning">
+                {stats.completedRaces}
+              </p>
               <p className="text-sm text-neutral-600">Completed</p>
             </div>
             <ChartBar className="w-8 h-8 text-warning/30" />
@@ -210,15 +256,19 @@ function CompetitionManagementPageNew() {
               <CardContent className="p-0">
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <div className={cn(
-                      'p-3 rounded-lg transition-all duration-300',
-                      getColorClasses(card.color)
-                    )}>
+                    <div
+                      className={cn(
+                        'p-3 rounded-lg transition-all duration-300',
+                        getColorClasses(card.color),
+                      )}
+                    >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <span className="text-sm text-neutral-500">{card.stats}</span>
+                    <span className="text-sm text-neutral-500">
+                      {card.stats}
+                    </span>
                   </div>
-                  
+
                   <h3 className="text-xl font-semibold text-neutral-900 mb-2 group-hover:text-primary-700 transition-colors">
                     {card.title}
                   </h3>
@@ -246,15 +296,17 @@ function CompetitionManagementPageNew() {
                     })}
                   </div>
                 </div>
-                
+
                 {/* Hover effect bar */}
-                <div className={cn(
-                  'h-1 w-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300',
-                  card.color === 'primary' && 'bg-primary-700',
-                  card.color === 'success' && 'bg-success',
-                  card.color === 'warning' && 'bg-warning',
-                  card.color === 'info' && 'bg-info'
-                )} />
+                <div
+                  className={cn(
+                    'h-1 w-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300',
+                    card.color === 'primary' && 'bg-primary-700',
+                    card.color === 'success' && 'bg-success',
+                    card.color === 'warning' && 'bg-warning',
+                    card.color === 'info' && 'bg-info',
+                  )}
+                />
               </CardContent>
             </Card>
           );
@@ -264,19 +316,27 @@ function CompetitionManagementPageNew() {
       {/* Recent Activity (Optional) */}
       <Card className="mt-8">
         <CardContent>
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Activity</h3>
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+            Recent Activity
+          </h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm">
               <div className="w-2 h-2 bg-success rounded-full" />
-              <span className="text-neutral-600">Competition created and configured</span>
+              <span className="text-neutral-600">
+                Competition created and configured
+              </span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <div className="w-2 h-2 bg-primary-500 rounded-full" />
-              <span className="text-neutral-600">{stats.competitors} competitors registered</span>
+              <span className="text-neutral-600">
+                {stats.competitors} competitors registered
+              </span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <div className="w-2 h-2 bg-warning rounded-full" />
-              <span className="text-neutral-600">{stats.races} races scheduled</span>
+              <span className="text-neutral-600">
+                {stats.races} races scheduled
+              </span>
             </div>
           </div>
         </CardContent>

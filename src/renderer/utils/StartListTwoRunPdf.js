@@ -262,12 +262,12 @@ const startListTwoRunPdf = (raceDetails, startList, womensStartList) => {
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((r) => {
-          if (r.success) {
-            showSuccess(`PDF saved successfully to: ${r.filePath}`);
-          } else {
-            alert('PDF save cancelled.');
-          }
-        })
+        if (r.success) {
+          showSuccess(`PDF saved successfully to: ${r.filePath}`);
+        } else {
+          alert('PDF save cancelled.');
+        }
+      })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

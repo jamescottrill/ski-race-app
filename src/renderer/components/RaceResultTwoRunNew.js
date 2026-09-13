@@ -283,9 +283,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     {
       accessorKey: 'team',
       header: 'Team',
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.team}</div>
-      ),
+      cell: ({ row }) => <div className="text-center">{row.original.team}</div>,
     },
     {
       accessorKey: 'run1Time',
@@ -372,15 +370,15 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
     {
       accessorKey: 'team',
       header: 'Team',
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.team}</div>
-      ),
+      cell: ({ row }) => <div className="text-center">{row.original.team}</div>,
     },
     {
       accessorKey: 'position',
       header: 'Position',
       cell: ({ row, table }) => {
-        const rowIndex = table.getSortedRowModel().rows.findIndex(r => r.id === row.id);
+        const rowIndex = table
+          .getSortedRowModel()
+          .rows.findIndex((r) => r.id === row.id);
         return <div className="text-center">{rowIndex + 1}</div>;
       },
     },
@@ -405,8 +403,8 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous
+              run as finished.
             </div>
           </CardContent>
         </Card>
@@ -414,7 +412,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run1Dns.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNS Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dns}
@@ -427,7 +427,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run1Dnf.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNF Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dnf}
@@ -440,7 +442,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run1Dsq.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DSQ Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dsq}
@@ -453,7 +457,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run2Dns.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNS Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dns}
@@ -466,7 +472,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run2Dnf.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNF Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dnf}
@@ -479,7 +487,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {run2Dsq.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DSQ Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dsq}
@@ -492,7 +502,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Junior Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Junior Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_junior).slice(0, 3)}
@@ -505,7 +517,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Novice Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Novice Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_novice).slice(0, 3)}
@@ -518,7 +532,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Veteran Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Veteran Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_veteran).slice(0, 3)}
@@ -531,10 +547,12 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Female Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Female Results
+            </h2>
             <DataTable
               columns={categoryColumns}
-              data={data.filter((e) => e.gender === "F").slice(0, 3)}
+              data={data.filter((e) => e.gender === 'F').slice(0, 3)}
               showPagination={false}
               className="w-full"
             />
@@ -544,7 +562,9 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Open Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Open Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.slice(0, 3)}
@@ -555,9 +575,7 @@ const RaceResultTwoRunNew = ({ raceId, competitionId }) => {
         </Card>
       )}
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download PDF
-        </Button>
+        <Button onClick={generatePDF}>Download PDF</Button>
       </div>
     </div>
   );

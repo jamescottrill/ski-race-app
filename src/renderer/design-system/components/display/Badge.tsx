@@ -14,14 +14,15 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'md',
   className,
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-full';
-  
+  const baseStyles =
+    'inline-flex items-center justify-center font-medium rounded-full';
+
   const sizeStyles = {
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-2.5 py-1 text-sm',
     lg: 'px-3 py-1.5 text-base',
   };
-  
+
   const variantStyles = {
     default: 'bg-neutral-100 text-neutral-700',
     primary: 'bg-primary-100 text-primary-700',
@@ -30,14 +31,14 @@ export const Badge: React.FC<BadgeProps> = ({
     danger: 'bg-danger/10 text-danger',
     info: 'bg-info/10 text-info',
   };
-  
+
   return (
     <span
       className={cn(
         baseStyles,
         sizeStyles[size],
         variantStyles[variant],
-        className
+        className,
       )}
     >
       {children}

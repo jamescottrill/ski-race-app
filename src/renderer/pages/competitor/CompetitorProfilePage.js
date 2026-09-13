@@ -52,9 +52,12 @@ const formatTime = (seconds) => {
 };
 
 const getStatus = (race) => {
-  if (race.run1_dns || race.run2_dns) return { label: 'DNS', variant: 'warning' };
-  if (race.run1_dnf || race.run2_dnf) return { label: 'DNF', variant: 'danger' };
-  if (race.run1_dsq || race.run2_dsq) return { label: 'DSQ', variant: 'danger' };
+  if (race.run1_dns || race.run2_dns)
+    return { label: 'DNS', variant: 'warning' };
+  if (race.run1_dnf || race.run2_dnf)
+    return { label: 'DNF', variant: 'danger' };
+  if (race.run1_dsq || race.run2_dsq)
+    return { label: 'DSQ', variant: 'danger' };
   if (race.run1_time) return { label: 'Finished', variant: 'success' };
   return { label: 'Pending', variant: 'default' };
 };
@@ -107,9 +110,8 @@ export default function CompetitorProfilePage() {
   const validSeedPoints = raceHistory
     .map((d) => d.earned_seed_points)
     .filter((p) => p != null && p >= 0);
-  const bestSeedPoints = validSeedPoints.length > 0
-    ? Math.min(...validSeedPoints)
-    : null;
+  const bestSeedPoints =
+    validSeedPoints.length > 0 ? Math.min(...validSeedPoints) : null;
 
   const completionRate = stats
     ? ((stats.completed_races / stats.total_races) * 100).toFixed(0)
@@ -147,7 +149,9 @@ export default function CompetitorProfilePage() {
             className="text-primary-600 hover:text-primary-800 hover:underline text-left"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/competition/${row.original.competition_id}/race/${row.original.race_id}/results`);
+              navigate(
+                `/competition/${row.original.competition_id}/race/${row.original.race_id}/results`,
+              );
             }}
           >
             {row.original.race_name}
@@ -176,9 +180,10 @@ export default function CompetitorProfilePage() {
       cell: ({ row }) => {
         const r = row.original;
         if (!r.run1_time) return '-';
-        const total = r.number_runs > 1 && r.run2_time
-          ? r.run1_time + r.run2_time
-          : r.run1_time;
+        const total =
+          r.number_runs > 1 && r.run2_time
+            ? r.run1_time + r.run2_time
+            : r.run1_time;
         return formatTime(total);
       },
     },
@@ -254,7 +259,9 @@ export default function CompetitorProfilePage() {
                     {competitor.title && `${competitor.title} `}
                     {competitor.first_name} {competitor.last_name}
                   </h2>
-                  <Badge variant={competitor.gender === 'F' ? 'warning' : 'info'}>
+                  <Badge
+                    variant={competitor.gender === 'F' ? 'warning' : 'info'}
+                  >
                     {competitor.gender === 'F' ? 'Female' : 'Male'}
                   </Badge>
                 </div>
@@ -363,7 +370,9 @@ export default function CompetitorProfilePage() {
                 {raceHistory.length === 0 ? (
                   <div className="text-center py-12">
                     <Trophy className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                    <p className="text-neutral-600">No race history found for this competitor.</p>
+                    <p className="text-neutral-600">
+                      No race history found for this competitor.
+                    </p>
                   </div>
                 ) : (
                   <DataTable columns={raceHistoryColumns} data={raceHistory} />
@@ -374,7 +383,9 @@ export default function CompetitorProfilePage() {
                 {chartData.length === 0 ? (
                   <div className="text-center py-12">
                     <BarChart3 className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                    <p className="text-neutral-600">No completed races to chart.</p>
+                    <p className="text-neutral-600">
+                      No completed races to chart.
+                    </p>
                   </div>
                 ) : (
                   <div>
@@ -382,7 +393,8 @@ export default function CompetitorProfilePage() {
                       Average Performance by Race Type
                     </h3>
                     <p className="text-sm text-neutral-600 mb-4">
-                      Comparison of average seed points across different disciplines.
+                      Comparison of average seed points across different
+                      disciplines.
                     </p>
                     <PerformanceChart data={chartData} />
                   </div>

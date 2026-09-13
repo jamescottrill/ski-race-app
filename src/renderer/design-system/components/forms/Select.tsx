@@ -15,40 +15,43 @@ const SelectTrigger = React.forwardRef<
     fullWidth?: boolean;
     required?: boolean;
   }
->(({ className, children, label, error, fullWidth, required, ...props }, ref) => (
-  <div className={cn('space-y-2', fullWidth && 'w-full')}>
-    {label && (
-      <label className="block text-sm font-medium text-neutral-700">
-        {label}
-        {required && <span className="ml-1 text-danger">*</span>}
-      </label>
-    )}
-    <SelectPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        'flex h-10 w-full items-center justify-between rounded-md border bg-surface px-3 py-2 text-sm',
-        'transition-all duration-200',
-        'placeholder:text-neutral-400',
-        'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
-        'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-neutral-50',
-        'data-[placeholder]:text-neutral-400',
-        error 
-          ? 'border-danger text-danger focus:ring-danger' 
-          : 'border-border text-neutral-900 hover:border-neutral-400',
-        className
+>(
+  (
+    { className, children, label, error, fullWidth, required, ...props },
+    ref,
+  ) => (
+    <div className={cn('space-y-2', fullWidth && 'w-full')}>
+      {label && (
+        <label className="block text-sm font-medium text-neutral-700">
+          {label}
+          {required && <span className="ml-1 text-danger">*</span>}
+        </label>
       )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDown className="h-4 w-4 text-neutral-500" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-    {error && (
-      <p className="text-sm text-danger">{error}</p>
-    )}
-  </div>
-));
+      <SelectPrimitive.Trigger
+        ref={ref}
+        className={cn(
+          'flex h-10 w-full items-center justify-between rounded-md border bg-surface px-3 py-2 text-sm',
+          'transition-all duration-200',
+          'placeholder:text-neutral-400',
+          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+          'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-neutral-50',
+          'data-[placeholder]:text-neutral-400',
+          error
+            ? 'border-danger text-danger focus:ring-danger'
+            : 'border-border text-neutral-900 hover:border-neutral-400',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <SelectPrimitive.Icon asChild>
+          <ChevronDown className="h-4 w-4 text-neutral-500" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </div>
+  ),
+);
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
 const SelectScrollUpButton = React.forwardRef<
@@ -59,7 +62,7 @@ const SelectScrollUpButton = React.forwardRef<
     ref={ref}
     className={cn(
       'flex cursor-default items-center justify-center py-1',
-      className
+      className,
     )}
     {...props}
   >
@@ -76,14 +79,15 @@ const SelectScrollDownButton = React.forwardRef<
     ref={ref}
     className={cn(
       'flex cursor-default items-center justify-center py-1',
-      className
+      className,
     )}
     {...props}
   >
     <ChevronDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
 ));
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName;
+SelectScrollDownButton.displayName =
+  SelectPrimitive.ScrollDownButton.displayName;
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
@@ -103,7 +107,7 @@ const SelectContent = React.forwardRef<
         'data-[side=top]:slide-in-from-bottom-2',
         position === 'popper' &&
           'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-        className
+        className,
       )}
       position={position}
       {...props}
@@ -113,7 +117,7 @@ const SelectContent = React.forwardRef<
         className={cn(
           'p-1',
           position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
+            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
         )}
       >
         {children}
@@ -130,7 +134,10 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('py-1.5 pl-8 pr-2 text-sm font-semibold text-neutral-700', className)}
+    className={cn(
+      'py-1.5 pl-8 pr-2 text-sm font-semibold text-neutral-700',
+      className,
+    )}
     {...props}
   />
 ));
@@ -148,7 +155,7 @@ const SelectItem = React.forwardRef<
       'focus:bg-primary-100 focus:text-primary-900',
       'hover:bg-neutral-100',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
+      className,
     )}
     {...props}
   >

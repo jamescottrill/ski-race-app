@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mountain, Plus, Trophy, ListOrdered, GitMerge, User } from 'lucide-react';
+import {
+  Mountain,
+  Plus,
+  Trophy,
+  ListOrdered,
+  GitMerge,
+  User,
+} from 'lucide-react';
 import {
   Button,
   Card,
@@ -71,7 +78,9 @@ function LandingPageNew() {
           {/* Quick Stats */}
           <div className="grid grid-cols-3  gap-4 p-4 bg-neutral-50 rounded-lg">
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary-700">{competitions.length}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {competitions.length}
+              </p>
               <p className="text-xs text-neutral-600">Competitions</p>
             </div>
           </div>
@@ -126,7 +135,9 @@ function LandingPageNew() {
                 <div className="w-full border-t border-neutral-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-surface text-neutral-500">or select existing</span>
+                <span className="px-4 bg-surface text-neutral-500">
+                  or select existing
+                </span>
               </div>
             </div>
 
@@ -135,7 +146,10 @@ function LandingPageNew() {
               <label className="block text-sm font-medium text-neutral-700">
                 Select Competition
               </label>
-              <Select value={selectedCompetition} onValueChange={handleSelectCompetition}>
+              <Select
+                value={selectedCompetition}
+                onValueChange={handleSelectCompetition}
+              >
                 <SelectTrigger className="w-full h-12 text-base">
                   <SelectValue placeholder="Choose a competition to continue" />
                 </SelectTrigger>

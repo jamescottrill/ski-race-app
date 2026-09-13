@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuid4 } from 'uuid';
 import { ArrowLeft, Trophy, Calendar, MapPin, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { 
+import {
   Card,
   CardHeader,
   CardTitle,
@@ -25,7 +25,7 @@ function CreateCompetitionPageNew() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
+
     if (!competitionName.trim()) {
       toast.error('Competition name is required');
       return;
@@ -107,7 +107,9 @@ function CreateCompetitionPageNew() {
                       rows={4}
                       placeholder="e.g., Annual British Army Alpine Ski Championships including GS, SL, and SG races"
                       value={competitionDescription}
-                      onChange={(e) => setCompetitionDescription(e.target.value)}
+                      onChange={(e) =>
+                        setCompetitionDescription(e.target.value)
+                      }
                     />
                     <p className="text-sm text-neutral-500">
                       Optional: Provide additional details about the competition
@@ -153,7 +155,9 @@ function CreateCompetitionPageNew() {
                     1
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Create Competition</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      Create Competition
+                    </p>
                     <p className="text-xs text-neutral-600">You are here</p>
                   </div>
                 </div>
@@ -162,8 +166,12 @@ function CreateCompetitionPageNew() {
                     2
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Register Competitors</p>
-                    <p className="text-xs text-neutral-600">Add athletes and teams</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      Register Competitors
+                    </p>
+                    <p className="text-xs text-neutral-600">
+                      Add athletes and teams
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -171,8 +179,12 @@ function CreateCompetitionPageNew() {
                     3
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Create Races</p>
-                    <p className="text-xs text-neutral-600">Set up individual events</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      Create Races
+                    </p>
+                    <p className="text-xs text-neutral-600">
+                      Set up individual events
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -180,7 +192,9 @@ function CreateCompetitionPageNew() {
                     4
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Record Results</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      Record Results
+                    </p>
                     <p className="text-xs text-neutral-600">Enter race times</p>
                   </div>
                 </div>
@@ -193,9 +207,12 @@ function CreateCompetitionPageNew() {
                 <div className="flex gap-3">
                   <Calendar className="w-5 h-5 text-primary-700 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-primary-900">Season 2024</p>
+                    <p className="text-sm font-medium text-primary-900">
+                      Season 2024
+                    </p>
                     <p className="text-xs text-primary-700 mt-1">
-                      Remember to configure race dates and venues after creating the competition
+                      Remember to configure race dates and venues after creating
+                      the competition
                     </p>
                   </div>
                 </div>
@@ -208,9 +225,12 @@ function CreateCompetitionPageNew() {
                 <div className="flex gap-3">
                   <MapPin className="w-5 h-5 text-neutral-700 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Venue Settings</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      Venue Settings
+                    </p>
                     <p className="text-xs text-neutral-600 mt-1">
-                      Individual race venues can be configured when creating each race
+                      Individual race venues can be configured when creating
+                      each race
                     </p>
                   </div>
                 </div>

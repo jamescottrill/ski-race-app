@@ -8,7 +8,7 @@ import {
   CardContent,
   Button,
   Input,
-  Checkbox
+  Checkbox,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -36,7 +36,7 @@ export default function EditTeamPageNew() {
         `SELECT team_name, is_corps, is_reserve
          FROM competition_team
          WHERE competition_id = ? AND team_id = ?`,
-        [competitionId, teamId]
+        [competitionId, teamId],
       );
 
       if (result.length > 0) {
@@ -58,7 +58,7 @@ export default function EditTeamPageNew() {
   };
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -82,8 +82,8 @@ export default function EditTeamPageNew() {
           formData.is_corps ? 1 : 0,
           formData.is_reserve ? 1 : 0,
           competitionId,
-          teamId
-        ]
+          teamId,
+        ],
       );
 
       navigate(`/competition/${competitionId}/team/list`);
@@ -165,11 +165,7 @@ export default function EditTeamPageNew() {
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-              >
+              <Button type="button" variant="outline" onClick={handleBack}>
                 Cancel
               </Button>
             </div>

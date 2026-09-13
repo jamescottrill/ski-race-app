@@ -209,9 +209,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
     {
       accessorKey: 'team',
       header: 'Team',
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.team}</div>
-      ),
+      cell: ({ row }) => <div className="text-center">{row.original.team}</div>,
     },
     {
       accessorKey: 'run1Time',
@@ -219,11 +217,15 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       cell: ({ row }) => (
         <div className="text-center">
           {['DNS', 'DNF', 'DSQ'].includes(row.original.run1Time) ? (
-            <Badge variant={
-              row.original.run1Time === 'DNS' ? 'warning' :
-              row.original.run1Time === 'DNF' ? 'danger' :
-              'info'
-            }>
+            <Badge
+              variant={
+                row.original.run1Time === 'DNS'
+                  ? 'warning'
+                  : row.original.run1Time === 'DNF'
+                    ? 'danger'
+                    : 'info'
+              }
+            >
               {row.original.run1Time}
             </Badge>
           ) : (
@@ -238,11 +240,15 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       cell: ({ row }) => (
         <div className="text-center">
           {['DNS', 'DNF', 'DSQ'].includes(row.original.run2Time) ? (
-            <Badge variant={
-              row.original.run2Time === 'DNS' ? 'warning' :
-              row.original.run2Time === 'DNF' ? 'danger' :
-              'info'
-            }>
+            <Badge
+              variant={
+                row.original.run2Time === 'DNS'
+                  ? 'warning'
+                  : row.original.run2Time === 'DNF'
+                    ? 'danger'
+                    : 'info'
+              }
+            >
               {row.original.run2Time}
             </Badge>
           ) : (
@@ -327,8 +333,8 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous
+              run as finished.
             </div>
           </CardContent>
         </Card>
@@ -336,7 +342,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run1Dns.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNS Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dns}
@@ -349,7 +357,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run1Dnf.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNF Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dnf}
@@ -362,7 +372,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run1Dsq.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DSQ Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dsq}
@@ -375,7 +387,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run2Dns.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNS Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dns}
@@ -388,7 +402,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run2Dnf.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNF Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dnf}
@@ -401,7 +417,9 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
       {run2Dsq.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 2</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DSQ Run 2
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run2Dsq}
@@ -412,9 +430,7 @@ export default function RaceResultSeedNew({ raceId, competitionId }) {
         </Card>
       )}
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download PDF
-        </Button>
+        <Button onClick={generatePDF}>Download PDF</Button>
       </div>
     </div>
   );

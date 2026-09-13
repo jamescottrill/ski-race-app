@@ -10,7 +10,7 @@ import {
   Timer,
   Trash2,
   Upload,
-  ClipboardEdit
+  ClipboardEdit,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -18,7 +18,7 @@ import {
   Card,
   CardContent,
   Button,
-  Badge
+  Badge,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -61,7 +61,9 @@ export default function RaceDetailsPageNew() {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this race?')) {
       try {
-        await window.api.delete('DELETE FROM races WHERE race_id = ?', [raceId]);
+        await window.api.delete('DELETE FROM races WHERE race_id = ?', [
+          raceId,
+        ]);
         navigate(`/competition/${competitionId}/race`);
       } catch (error) {
         console.error('Failed to delete race:', error);
@@ -73,7 +75,9 @@ export default function RaceDetailsPageNew() {
     return (
       <PageContainer>
         <PageHeader title="Loading..." />
-        <Card><CardContent>Loading race details...</CardContent></Card>
+        <Card>
+          <CardContent>Loading race details...</CardContent>
+        </Card>
       </PageContainer>
     );
   }
@@ -85,25 +89,67 @@ export default function RaceDetailsPageNew() {
         subtitle={`${raceDetails.race_type} • ${raceDetails.venue || 'TBD'}`}
         actions={
           <div className="flex gap-3">
-            <Button variant="primary" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/start-list`)}>
+            <Button
+              variant="primary"
+              onClick={() =>
+                navigate(
+                  `/competition/${competitionId}/race/${raceId}/start-list`,
+                )
+              }
+            >
               Start List
             </Button>
-            <Button variant="warning" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/edit`)} leftIcon={<ClipboardEdit className="w-4 h-4" />}>
+            <Button
+              variant="warning"
+              onClick={() =>
+                navigate(
+                  `/competition/${competitionId}/race/${raceId}/results/edit`,
+                )
+              }
+              leftIcon={<ClipboardEdit className="w-4 h-4" />}
+            >
               Record Results
             </Button>
-            <Button variant="success" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results`)}>
+            <Button
+              variant="success"
+              onClick={() =>
+                navigate(`/competition/${competitionId}/race/${raceId}/results`)
+              }
+            >
               View Results
             </Button>
-            <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results/import`)} leftIcon={<Upload className="w-4 h-4" />}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                navigate(
+                  `/competition/${competitionId}/race/${raceId}/results/import`,
+                )
+              }
+              leftIcon={<Upload className="w-4 h-4" />}
+            >
               Import Results
             </Button>
-            <Button variant="outline" onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/edit`)} leftIcon={<Edit className="w-4 h-4" />}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                navigate(`/competition/${competitionId}/race/${raceId}/edit`)
+              }
+              leftIcon={<Edit className="w-4 h-4" />}
+            >
               Edit
             </Button>
-            <Button variant="danger" onClick={handleDelete} leftIcon={<Trash2 className="w-4 h-4" />}>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
               Delete
             </Button>
-            <Button variant="outline" onClick={handleBack} leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
               Back
             </Button>
           </div>
@@ -115,14 +161,36 @@ export default function RaceDetailsPageNew() {
           <CardContent>
             <h3 className="font-semibold mb-4">Race Information</h3>
             <dl className="space-y-2">
-              <div><dt className="text-sm text-neutral-500">Type</dt><dd className="font-medium">{raceDetails.race_type}</dd></div>
-              <div><dt className="text-sm text-neutral-500">Date</dt><dd className="font-medium">{raceDetails.race_date || 'TBD'}</dd></div>
-              <div><dt className="text-sm text-neutral-500">Venue</dt><dd className="font-medium">{raceDetails.venue || 'TBD'}</dd></div>
-              <div><dt className="text-sm text-neutral-500">Runs</dt><dd className="font-medium">{raceDetails.number_runs}</dd></div>
-              {raceDetails.is_team ? <Badge variant="primary">Team Race</Badge> : null}
-              {raceDetails.is_training ? <Badge variant="info">Training</Badge> : null}
-              {raceDetails.is_seeding ? <Badge variant="primary">Seeding Race</Badge> : null}
-              {raceDetails.women_separate ? <Badge variant="info">Separate Women</Badge> : null}
+              <div>
+                <dt className="text-sm text-neutral-500">Type</dt>
+                <dd className="font-medium">{raceDetails.race_type}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-neutral-500">Date</dt>
+                <dd className="font-medium">
+                  {raceDetails.race_date || 'TBD'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-neutral-500">Venue</dt>
+                <dd className="font-medium">{raceDetails.venue || 'TBD'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-neutral-500">Runs</dt>
+                <dd className="font-medium">{raceDetails.number_runs}</dd>
+              </div>
+              {raceDetails.is_team ? (
+                <Badge variant="primary">Team Race</Badge>
+              ) : null}
+              {raceDetails.is_training ? (
+                <Badge variant="info">Training</Badge>
+              ) : null}
+              {raceDetails.is_seeding ? (
+                <Badge variant="primary">Seeding Race</Badge>
+              ) : null}
+              {raceDetails.women_separate ? (
+                <Badge variant="info">Separate Women</Badge>
+              ) : null}
             </dl>
           </CardContent>
         </Card>
@@ -131,9 +199,18 @@ export default function RaceDetailsPageNew() {
           <CardContent>
             <h3 className="font-semibold mb-4">Officials</h3>
             <dl className="space-y-2">
-              <div><dt className="text-sm text-neutral-500">Chief of Race</dt><dd className="font-medium">{raceDetails.cor_name || 'TBD'}</dd></div>
-              <div><dt className="text-sm text-neutral-500">Technical Delegate</dt><dd className="font-medium">{raceDetails.td_name || 'TBD'}</dd></div>
-              <div><dt className="text-sm text-neutral-500">Referee</dt><dd className="font-medium">{raceDetails.ref_name || 'TBD'}</dd></div>
+              <div>
+                <dt className="text-sm text-neutral-500">Chief of Race</dt>
+                <dd className="font-medium">{raceDetails.cor_name || 'TBD'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-neutral-500">Technical Delegate</dt>
+                <dd className="font-medium">{raceDetails.td_name || 'TBD'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-neutral-500">Referee</dt>
+                <dd className="font-medium">{raceDetails.ref_name || 'TBD'}</dd>
+              </div>
             </dl>
           </CardContent>
         </Card>

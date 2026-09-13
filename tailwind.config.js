@@ -16,7 +16,7 @@ module.exports = {
           700: '#1E3A5F',
           900: '#0A1628',
         },
-        
+
         // Alpine Theme
         alpine: {
           white: '#FFFFFF',
@@ -24,18 +24,18 @@ module.exports = {
           shadow: '#64748B',
           rock: '#475569',
         },
-        
+
         // Competition Colors
         gold: '#FFB800',
         silver: '#C0C0C0',
         bronze: '#CD7F32',
-        
+
         // Semantic Colors
         success: '#10B981',
         warning: '#F59E0B',
         danger: '#EF4444',
         info: '#3B82F6',
-        
+
         // Neutral Colors
         neutral: {
           0: '#FFFFFF',
@@ -51,19 +51,25 @@ module.exports = {
           900: '#111827',
           950: '#030712',
         },
-        
+
         // System Colors
         background: '#FAFBFC',
         surface: '#FFFFFF',
         border: '#E2E8F0',
         ring: '#2C5282',
       },
-      
+
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        sans: [
+          'Inter',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'sans-serif',
+        ],
         mono: ['JetBrains Mono', 'SF Mono', 'Consolas', 'monospace'],
       },
-      
+
       fontSize: {
         xs: ['0.75rem', { lineHeight: '1rem' }],
         sm: ['0.875rem', { lineHeight: '1.25rem' }],
@@ -75,33 +81,34 @@ module.exports = {
         '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
         '5xl': ['3rem', { lineHeight: '1' }],
       },
-      
+
       spacing: {
         128: '32rem',
         144: '36rem',
       },
-      
+
       borderRadius: {
         lg: '0.5rem',
         md: '0.375rem',
         sm: '0.125rem',
       },
-      
+
       boxShadow: {
         sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        DEFAULT:
+          '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
         md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
       },
-      
+
       animation: {
         'spin-slow': 'spin 2s linear infinite',
         'fade-in': 'fadeIn 0.2s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'slide-down': 'slideDown 0.3s ease-out',
       },
-      
+
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },

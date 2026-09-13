@@ -8,7 +8,7 @@ import {
   CardContent,
   Button,
   DataTable,
-  Badge
+  Badge,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -61,9 +61,15 @@ export default function TeamListPageNew() {
     if (window.confirm(`Are you sure you want to delete team "${teamName}"?`)) {
       try {
         // Delete team members first
-        await window.api.delete('DELETE FROM competition_team_members WHERE team_id = ?', [teamId]);
+        await window.api.delete(
+          'DELETE FROM competition_team_members WHERE team_id = ?',
+          [teamId],
+        );
         // Then delete the team
-        await window.api.delete('DELETE FROM competition_team WHERE team_id = ?', [teamId]);
+        await window.api.delete(
+          'DELETE FROM competition_team WHERE team_id = ?',
+          [teamId],
+        );
         await fetchTeams();
       } catch (error) {
         console.error('Failed to delete team:', error);
@@ -81,16 +87,21 @@ export default function TeamListPageNew() {
           <Users className="w-4 h-4 text-primary-500" />
           <span className="font-medium">{row.original.team_name}</span>
         </div>
-      )
+      ),
     },
     {
       header: 'Type',
       accessorKey: 'team_type',
       cell: ({ row }) => {
         const type = row.original.team_type;
-        const variant = type === 'Alpine' ? 'primary' : type === 'Nordic' ? 'info' : 'default';
+        const variant =
+          type === 'Alpine'
+            ? 'primary'
+            : type === 'Nordic'
+              ? 'info'
+              : 'default';
         return <Badge variant={variant}>{type || 'General'}</Badge>;
-      }
+      },
     },
     {
       header: 'Members',
@@ -100,7 +111,7 @@ export default function TeamListPageNew() {
           <span className="font-mono">{row.original.member_count}</span>
           <span className="text-neutral-500">competitors</span>
         </div>
-      )
+      ),
     },
     {
       header: 'Actions',
@@ -126,14 +137,16 @@ export default function TeamListPageNew() {
           <Button
             size="sm"
             variant="danger"
-            onClick={() => handleDeleteTeam(row.original.team_id, row.original.team_name)}
+            onClick={() =>
+              handleDeleteTeam(row.original.team_id, row.original.team_name)
+            }
             leftIcon={<Trash2 className="w-3 h-3" />}
           >
             Delete
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -166,7 +179,9 @@ export default function TeamListPageNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-neutral-600">Total Teams</p>
-              <p className="text-2xl font-bold text-primary-700">{teams.length}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {teams.length}
+              </p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
           </div>
@@ -177,7 +192,7 @@ export default function TeamListPageNew() {
             <div>
               <p className="text-sm text-neutral-600">Alpine Teams</p>
               <p className="text-2xl font-bold text-info">
-                {teams.filter(t => t.team_type === 'Alpine').length}
+                {teams.filter((t) => t.team_type === 'Alpine').length}
               </p>
             </div>
             <Users className="w-8 h-8 text-info/30" />

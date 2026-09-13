@@ -6,7 +6,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import {
@@ -44,7 +44,7 @@ export default function ImportRaceResultsPageNew() {
     time: '',
     time1: '',
     time2: '',
-    status: ''
+    status: '',
   });
   const [previewData, setPreviewData] = useState([]);
   const [importStatus, setImportStatus] = useState(null);
@@ -109,25 +109,42 @@ export default function ImportRaceResultsPageNew() {
       error: (error) => {
         console.error('CSV parse error:', error);
         setImportStatus({ type: 'error', message: 'Failed to parse CSV file' });
-      }
+      },
     });
   };
 
   const autoDetectColumns = (headers, data) => {
-    const lowerHeaders = headers.map(h => h.toLowerCase());
+    const lowerHeaders = headers.map((h) => h.toLowerCase());
     const mapping = { bib: '', time: '', time1: '', time2: '', status: '' };
 
     lowerHeaders.forEach((header, index) => {
       const originalHeader = headers[index];
-      if (header.includes('bib') || header.includes('number') || header === 'no' || header === '#') {
+      if (
+        header.includes('bib') ||
+        header.includes('number') ||
+        header === 'no' ||
+        header === '#'
+      ) {
         mapping.bib = originalHeader;
-      } else if (header.includes('time1') || header.includes('run1') || header.includes('run 1')) {
+      } else if (
+        header.includes('time1') ||
+        header.includes('run1') ||
+        header.includes('run 1')
+      ) {
         mapping.time1 = originalHeader;
-      } else if (header.includes('time2') || header.includes('run2') || header.includes('run 2')) {
+      } else if (
+        header.includes('time2') ||
+        header.includes('run2') ||
+        header.includes('run 2')
+      ) {
         mapping.time2 = originalHeader;
       } else if (header.includes('time') && !mapping.time) {
         mapping.time = originalHeader;
-      } else if (header.includes('status') || header.includes('dnf') || header.includes('dsq')) {
+      } else if (
+        header.includes('status') ||
+        header.includes('dnf') ||
+        header.includes('dsq')
+      ) {
         mapping.status = originalHeader;
       }
     });
@@ -204,7 +221,7 @@ export default function ImportRaceResultsPageNew() {
       accessorKey: 'bib',
       cell: ({ row }) => (
         <span className="font-mono font-bold">{row.original.bib}</span>
-      )
+      ),
     },
     {
       header: 'Competitor',
@@ -220,7 +237,7 @@ export default function ImportRaceResultsPageNew() {
             {row.original.competitorName}
           </span>
         </div>
-      )
+      ),
     },
     {
       header: 'Run 1',
@@ -253,7 +270,11 @@ export default function ImportRaceResultsPageNew() {
     <PageContainer>
       <PageHeader
         title="Import Race Results"
-        subtitle={raceDetails ? `${raceDetails.race_name} - ${raceDetails.race_type}` : 'Loading...'}
+        subtitle={
+          raceDetails
+            ? `${raceDetails.race_name} - ${raceDetails.race_type}`
+            : 'Loading...'
+        }
         actions={
           <Button
             variant="outline"
@@ -268,7 +289,9 @@ export default function ImportRaceResultsPageNew() {
       <div className="space-y-6">
         <Card>
           <CardContent>
-            <h3 className="text-lg font-semibold mb-4">Step 1: Upload CSV File</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Step 1: Upload CSV File
+            </h3>
             <div className="border-2 border-dashed border-neutral-300 rounded-lg p-8 text-center">
               <input
                 type="file"
@@ -286,7 +309,9 @@ export default function ImportRaceResultsPageNew() {
                   <p className="font-medium text-neutral-700">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-sm text-neutral-500">CSV file with bib numbers and times</p>
+                  <p className="text-sm text-neutral-500">
+                    CSV file with bib numbers and times
+                  </p>
                 </div>
                 <Button variant="outline" as="span">
                   <Upload className="w-4 h-4 mr-2" />
@@ -307,7 +332,9 @@ export default function ImportRaceResultsPageNew() {
         {csvData && (
           <Card>
             <CardContent>
-              <h3 className="text-lg font-semibold mb-4">Step 2: Configure Import</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Step 2: Configure Import
+              </h3>
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
@@ -380,12 +407,19 @@ export default function ImportRaceResultsPageNew() {
                   </label>
                   <select
                     value={columnMapping.bib}
-                    onChange={(e) => setColumnMapping(prev => ({ ...prev, bib: e.target.value }))}
+                    onChange={(e) =>
+                      setColumnMapping((prev) => ({
+                        ...prev,
+                        bib: e.target.value,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                   >
                     <option value="">Select column...</option>
-                    {csvHeaders.map(header => (
-                      <option key={header} value={header}>{header}</option>
+                    {csvHeaders.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -397,12 +431,20 @@ export default function ImportRaceResultsPageNew() {
                     </label>
                     <select
                       value={columnMapping.time || columnMapping.time1}
-                      onChange={(e) => setColumnMapping(prev => ({ ...prev, time: e.target.value, time1: e.target.value }))}
+                      onChange={(e) =>
+                        setColumnMapping((prev) => ({
+                          ...prev,
+                          time: e.target.value,
+                          time1: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                     >
                       <option value="">Select column...</option>
-                      {csvHeaders.map(header => (
-                        <option key={header} value={header}>{header}</option>
+                      {csvHeaders.map((header) => (
+                        <option key={header} value={header}>
+                          {header}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -414,12 +456,19 @@ export default function ImportRaceResultsPageNew() {
                       </label>
                       <select
                         value={columnMapping.time1}
-                        onChange={(e) => setColumnMapping(prev => ({ ...prev, time1: e.target.value }))}
+                        onChange={(e) =>
+                          setColumnMapping((prev) => ({
+                            ...prev,
+                            time1: e.target.value,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                       >
                         <option value="">Select column...</option>
-                        {csvHeaders.map(header => (
-                          <option key={header} value={header}>{header}</option>
+                        {csvHeaders.map((header) => (
+                          <option key={header} value={header}>
+                            {header}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -429,12 +478,19 @@ export default function ImportRaceResultsPageNew() {
                       </label>
                       <select
                         value={columnMapping.time2}
-                        onChange={(e) => setColumnMapping(prev => ({ ...prev, time2: e.target.value }))}
+                        onChange={(e) =>
+                          setColumnMapping((prev) => ({
+                            ...prev,
+                            time2: e.target.value,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                       >
                         <option value="">Select column...</option>
-                        {csvHeaders.map(header => (
-                          <option key={header} value={header}>{header}</option>
+                        {csvHeaders.map((header) => (
+                          <option key={header} value={header}>
+                            {header}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -447,12 +503,19 @@ export default function ImportRaceResultsPageNew() {
                   </label>
                   <select
                     value={columnMapping.status}
-                    onChange={(e) => setColumnMapping(prev => ({ ...prev, status: e.target.value }))}
+                    onChange={(e) =>
+                      setColumnMapping((prev) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-neutral-300 rounded-md"
                   >
                     <option value="">None</option>
-                    {csvHeaders.map(header => (
-                      <option key={header} value={header}>{header}</option>
+                    {csvHeaders.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -462,7 +525,10 @@ export default function ImportRaceResultsPageNew() {
                 <Info className="w-5 h-5 text-info mt-0.5" />
                 <div className="text-sm text-neutral-600">
                   <p className="font-medium">Time Format</p>
-                  <p>Accepts: seconds (e.g., 45.23), minutes:seconds (e.g., 1:23.45), or status codes (DNF, DSQ, DNS)</p>
+                  <p>
+                    Accepts: seconds (e.g., 45.23), minutes:seconds (e.g.,
+                    1:23.45), or status codes (DNF, DSQ, DNS)
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -473,11 +539,15 @@ export default function ImportRaceResultsPageNew() {
           <Card>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Step 3: Preview & Import</h3>
+                <h3 className="text-lg font-semibold">
+                  Step 3: Preview & Import
+                </h3>
                 <div className="flex gap-3">
                   <Badge variant="success">{importableCount} ready</Badge>
                   {problemRows.length > 0 && (
-                    <Badge variant="danger">{problemRows.length} with problems</Badge>
+                    <Badge variant="danger">
+                      {problemRows.length} with problems
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -490,7 +560,8 @@ export default function ImportRaceResultsPageNew() {
                   <ul className="list-disc list-inside text-neutral-700 space-y-0.5">
                     {problemRows.slice(0, 20).map((row) => (
                       <li key={row.rowIndex}>
-                        Row {row.rowNumber} (bib {row.bib === '' ? '?' : row.bib}):{' '}
+                        Row {row.rowNumber} (bib{' '}
+                        {row.bib === '' ? '?' : row.bib}):{' '}
                         {row.problems.join('; ')}
                       </li>
                     ))}
@@ -508,11 +579,15 @@ export default function ImportRaceResultsPageNew() {
               />
 
               {importStatus && (
-                <div className={`mt-4 p-3 rounded-md flex items-center gap-2 ${
-                  importStatus.type === 'error' ? 'bg-danger/10 border border-danger/20 text-danger' :
-                  importStatus.type === 'complete' ? 'bg-success/10 border border-success/20 text-success' :
-                  'bg-info/10 border border-info/20 text-info'
-                }`}>
+                <div
+                  className={`mt-4 p-3 rounded-md flex items-center gap-2 ${
+                    importStatus.type === 'error'
+                      ? 'bg-danger/10 border border-danger/20 text-danger'
+                      : importStatus.type === 'complete'
+                        ? 'bg-success/10 border border-success/20 text-success'
+                        : 'bg-info/10 border border-info/20 text-info'
+                  }`}
+                >
                   {importStatus.type === 'complete' ? (
                     <CheckCircle className="w-5 h-5" />
                   ) : importStatus.type === 'error' ? (
@@ -528,7 +603,9 @@ export default function ImportRaceResultsPageNew() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={importableCount === 0 || importStatus?.type === 'importing'}
+                  disabled={
+                    importableCount === 0 || importStatus?.type === 'importing'
+                  }
                   leftIcon={<Upload className="w-4 h-4" />}
                 >
                   Import {importableCount} Competitor(s)
@@ -536,7 +613,11 @@ export default function ImportRaceResultsPageNew() {
                 {importStatus?.type === 'complete' && (
                   <Button
                     variant="outline"
-                    onClick={() => navigate(`/competition/${competitionId}/race/${raceId}/results`)}
+                    onClick={() =>
+                      navigate(
+                        `/competition/${competitionId}/race/${raceId}/results`,
+                      )
+                    }
                   >
                     View Results
                   </Button>

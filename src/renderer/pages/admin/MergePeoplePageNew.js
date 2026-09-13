@@ -46,7 +46,7 @@ export default function MergePeoplePageNew() {
   const fetchPeople = async () => {
     try {
       const result = await window.api.select(
-        `SELECT id, first_name, last_name FROM people ORDER BY last_name, first_name`
+        `SELECT id, first_name, last_name FROM people ORDER BY last_name, first_name`,
       );
       setPeople(result);
     } catch (error) {
@@ -61,38 +61,61 @@ export default function MergePeoplePageNew() {
       const counts = {};
 
       const racerTables = [
-        { table: 'competition_competitor', column: 'racer_id', label: 'Competition entries' },
-        { table: 'competition_team_members', column: 'racer_id', label: 'Team memberships' },
+        {
+          table: 'competition_competitor',
+          column: 'racer_id',
+          label: 'Competition entries',
+        },
+        {
+          table: 'competition_team_members',
+          column: 'racer_id',
+          label: 'Team memberships',
+        },
         { table: 'race_competitor', column: 'racer_id', label: 'Race entries' },
         { table: 'race_results', column: 'racer_id', label: 'Race results' },
-        { table: 'competition_final_seed_list', column: 'racer_id', label: 'Seed list entries' },
+        {
+          table: 'competition_final_seed_list',
+          column: 'racer_id',
+          label: 'Seed list entries',
+        },
         { table: 'aasl', column: 'service_number', label: 'AASL entries' },
       ];
 
       for (const { table, column, label } of racerTables) {
         const result = await window.api.select(
           `SELECT COUNT(*) as count FROM ${table} WHERE ${column} = ?`,
-          [srcId]
+          [srcId],
         );
         counts[label] = result[0].count;
       }
 
       // Count official roles
-      const raceOfficials = ['chief_of_race', 'tech_delegate', 'referee', 'asst_referee'];
+      const raceOfficials = [
+        'chief_of_race',
+        'tech_delegate',
+        'referee',
+        'asst_referee',
+      ];
       let officialCount = 0;
       for (const col of raceOfficials) {
         const result = await window.api.select(
           `SELECT COUNT(*) as count FROM races WHERE ${col} = ?`,
-          [srcId]
+          [srcId],
         );
         officialCount += result[0].count;
       }
 
-      const runOfficials = ['course_setter', 'forerunner_a', 'forerunner_b', 'forerunner_c', 'forerunner_d'];
+      const runOfficials = [
+        'course_setter',
+        'forerunner_a',
+        'forerunner_b',
+        'forerunner_c',
+        'forerunner_d',
+      ];
       for (const col of runOfficials) {
         const result = await window.api.select(
           `SELECT COUNT(*) as count FROM race_run WHERE ${col} = ?`,
-          [srcId]
+          [srcId],
         );
         officialCount += result[0].count;
       }
@@ -112,7 +135,7 @@ export default function MergePeoplePageNew() {
     const targetPerson = people.find((p) => p.id === targetId);
 
     const confirmed = window.confirm(
-      `Are you sure you want to merge "${sourcePerson.first_name} ${sourcePerson.last_name}" (${sourceId}) into "${targetPerson.first_name} ${targetPerson.last_name}" (${targetId})?\n\nThis will transfer all records and delete the source person. This cannot be undone.`
+      `Are you sure you want to merge "${sourcePerson.first_name} ${sourcePerson.last_name}" (${sourceId}) into "${targetPerson.first_name} ${targetPerson.last_name}" (${targetId})?\n\nThis will transfer all records and delete the source person. This cannot be undone.`,
     );
 
     if (!confirmed) return;
@@ -129,11 +152,31 @@ export default function MergePeoplePageNew() {
       // the same key, the source's duplicate row is deleted instead of
       // updated, which would otherwise abort the merge with a PK violation.
       const racerTables = [
-        { table: 'competition_competitor', column: 'racer_id', keyColumns: ['competition_id'] },
-        { table: 'competition_team_members', column: 'racer_id', keyColumns: ['competition_id', 'team_id', 'race_id'] },
-        { table: 'race_competitor', column: 'racer_id', keyColumns: ['competition_id', 'race_id'] },
-        { table: 'race_results', column: 'racer_id', keyColumns: ['competition_id', 'race_id', 'run_number'] },
-        { table: 'competition_final_seed_list', column: 'racer_id', keyColumns: ['competition_id'] },
+        {
+          table: 'competition_competitor',
+          column: 'racer_id',
+          keyColumns: ['competition_id'],
+        },
+        {
+          table: 'competition_team_members',
+          column: 'racer_id',
+          keyColumns: ['competition_id', 'team_id', 'race_id'],
+        },
+        {
+          table: 'race_competitor',
+          column: 'racer_id',
+          keyColumns: ['competition_id', 'race_id'],
+        },
+        {
+          table: 'race_results',
+          column: 'racer_id',
+          keyColumns: ['competition_id', 'race_id', 'run_number'],
+        },
+        {
+          table: 'competition_final_seed_list',
+          column: 'racer_id',
+          keyColumns: ['competition_id'],
+        },
         { table: 'aasl', column: 'service_number', keyColumns: ['season'] },
       ];
 
@@ -155,7 +198,12 @@ export default function MergePeoplePageNew() {
       }
 
       // Official references in races and race_run
-      const raceOfficials = ['chief_of_race', 'tech_delegate', 'referee', 'asst_referee'];
+      const raceOfficials = [
+        'chief_of_race',
+        'tech_delegate',
+        'referee',
+        'asst_referee',
+      ];
       for (const col of raceOfficials) {
         operations.push({
           type: 'update',
@@ -164,7 +212,13 @@ export default function MergePeoplePageNew() {
         });
       }
 
-      const runOfficials = ['course_setter', 'forerunner_a', 'forerunner_b', 'forerunner_c', 'forerunner_d'];
+      const runOfficials = [
+        'course_setter',
+        'forerunner_a',
+        'forerunner_b',
+        'forerunner_c',
+        'forerunner_d',
+      ];
       for (const col of runOfficials) {
         operations.push({
           type: 'update',
@@ -203,7 +257,7 @@ export default function MergePeoplePageNew() {
       (p) =>
         p.last_name?.toLowerCase().includes(term) ||
         p.first_name?.toLowerCase().includes(term) ||
-        p.id?.toString().includes(term)
+        p.id?.toString().includes(term),
     );
   }, [people, searchSource]);
 
@@ -214,7 +268,7 @@ export default function MergePeoplePageNew() {
       (p) =>
         p.last_name?.toLowerCase().includes(term) ||
         p.first_name?.toLowerCase().includes(term) ||
-        p.id?.toString().includes(term)
+        p.id?.toString().includes(term),
     );
   }, [people, searchTarget]);
 
@@ -283,8 +337,12 @@ export default function MergePeoplePageNew() {
                 <table className="w-full">
                   <thead className="bg-neutral-50 sticky top-0">
                     <tr>
-                      <th className="text-left p-3 text-sm font-medium text-neutral-600">Name</th>
-                      <th className="text-left p-3 text-sm font-medium text-neutral-600">Service No</th>
+                      <th className="text-left p-3 text-sm font-medium text-neutral-600">
+                        Name
+                      </th>
+                      <th className="text-left p-3 text-sm font-medium text-neutral-600">
+                        Service No
+                      </th>
                       <th className="w-10"></th>
                     </tr>
                   </thead>
@@ -297,7 +355,9 @@ export default function MergePeoplePageNew() {
                         } ${targetId === person.id ? 'opacity-50' : ''}`}
                         onClick={() => {
                           if (targetId !== person.id) {
-                            setSourceId(sourceId === person.id ? null : person.id);
+                            setSourceId(
+                              sourceId === person.id ? null : person.id,
+                            );
                           }
                         }}
                       >
@@ -350,8 +410,12 @@ export default function MergePeoplePageNew() {
                 <table className="w-full">
                   <thead className="bg-neutral-50 sticky top-0">
                     <tr>
-                      <th className="text-left p-3 text-sm font-medium text-neutral-600">Name</th>
-                      <th className="text-left p-3 text-sm font-medium text-neutral-600">Service No</th>
+                      <th className="text-left p-3 text-sm font-medium text-neutral-600">
+                        Name
+                      </th>
+                      <th className="text-left p-3 text-sm font-medium text-neutral-600">
+                        Service No
+                      </th>
                       <th className="w-10"></th>
                     </tr>
                   </thead>
@@ -364,7 +428,9 @@ export default function MergePeoplePageNew() {
                         } ${sourceId === person.id ? 'opacity-50' : ''}`}
                         onClick={() => {
                           if (sourceId !== person.id) {
-                            setTargetId(targetId === person.id ? null : person.id);
+                            setTargetId(
+                              targetId === person.id ? null : person.id,
+                            );
                           }
                         }}
                       >
@@ -399,24 +465,31 @@ export default function MergePeoplePageNew() {
           {!sourceId && !targetId ? (
             <div className="text-center py-8 text-neutral-500">
               <Users className="w-12 h-12 mx-auto mb-3 text-neutral-300" />
-              <p>Select a source person (to remove) and a target person (to keep)</p>
+              <p>
+                Select a source person (to remove) and a target person (to keep)
+              </p>
             </div>
           ) : !sourceId ? (
             <div className="text-center py-8 text-neutral-500">
-              <p>Select a source person to see what records will be transferred</p>
+              <p>
+                Select a source person to see what records will be transferred
+              </p>
             </div>
           ) : !targetId ? (
             <div className="py-4">
               <div className="flex items-center gap-2 mb-4 text-warning">
                 <AlertTriangle className="w-5 h-5" />
-                <span className="font-medium">Select a target person to merge into</span>
+                <span className="font-medium">
+                  Select a target person to merge into
+                </span>
               </div>
               {preview && (
                 <div className="space-y-2">
                   <p className="text-sm text-neutral-600 mb-2">
                     Records that will be transferred from{' '}
                     <strong>
-                      {sourcePerson?.last_name}, {sourcePerson?.first_name} ({sourceId})
+                      {sourcePerson?.last_name}, {sourcePerson?.first_name} (
+                      {sourceId})
                     </strong>
                     :
                   </p>
@@ -426,8 +499,12 @@ export default function MergePeoplePageNew() {
                         key={label}
                         className="flex justify-between items-center bg-neutral-50 px-3 py-2 rounded"
                       >
-                        <span className="text-sm text-neutral-600">{label}</span>
-                        <Badge variant={count > 0 ? 'primary' : 'default'}>{count}</Badge>
+                        <span className="text-sm text-neutral-600">
+                          {label}
+                        </span>
+                        <Badge variant={count > 0 ? 'primary' : 'default'}>
+                          {count}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -438,7 +515,9 @@ export default function MergePeoplePageNew() {
             <div className="py-4">
               <div className="flex items-center justify-center gap-4 mb-6">
                 <div className="text-center">
-                  <div className="text-sm text-neutral-500 mb-1">Source (Remove)</div>
+                  <div className="text-sm text-neutral-500 mb-1">
+                    Source (Remove)
+                  </div>
                   <div className="font-semibold text-danger">
                     {sourcePerson?.last_name}, {sourcePerson?.first_name}
                   </div>
@@ -446,7 +525,9 @@ export default function MergePeoplePageNew() {
                 </div>
                 <GitMerge className="w-8 h-8 text-primary-500" />
                 <div className="text-center">
-                  <div className="text-sm text-neutral-500 mb-1">Target (Keep)</div>
+                  <div className="text-sm text-neutral-500 mb-1">
+                    Target (Keep)
+                  </div>
                   <div className="font-semibold text-success">
                     {targetPerson?.last_name}, {targetPerson?.first_name}
                   </div>
@@ -456,15 +537,21 @@ export default function MergePeoplePageNew() {
 
               {preview && (
                 <div className="mb-6">
-                  <p className="text-sm text-neutral-600 mb-2">Records to transfer:</p>
+                  <p className="text-sm text-neutral-600 mb-2">
+                    Records to transfer:
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     {Object.entries(preview).map(([label, count]) => (
                       <div
                         key={label}
                         className="flex justify-between items-center bg-neutral-50 px-3 py-2 rounded"
                       >
-                        <span className="text-sm text-neutral-600">{label}</span>
-                        <Badge variant={count > 0 ? 'primary' : 'default'}>{count}</Badge>
+                        <span className="text-sm text-neutral-600">
+                          {label}
+                        </span>
+                        <Badge variant={count > 0 ? 'primary' : 'default'}>
+                          {count}
+                        </Badge>
                       </div>
                     ))}
                   </div>

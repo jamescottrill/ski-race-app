@@ -6,10 +6,7 @@ import { convertRaceTime } from '../utils/TimeUtils';
 import { resultsTeamPdf } from '../utils/ResultsTeamPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 
-export default function RaceTeamResultOneRunNew({
-  raceId,
-  competitionId,
-}) {
+export default function RaceTeamResultOneRunNew({ raceId, competitionId }) {
   const [data, setData] = useState([]);
   const [dnfTeam, setDnfTeam] = useState([]);
   const [raceDetails, setRaceDetails] = useState([]);
@@ -99,7 +96,12 @@ export default function RaceTeamResultOneRunNew({
         run1Dnf: result.run_1_dnf,
         run1DsqGate: result.run_1_dsq_gate,
         run1DsqReason: result.run_1_dsq_reason,
-        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq && !result.run_1_ns && result.run_1_time,
+        completed:
+          !result.run_1_dns &&
+          !result.run_1_dnf &&
+          !result.run_1_dsq &&
+          !result.run_1_ns &&
+          result.run_1_time,
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
@@ -109,32 +111,50 @@ export default function RaceTeamResultOneRunNew({
         position: result.position,
       };
     });
-    const finished = mapped
-      .filter((e) => {
-        return e.completed;
-      });
+    const finished = mapped.filter((e) => {
+      return e.completed;
+    });
 
     const teamResults = [];
     const dnfTeams = [];
-    const teamNames = mapped.map(r => r.teamName).filter((teamName, index, self) => {
-      return self.indexOf(teamName) === index && teamName !== null;
-    });
+    const teamNames = mapped
+      .map((r) => r.teamName)
+      .filter((teamName, index, self) => {
+        return self.indexOf(teamName) === index && teamName !== null;
+      });
     teamNames.forEach((teamName) => {
-      const sortedRacers = finished.filter((r) => r.teamName === teamName).sort((a, b) => a.points - b.points);
+      const sortedRacers = finished
+        .filter((r) => r.teamName === teamName)
+        .sort((a, b) => a.points - b.points);
       const topNRacers = sortedRacers.slice(0, 3);
       if (sortedRacers.length < 3) {
-        dnfTeams.push({"teamName": teamName});
-        return
+        dnfTeams.push({ teamName: teamName });
+        return;
       }
-      const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
-      const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.run1TimeSecs, 0);
+      const topNPoints = topNRacers.reduce(
+        (acc, curr) => acc + curr.seedPoints,
+        0,
+      );
+      const topNTimesSecs = topNRacers.reduce(
+        (acc, curr) => acc + curr.run1TimeSecs,
+        0,
+      );
       const topNTimes = convertRaceTime(topNTimesSecs);
-      const results = {teamName: teamName, racers: topNRacers, points: topNPoints, time: topNTimes};
+      const results = {
+        teamName: teamName,
+        racers: topNRacers,
+        points: topNPoints,
+        time: topNTimes,
+      };
       teamResults.push(results);
     });
-    teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
+    teamResults
+      .sort((a, b) => a.points - b.points)
+      .forEach((result, i) => {
+        result['position'] = i + 1;
+      });
     setData(teamResults);
-    setDnfTeam(dnfTeams)
+    setDnfTeam(dnfTeams);
   };
 
   useEffect(() => {
@@ -143,11 +163,7 @@ export default function RaceTeamResultOneRunNew({
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
-    resultsTeamPdf(
-      raceDetails,
-      data,
-      dnfTeam,
-    );
+    resultsTeamPdf(raceDetails, data, dnfTeam);
   };
 
   // Define columns for team results DataTable
@@ -179,10 +195,15 @@ export default function RaceTeamResultOneRunNew({
       cell: ({ row }) => (
         <div className="space-y-1">
           {row.original.racers.map((racer, idx) => (
-            <div key={idx} className="text-sm border-b last:border-b-0 pb-1 last:pb-0">
+            <div
+              key={idx}
+              className="text-sm border-b last:border-b-0 pb-1 last:pb-0"
+            >
               <div className="flex justify-between items-center">
                 <span className="font-medium">{racer.title}</span>
-                <span>{racer.lastName.toUpperCase()} {racer.firstName}</span>
+                <span>
+                  {racer.lastName.toUpperCase()} {racer.firstName}
+                </span>
                 <span className="text-neutral-600">{racer.run1Time}</span>
               </div>
             </div>
@@ -217,10 +238,15 @@ export default function RaceTeamResultOneRunNew({
       {dnfTeam.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Disqualified Teams</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Disqualified Teams
+            </h2>
             <div className="space-y-2">
               {dnfTeam.map((row, index) => (
-                <div key={index} className="text-center py-2 border-b last:border-b-0">
+                <div
+                  key={index}
+                  className="text-center py-2 border-b last:border-b-0"
+                >
                   {row.teamName}
                 </div>
               ))}
@@ -232,16 +258,14 @@ export default function RaceTeamResultOneRunNew({
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous
+              run as finished.
             </div>
           </CardContent>
         </Card>
       )}
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download PDF
-        </Button>
+        <Button onClick={generatePDF}>Download PDF</Button>
       </div>
     </div>
   );

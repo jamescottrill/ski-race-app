@@ -9,7 +9,7 @@ import {
   AlertCircle,
   CheckCircle,
   TrendingUp,
-  Save
+  Save,
 } from 'lucide-react';
 import {
   PageContainer,
@@ -19,7 +19,7 @@ import {
   Button,
   DataTable,
   Badge,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { fetchSeedList } from '../../utils/FetchSeedList';
@@ -29,7 +29,7 @@ import {
   applyCPPToSeedList,
   storeCPPResult,
   storeFinalSeedList,
-  getStoredCPP
+  getStoredCPP,
 } from '../../utils/CPPCalculation';
 import toast from 'react-hot-toast';
 
@@ -93,10 +93,15 @@ function GenerateSeedListNew() {
       await storeCPPResult(competitionId, cppResult);
 
       // Store finalised seed list
-      const storeResult = await storeFinalSeedList(competitionId, finalisedList);
+      const storeResult = await storeFinalSeedList(
+        competitionId,
+        finalisedList,
+      );
 
       if (storeResult.success) {
-        toast.success(`Finalised seed list with ${storeResult.successCount} entries`);
+        toast.success(
+          `Finalised seed list with ${storeResult.successCount} entries`,
+        );
         loadStoredCPP();
       } else {
         toast.error(`Stored with ${storeResult.errorCount} errors`);
@@ -121,9 +126,10 @@ function GenerateSeedListNew() {
       setRaces(result);
 
       if (result.length > 0) {
-        const initialSelected = result.length > 3
-          ? result.filter(e => !e.isSeeding).map(e => e.id)
-          : result.map(e => e.id);
+        const initialSelected =
+          result.length > 3
+            ? result.filter((e) => !e.isSeeding).map((e) => e.id)
+            : result.map((e) => e.id);
         setSelectedRaces(initialSelected);
 
         if (initialSelected.length > 0) {
@@ -142,10 +148,16 @@ function GenerateSeedListNew() {
     try {
       const seeds = await fetchSeedList(competitionId, raceIds);
       setSeedList(seeds);
-      setGenerationStatus({ type: 'success', message: `Generated seed list with ${seeds.length} competitors` });
+      setGenerationStatus({
+        type: 'success',
+        message: `Generated seed list with ${seeds.length} competitors`,
+      });
     } catch (error) {
       console.error('Failed to generate seed list:', error);
-      setGenerationStatus({ type: 'error', message: 'Failed to generate seed list' });
+      setGenerationStatus({
+        type: 'error',
+        message: 'Failed to generate seed list',
+      });
     } finally {
       setLoading(false);
     }
@@ -153,7 +165,7 @@ function GenerateSeedListNew() {
 
   const handleRaceToggle = async (raceId) => {
     const newSelected = selectedRaces.includes(raceId)
-      ? selectedRaces.filter(id => id !== raceId)
+      ? selectedRaces.filter((id) => id !== raceId)
       : [...selectedRaces, raceId];
 
     setSelectedRaces(newSelected);
@@ -171,7 +183,7 @@ function GenerateSeedListNew() {
       return;
     }
 
-    const selectedRaceData = races.filter(r => selectedRaces.includes(r.id));
+    const selectedRaceData = races.filter((r) => selectedRaces.includes(r.id));
     generatePDF(seedList, selectedRaceData);
     setGenerationStatus({ type: 'success', message: 'PDF export started' });
   };
@@ -189,9 +201,7 @@ function GenerateSeedListNew() {
     {
       header: 'Rank',
       accessorKey: 'title',
-      cell: ({ row }) => (
-        <div className="text-sm">{row.original.title}</div>
-      ),
+      cell: ({ row }) => <div className="text-sm">{row.original.title}</div>,
     },
     {
       header: 'Name',
@@ -202,14 +212,16 @@ function GenerateSeedListNew() {
             {row.original.last_name?.toUpperCase()} {row.original.first_name}
           </div>
           {row.original.team_name && (
-            <div className="text-xs text-neutral-500">{row.original.team_name}</div>
+            <div className="text-xs text-neutral-500">
+              {row.original.team_name}
+            </div>
           )}
         </div>
       ),
     },
     ...races
-      .filter(r => selectedRaces.includes(r.id))
-      .map(race => ({
+      .filter((r) => selectedRaces.includes(r.id))
+      .map((race) => ({
         header: race.text,
         accessorKey: race.id,
         cell: ({ row }) => {
@@ -265,7 +277,9 @@ function GenerateSeedListNew() {
                   : `Seed List after ${selectedRaces.length} Race${selectedRaces.length > 1 ? 's' : ''}`}
               </h3>
               {races.length === 0 ? (
-                <p className="text-neutral-500 text-sm">No completed races found</p>
+                <p className="text-neutral-500 text-sm">
+                  No completed races found
+                </p>
               ) : (
                 <div className="flex flex-wrap gap-3">
                   {races.map((race) => (
@@ -275,7 +289,7 @@ function GenerateSeedListNew() {
                         'flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
                         selectedRaces.includes(race.id)
                           ? 'bg-primary-50 border-primary-300 text-primary-700'
-                          : 'bg-white border-neutral-200 hover:border-neutral-300'
+                          : 'bg-white border-neutral-200 hover:border-neutral-300',
                       )}
                     >
                       <input
@@ -304,15 +318,24 @@ function GenerateSeedListNew() {
 
           {/* Status Message */}
           {generationStatus && (
-            <div className={cn(
-              'mt-4 p-3 rounded-lg flex items-center gap-2',
-              generationStatus.type === 'success' && 'bg-success/10 text-success',
-              generationStatus.type === 'error' && 'bg-danger/10 text-danger',
-              generationStatus.type === 'info' && 'bg-info/10 text-info'
-            )}>
-              {generationStatus.type === 'success' && <CheckCircle className="w-5 h-5" />}
-              {generationStatus.type === 'error' && <AlertCircle className="w-5 h-5" />}
-              {generationStatus.type === 'info' && <FileText className="w-5 h-5" />}
+            <div
+              className={cn(
+                'mt-4 p-3 rounded-lg flex items-center gap-2',
+                generationStatus.type === 'success' &&
+                  'bg-success/10 text-success',
+                generationStatus.type === 'error' && 'bg-danger/10 text-danger',
+                generationStatus.type === 'info' && 'bg-info/10 text-info',
+              )}
+            >
+              {generationStatus.type === 'success' && (
+                <CheckCircle className="w-5 h-5" />
+              )}
+              {generationStatus.type === 'error' && (
+                <AlertCircle className="w-5 h-5" />
+              )}
+              {generationStatus.type === 'info' && (
+                <FileText className="w-5 h-5" />
+              )}
               <span className="font-medium">{generationStatus.message}</span>
             </div>
           )}
@@ -324,7 +347,9 @@ function GenerateSeedListNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-700">{seedList.length}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {seedList.length}
+              </p>
               <p className="text-sm text-neutral-600">Total Competitors</p>
             </div>
             <Hash className="w-8 h-8 text-primary-300" />
@@ -334,7 +359,7 @@ function GenerateSeedListNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-success">
-                {seedList.filter(s => s.is_novice).length}
+                {seedList.filter((s) => s.is_novice).length}
               </p>
               <p className="text-sm text-neutral-600">Novice</p>
             </div>
@@ -345,7 +370,7 @@ function GenerateSeedListNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-warning">
-                {seedList.filter(s => s.is_reserve).length}
+                {seedList.filter((s) => s.is_reserve).length}
               </p>
               <p className="text-sm text-neutral-600">Reserve</p>
             </div>
@@ -356,7 +381,11 @@ function GenerateSeedListNew() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-info">
-                {seedList.length > 0 ? Math.min(...seedList.map(s => s.seed_points || 0)).toFixed(2) : '0.00'}
+                {seedList.length > 0
+                  ? Math.min(
+                      ...seedList.map((s) => s.seed_points || 0),
+                    ).toFixed(2)
+                  : '0.00'}
               </p>
               <p className="text-sm text-neutral-600">Best Seed</p>
             </div>
@@ -372,7 +401,9 @@ function GenerateSeedListNew() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-5 h-5 text-primary-600" />
-                <h3 className="font-semibold text-neutral-900">Championship Penalty Points (CPP)</h3>
+                <h3 className="font-semibold text-neutral-900">
+                  Championship Penalty Points (CPP)
+                </h3>
                 {storedCPP && (
                   <Badge variant="success">
                     Previously calculated: {storedCPP.cpp_value?.toFixed(2)}
@@ -401,24 +432,38 @@ function GenerateSeedListNew() {
             </div>
 
             {showCPPSection && cppResult && (
-              <div className={cn(
-                'p-4 rounded-lg',
-                cppResult.success ? 'bg-success/10' : 'bg-danger/10'
-              )}>
+              <div
+                className={cn(
+                  'p-4 rounded-lg',
+                  cppResult.success ? 'bg-success/10' : 'bg-danger/10',
+                )}
+              >
                 {cppResult.success ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-5 gap-4">
                       <div className="text-center">
-                        <p className="text-sm text-neutral-600">T1 (AASL Sum)</p>
-                        <p className="text-xl font-bold">{cppResult.t1?.toFixed(2)}</p>
+                        <p className="text-sm text-neutral-600">
+                          T1 (AASL Sum)
+                        </p>
+                        <p className="text-xl font-bold">
+                          {cppResult.t1?.toFixed(2)}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-neutral-600">T2 (AASL Sum)</p>
-                        <p className="text-xl font-bold">{cppResult.t2?.toFixed(2)}</p>
+                        <p className="text-sm text-neutral-600">
+                          T2 (AASL Sum)
+                        </p>
+                        <p className="text-xl font-bold">
+                          {cppResult.t2?.toFixed(2)}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-neutral-600">T3 (Seed Sum)</p>
-                        <p className="text-xl font-bold">{cppResult.t3?.toFixed(2)}</p>
+                        <p className="text-sm text-neutral-600">
+                          T3 (Seed Sum)
+                        </p>
+                        <p className="text-xl font-bold">
+                          {cppResult.t3?.toFixed(2)}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-neutral-600">Divisor</p>
@@ -426,16 +471,21 @@ function GenerateSeedListNew() {
                       </div>
                       <div className="text-center bg-primary-100 rounded-lg p-2">
                         <p className="text-sm text-primary-700">CPP Value</p>
-                        <p className="text-2xl font-bold text-primary-700">{cppResult.cpp?.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-primary-700">
+                          {cppResult.cpp?.toFixed(2)}
+                        </p>
                       </div>
                     </div>
 
                     <div className="text-sm text-neutral-600">
-                      <p className="font-medium mb-2">Reference Skiers ({cppResult.skiersUsed}):</p>
+                      <p className="font-medium mb-2">
+                        Reference Skiers ({cppResult.skiersUsed}):
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {cppResult.qualifyingSkiers?.map((skier, idx) => (
                           <Badge key={idx} variant="outline">
-                            {skier.name} (AASL: {skier.aasl_points?.toFixed(2)}, Seed: {skier.seed_points?.toFixed(2)})
+                            {skier.name} (AASL: {skier.aasl_points?.toFixed(2)},
+                            Seed: {skier.seed_points?.toFixed(2)})
                           </Badge>
                         ))}
                       </div>
@@ -475,11 +525,7 @@ function GenerateSeedListNew() {
               </p>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={seedList}
-              pageSize={50}
-            />
+            <DataTable columns={columns} data={seedList} pageSize={50} />
           )}
         </CardContent>
       </Card>

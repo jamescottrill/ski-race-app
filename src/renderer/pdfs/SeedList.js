@@ -4,8 +4,7 @@ import { getFormattedDate } from '../utils/DateUtils';
 import { tableStyles } from '../utils/PdfStyles';
 import { showSuccess } from '../utils/ErrorHandler';
 
-
-const generatePDF = (seedList, races, title=null) => {
+const generatePDF = (seedList, races, title = null) => {
   let pageTitle = title;
   if (!title) {
     pageTitle = 'Initial Seed List';
@@ -84,12 +83,12 @@ const generatePDF = (seedList, races, title=null) => {
     window.electronAPI
       .savePDF(buffer, defaultFileName)
       .then((r) => {
-          if (r.success) {
-            showSuccess(`PDF saved successfully to: ${r.filePath}`);
-          } else {
-            alert('PDF save cancelled.');
-          }
-        })
+        if (r.success) {
+          showSuccess(`PDF saved successfully to: ${r.filePath}`);
+        } else {
+          alert('PDF save cancelled.');
+        }
+      })
       .catch((err) => {
         console.error('Error saving PDF:', err);
       });

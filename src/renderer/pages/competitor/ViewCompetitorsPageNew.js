@@ -18,7 +18,7 @@ import {
   Button,
   DataTable,
   Badge,
-  cn
+  cn,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 import { calculateCategory } from '../../utils/CompetitorManagement';
@@ -85,7 +85,9 @@ export default function ViewCompetitorsPageNew() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-primary-400" />
-          <span className="text-sm">{row.original.regiment || 'Not assigned'}</span>
+          <span className="text-sm">
+            {row.original.regiment || 'Not assigned'}
+          </span>
         </div>
       ),
     },
@@ -101,11 +103,7 @@ export default function ViewCompetitorsPageNew() {
           if (cat.includes('Veteran')) return 'warning';
           return 'default';
         };
-        return (
-          <Badge variant={getCategoryColor(category)}>
-            {category}
-          </Badge>
-        );
+        return <Badge variant={getCategoryColor(category)}>{category}</Badge>;
       },
     },
     {
@@ -119,7 +117,9 @@ export default function ViewCompetitorsPageNew() {
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/competition/${competitionId}/competitor/${row.original.id}/profile`);
+              navigate(
+                `/competition/${competitionId}/competitor/${row.original.id}/profile`,
+              );
             }}
             leftIcon={<User className="w-3 h-3" />}
           >
@@ -130,7 +130,9 @@ export default function ViewCompetitorsPageNew() {
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/competition/${competitionId}/competitor/${row.original.id}/edit`);
+              navigate(
+                `/competition/${competitionId}/competitor/${row.original.id}/edit`,
+              );
             }}
             leftIcon={<Edit className="w-3 h-3" />}
           >
@@ -144,9 +146,9 @@ export default function ViewCompetitorsPageNew() {
   // Calculate stats
   const stats = {
     total: competitors.length,
-    male: competitors.filter(c => c.gender === 'M').length,
-    female: competitors.filter(c => c.gender === 'F').length,
-    novice: competitors.filter(c => c.is_novice).length,
+    male: competitors.filter((c) => c.gender === 'M').length,
+    female: competitors.filter((c) => c.gender === 'F').length,
+    novice: competitors.filter((c) => c.is_novice).length,
   };
 
   return (
@@ -158,7 +160,9 @@ export default function ViewCompetitorsPageNew() {
           <div className="flex gap-3">
             <Button
               variant="primary"
-              onClick={() => navigate(`/competition/${competitionId}/competitor/new`)}
+              onClick={() =>
+                navigate(`/competition/${competitionId}/competitor/new`)
+              }
               leftIcon={<Users className="w-4 h-4" />}
             >
               Add Competitor
@@ -179,7 +183,9 @@ export default function ViewCompetitorsPageNew() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-700">{stats.total}</p>
+              <p className="text-2xl font-bold text-primary-700">
+                {stats.total}
+              </p>
               <p className="text-sm text-neutral-600">Total Athletes</p>
             </div>
             <Users className="w-8 h-8 text-primary-300" />
@@ -227,7 +233,9 @@ export default function ViewCompetitorsPageNew() {
               <p className="text-neutral-500">No competitors registered yet</p>
               <Button
                 variant="primary"
-                onClick={() => navigate(`/competition/${competitionId}/competitor/new`)}
+                onClick={() =>
+                  navigate(`/competition/${competitionId}/competitor/new`)
+                }
                 leftIcon={<Users className="w-4 h-4" />}
               >
                 Register First Competitor
@@ -237,7 +245,11 @@ export default function ViewCompetitorsPageNew() {
             <DataTable
               columns={columns}
               data={competitors}
-              onRowClick={(row) => navigate(`/competition/${competitionId}/competitor/${row.id}/edit`)}
+              onRowClick={(row) =>
+                navigate(
+                  `/competition/${competitionId}/competitor/${row.id}/edit`,
+                )
+              }
               pageSize={25}
             />
           )}

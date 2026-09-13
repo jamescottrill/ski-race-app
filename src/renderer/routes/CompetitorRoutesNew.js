@@ -19,49 +19,90 @@ function CompetitorRoutesNew() {
       <Route
         path="competition/:competitionId/competitor/manage"
         element={
-        <LayoutNew>
-          <ManageCompetitorsPageNew />
-        </LayoutNew>}
+          <LayoutNew>
+            <ManageCompetitorsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/edit"
-        element={<LayoutNew><EditCompetitorsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <EditCompetitorsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/:competitorId/edit"
-        element={<LayoutNew><EditCompetitorPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <EditCompetitorPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/new"
-        element={<LayoutNew><RegisterCompetitorPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <RegisterCompetitorPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/list"
-        element={<LayoutNew><ViewCompetitorsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <ViewCompetitorsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/bulk"
-        element={<LayoutNew><UploadCompetitorsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <UploadCompetitorsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/competitor/:competitorId/profile"
-        element={<LayoutNew><CompetitorProfilePage /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <CompetitorProfilePage />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/team/list"
-        element={<LayoutNew><TeamListPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <TeamListPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/team/new"
-        element={<LayoutNew><CreateTeamPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <CreateTeamPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/team/:teamId/edit"
-        element={<LayoutNew><EditTeamPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <EditTeamPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/team/:teamId/members"
-        element={<LayoutNew><TeamMembersPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <TeamMembersPageNew />
+          </LayoutNew>
+        }
       />
     </>
   );

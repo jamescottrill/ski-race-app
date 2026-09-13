@@ -24,35 +24,67 @@ function RaceRoutesNew() {
       />
       <Route
         path="competition/:competitionId/race/new"
-        element={<LayoutNew><CreateRacePageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <CreateRacePageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId"
-        element={<LayoutNew><RaceDetailsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <RaceDetailsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/edit"
-        element={<LayoutNew><EditRacePageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <EditRacePageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/results"
-        element={<LayoutNew><RaceResultsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <RaceResultsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/results/edit"
-        element={<LayoutNew><RecordRaceResultsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <RecordRaceResultsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/results/import"
-        element={<LayoutNew><ImportRaceResultsPageNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <ImportRaceResultsPageNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/start-list"
-        element={<LayoutNew><GenerateStartListNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <GenerateStartListNew />
+          </LayoutNew>
+        }
       />
       <Route
         path="competition/:competitionId/race/:raceId/teams"
-        element={<LayoutNew><RaceTeamManagementNew /></LayoutNew>}
+        element={
+          <LayoutNew>
+            <RaceTeamManagementNew />
+          </LayoutNew>
+        }
       />
     </>
   );

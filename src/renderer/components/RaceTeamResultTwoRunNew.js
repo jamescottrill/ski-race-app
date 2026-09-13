@@ -6,10 +6,7 @@ import { convertRaceTime } from '../utils/TimeUtils';
 import { resultsTeamPdf } from '../utils/ResultsTeamPdf';
 import { getRaceDetails } from '../utils/RaceDetails';
 
-export default function RaceTeamResultTwoRunNew({
-  raceId,
-  competitionId,
-}) {
+export default function RaceTeamResultTwoRunNew({ raceId, competitionId }) {
   const [data, setData] = useState([]);
   const [dnfTeams, setDnfTeams] = useState([]);
   const [raceDetails, setRaceDetails] = useState([]);
@@ -142,31 +139,49 @@ export default function RaceTeamResultTwoRunNew({
         is_reserve: result.is_reserve,
       };
     });
-    const finished = mapped
-      .filter((e) => {
-        return e.completed;
-      });
+    const finished = mapped.filter((e) => {
+      return e.completed;
+    });
     console.log(finished);
 
     const teamResults = [];
     const dnfTeams = [];
-    const teamNames = mapped.map(r => r.teamName).filter((teamName, index, self) => {
-      return self.indexOf(teamName) === index && teamName !== null;
-    });
+    const teamNames = mapped
+      .map((r) => r.teamName)
+      .filter((teamName, index, self) => {
+        return self.indexOf(teamName) === index && teamName !== null;
+      });
     teamNames.forEach((teamName) => {
-      const sortedRacers = finished.filter((r) => r.teamName === teamName).sort((a, b) => a.points - b.points);
+      const sortedRacers = finished
+        .filter((r) => r.teamName === teamName)
+        .sort((a, b) => a.points - b.points);
       const topNRacers = sortedRacers.slice(0, 3);
       if (sortedRacers.length < 3) {
-        dnfTeams.push({"teamName": teamName});
-        return
+        dnfTeams.push({ teamName: teamName });
+        return;
       }
-      const topNPoints = topNRacers.reduce((acc, curr) => acc + curr.seedPoints, 0);
-      const topNTimesSecs = topNRacers.reduce((acc, curr) => acc + curr.totalTimeSecs, 0);
+      const topNPoints = topNRacers.reduce(
+        (acc, curr) => acc + curr.seedPoints,
+        0,
+      );
+      const topNTimesSecs = topNRacers.reduce(
+        (acc, curr) => acc + curr.totalTimeSecs,
+        0,
+      );
       const topNTimes = convertRaceTime(topNTimesSecs);
-      const results = {teamName: teamName, racers: topNRacers, points: topNPoints, time: topNTimes};
+      const results = {
+        teamName: teamName,
+        racers: topNRacers,
+        points: topNPoints,
+        time: topNTimes,
+      };
       teamResults.push(results);
     });
-    teamResults.sort((a, b) => a.points - b.points).forEach((result, i) => {result["position"] = i+1})
+    teamResults
+      .sort((a, b) => a.points - b.points)
+      .forEach((result, i) => {
+        result['position'] = i + 1;
+      });
     setData(teamResults);
     setDnfTeams(dnfTeams);
   };
@@ -177,11 +192,7 @@ export default function RaceTeamResultTwoRunNew({
   }, [raceId, competitionId]);
 
   const generatePDF = () => {
-    resultsTeamPdf(
-      raceDetails,
-      data,
-      dnfTeams
-    );
+    resultsTeamPdf(raceDetails, data, dnfTeams);
   };
 
   // Define columns for team results DataTable
@@ -193,9 +204,7 @@ export default function RaceTeamResultTwoRunNew({
         const teamData = row.original;
         // Only show position for the first racer in the team
         return (
-          <div className="text-center font-medium">
-            {teamData.position}
-          </div>
+          <div className="text-center font-medium">{teamData.position}</div>
         );
       },
     },
@@ -219,10 +228,15 @@ export default function RaceTeamResultTwoRunNew({
       cell: ({ row }) => (
         <div className="space-y-1">
           {row.original.racers.map((racer, idx) => (
-            <div key={idx} className="text-sm border-b last:border-b-0 pb-1 last:pb-0">
+            <div
+              key={idx}
+              className="text-sm border-b last:border-b-0 pb-1 last:pb-0"
+            >
               <div className="flex justify-between items-center">
                 <span className="font-medium">{racer.title}</span>
-                <span>{racer.lastName.toUpperCase()} {racer.firstName}</span>
+                <span>
+                  {racer.lastName.toUpperCase()} {racer.firstName}
+                </span>
                 <span className="text-neutral-600">{racer.totalTime}</span>
               </div>
             </div>
@@ -257,10 +271,15 @@ export default function RaceTeamResultTwoRunNew({
       {dnfTeams.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Disqualified Teams</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Disqualified Teams
+            </h2>
             <div className="space-y-2">
               {dnfTeams.map((row, index) => (
-                <div key={index} className="text-center py-2 border-b last:border-b-0">
+                <div
+                  key={index}
+                  className="text-center py-2 border-b last:border-b-0"
+                >
                   {row.teamName}
                 </div>
               ))}
@@ -272,17 +291,15 @@ export default function RaceTeamResultTwoRunNew({
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous
+              run as finished.
             </div>
           </CardContent>
         </Card>
       )}
 
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download PDF
-        </Button>
+        <Button onClick={generatePDF}>Download PDF</Button>
       </div>
     </div>
   );

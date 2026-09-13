@@ -188,12 +188,21 @@ async function createWindow() {
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html')).catch((error: any) => {
-    dialog.showErrorBox('Load Error', `Failed to load application: ${error.message}`);
+    dialog.showErrorBox(
+      'Load Error',
+      `Failed to load application: ${error.message}`,
+    );
   });
 
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    dialog.showErrorBox('Load Error', `Page failed to load: ${errorDescription} (${errorCode})`);
-  });
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (event, errorCode, errorDescription) => {
+      dialog.showErrorBox(
+        'Load Error',
+        `Page failed to load: ${errorDescription} (${errorCode})`,
+      );
+    },
+  );
 
   mainWindow.on('closed', () => {
     mainWindow = null;

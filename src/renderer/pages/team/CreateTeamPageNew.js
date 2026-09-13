@@ -10,7 +10,7 @@ import {
   Button,
   Input,
   Select,
-  Checkbox
+  Checkbox,
 } from '../../design-system';
 import { useBackButton } from '../../utils/navigation';
 
@@ -28,7 +28,7 @@ export default function CreateTeamPageNew() {
   const [error, setError] = useState(null);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -54,7 +54,7 @@ export default function CreateTeamPageNew() {
           formData.team_name.trim(),
           formData.is_corps ? 1 : 0,
           formData.is_reserve ? 1 : 0,
-        ]
+        ],
       );
 
       navigate(`/competition/${competitionId}/team/list`);
@@ -103,7 +103,8 @@ export default function CreateTeamPageNew() {
                   autoFocus
                 />
                 <p className="mt-1 text-xs text-neutral-500">
-                  Enter the team identifier (e.g., unit abbreviation + team letter)
+                  Enter the team identifier (e.g., unit abbreviation + team
+                  letter)
                 </p>
               </div>
 
@@ -130,11 +131,7 @@ export default function CreateTeamPageNew() {
               >
                 {saving ? 'Creating...' : 'Create Team'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-              >
+              <Button type="button" variant="outline" onClick={handleBack}>
                 Cancel
               </Button>
             </div>
@@ -147,11 +144,13 @@ export default function CreateTeamPageNew() {
           <div className="flex items-start gap-3">
             <Users className="w-5 h-5 text-primary-500 mt-0.5" />
             <div>
-              <h3 className="font-medium text-neutral-900">About Team Registration</h3>
+              <h3 className="font-medium text-neutral-900">
+                About Team Registration
+              </h3>
               <p className="text-sm text-neutral-600 mt-1">
-                Teams are registered at the competition level. Team captains can then assign
-                different racers to each team for individual races (e.g., different line-ups
-                for Slalom vs Giant Slalom).
+                Teams are registered at the competition level. Team captains can
+                then assign different racers to each team for individual races
+                (e.g., different line-ups for Slalom vs Giant Slalom).
               </p>
             </div>
           </div>

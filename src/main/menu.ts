@@ -137,7 +137,10 @@ export default class MenuBuilder {
             if (dbPath) {
               shell.showItemInFolder(dbPath);
             } else {
-              dialog.showErrorBox('No Database', 'No database is currently open.');
+              dialog.showErrorBox(
+                'No Database',
+                'No database is currently open.',
+              );
             }
           },
         },
@@ -234,7 +237,14 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuFile, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuAbout,
+      subMenuFile,
+      subMenuEdit,
+      subMenuView,
+      subMenuWindow,
+      subMenuHelp,
+    ];
   }
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
@@ -282,7 +292,10 @@ export default class MenuBuilder {
               if (dbPath) {
                 shell.showItemInFolder(dbPath);
               } else {
-                dialog.showErrorBox('No Database', 'No database is currently open.');
+                dialog.showErrorBox(
+                  'No Database',
+                  'No database is currently open.',
+                );
               }
             },
           },

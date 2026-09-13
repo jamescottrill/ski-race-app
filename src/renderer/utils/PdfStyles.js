@@ -42,7 +42,7 @@ const teamTableLayout = {
     if (body && body.length > 0) {
       return node.table.body[i][0].text === '' ? 0 : 1;
     }
-    return 1
+    return 1;
   },
   vLineWidth: function () {
     // No vertical lines
@@ -56,7 +56,7 @@ const teamTableLayout = {
     return i === 0 ? 0 : 8;
   },
   paddingRight: function (i, node) {
-    return (i === node.table.widths.length - 1) ? 0 : 8;
+    return i === node.table.widths.length - 1 ? 0 : 8;
   },
 };
 
@@ -109,7 +109,7 @@ const dsqTable = (data) => {
         ]),
       ],
     },
-  }
-}
+  };
+};
 
 export { tableStyles, teamTableLayout, dnfTable, dsqTable };

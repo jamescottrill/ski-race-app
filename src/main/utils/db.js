@@ -270,7 +270,8 @@ const TABLE_SCHEMAS = {
 
 class DatabaseWrapper {
   constructor(dbPath) {
-    const finalPath = dbPath || preferences.databasePath || selectDatabaseFile();
+    const finalPath =
+      dbPath || preferences.databasePath || selectDatabaseFile();
 
     if (!finalPath) {
       throw new Error('Database file must be selected to proceed.');
@@ -567,7 +568,10 @@ function exportDatabase() {
       });
       return result;
     } catch (error) {
-      dialog.showErrorBox('Export Error', `Failed to export database: ${error.message}`);
+      dialog.showErrorBox(
+        'Export Error',
+        `Failed to export database: ${error.message}`,
+      );
       return null;
     }
   }
@@ -588,7 +592,10 @@ function importDatabase() {
       const testDb = new Database(importPath, { readonly: true });
       testDb.close();
     } catch (error) {
-      dialog.showErrorBox('Import Error', 'The selected file is not a valid SQLite database.');
+      dialog.showErrorBox(
+        'Import Error',
+        'The selected file is not a valid SQLite database.',
+      );
       return null;
     }
 

@@ -8,13 +8,23 @@ interface DatabaseOperation {
 
 interface DatabaseAPI {
   select: (query: string, params?: any[]) => Promise<any[]>;
-  insert: (query: string, params?: any[]) => Promise<{ success: true; id: number }>;
+  insert: (
+    query: string,
+    params?: any[],
+  ) => Promise<{ success: true; id: number }>;
   delete: (query: string, params?: any[]) => Promise<{ changes: number }>;
-  transaction: (operations: DatabaseOperation[]) => Promise<{ success: true; results: any[] }>;
+  transaction: (
+    operations: DatabaseOperation[],
+  ) => Promise<{ success: true; results: any[] }>;
 }
 
 interface ElectronAPI {
-  savePDF: (buffer: ArrayBuffer, defaultFileName: string) => Promise<{ success: true; filePath: string } | { success: false; cancelled: true }>;
+  savePDF: (
+    buffer: ArrayBuffer,
+    defaultFileName: string,
+  ) => Promise<
+    { success: true; filePath: string } | { success: false; cancelled: true }
+  >;
 }
 
 declare global {

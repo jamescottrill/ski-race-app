@@ -33,7 +33,8 @@ export const calculateCPP = async (competitionId, seedList) => {
         name: `${entry.last_name}, ${entry.first_name}`,
         seed_points: entry.seed_points,
         aasl_points: aaslEntry.seed_points,
-        seed_position: seedList.findIndex(s => s.racer_id === entry.racer_id) + 1
+        seed_position:
+          seedList.findIndex((s) => s.racer_id === entry.racer_id) + 1,
       });
     }
   }
@@ -42,23 +43,25 @@ export const calculateCPP = async (competitionId, seedList) => {
     return {
       success: false,
       error: 'Not enough competitors with AASL points (minimum 3 required)',
-      competitorsWithAASL: competitorsWithAASL.length
+      competitorsWithAASL: competitorsWithAASL.length,
     };
   }
 
   // Step 2: Sort by AASL points (lowest first) and take top 5
-  const sortedByAASL = [...competitorsWithAASL].sort((a, b) => a.aasl_points - b.aasl_points);
+  const sortedByAASL = [...competitorsWithAASL].sort(
+    (a, b) => a.aasl_points - b.aasl_points,
+  );
 
   // Step 3: Filter to those who finished in top 10 of current seed list
   const qualifyingSkiers = sortedByAASL
-    .filter(skier => skier.seed_position <= 10)
+    .filter((skier) => skier.seed_position <= 10)
     .slice(0, 5);
 
   if (qualifyingSkiers.length < 3) {
     return {
       success: false,
       error: `Not enough qualifying skiers (found ${qualifyingSkiers.length}, need at least 3)`,
-      qualifyingSkiers: qualifyingSkiers.length
+      qualifyingSkiers: qualifyingSkiers.length,
     };
   }
 
@@ -83,7 +86,7 @@ export const calculateCPP = async (competitionId, seedList) => {
     default:
       return {
         success: false,
-        error: 'Invalid number of qualifying skiers'
+        error: 'Invalid number of qualifying skiers',
       };
   }
 
@@ -98,7 +101,7 @@ export const calculateCPP = async (competitionId, seedList) => {
     divisor: divisor,
     skiersUsed: numSkiers,
     qualifyingSkiers: qualifyingSkiers,
-    formula: `(${T1.toFixed(2)} + ${T2.toFixed(2)} - ${T3.toFixed(2)}) / ${divisor} = ${cpp.toFixed(2)}`
+    formula: `(${T1.toFixed(2)} + ${T2.toFixed(2)} - ${T3.toFixed(2)}) / ${divisor} = ${cpp.toFixed(2)}`,
   };
 };
 
@@ -109,11 +112,11 @@ export const calculateCPP = async (competitionId, seedList) => {
  * @returns {Array} Seed list with CPP-adjusted points
  */
 export const applyCPPToSeedList = (seedList, cpp) => {
-  return seedList.map(entry => ({
+  return seedList.map((entry) => ({
     ...entry,
     cpp_applied: cpp,
     original_seed_points: entry.seed_points,
-    final_seed_points: entry.seed_points + cpp
+    final_seed_points: entry.seed_points + cpp,
   }));
 };
 
@@ -138,7 +141,7 @@ export const storeCPPResult = async (competitionId, cppResult) => {
     cppResult.t1,
     cppResult.t2,
     cppResult.t3,
-    cppResult.skiersUsed
+    cppResult.skiersUsed,
   ];
 
   try {
@@ -212,7 +215,7 @@ export const getStoredCPP = async (competitionId) => {
   try {
     const result = await window.api.select(
       `SELECT * FROM competition_cpp WHERE competition_id = ? ORDER BY calculation_date DESC LIMIT 1`,
-      [competitionId]
+      [competitionId],
     );
     return result.length > 0 ? result[0] : null;
   } catch (error) {
@@ -228,13 +231,16 @@ export const getStoredCPP = async (competitionId) => {
  */
 export const getFinalSeedList = async (competitionId) => {
   try {
-    return await window.api.select(`
+    return await window.api.select(
+      `
       SELECT cfs.*, p.first_name, p.last_name
       FROM competition_final_seed_list cfs
       JOIN people p ON cfs.racer_id = p.id
       WHERE cfs.competition_id = ?
       ORDER BY cfs.final_seed_points ASC
-    `, [competitionId]);
+    `,
+      [competitionId],
+    );
   } catch (error) {
     console.error('Failed to get final seed list:', error);
     return [];

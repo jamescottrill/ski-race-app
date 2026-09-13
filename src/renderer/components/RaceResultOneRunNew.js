@@ -105,7 +105,11 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
         run1Ns: result.is_ns,
         run1DsqGate: result.run_1_dsq_gate,
         run1DsqReason: result.run_1_dsq_reason,
-        completed: !result.run_1_dns && !result.run_1_dnf && !result.run_1_dsq && !result.is_ns,
+        completed:
+          !result.run_1_dns &&
+          !result.run_1_dnf &&
+          !result.run_1_dsq &&
+          !result.is_ns,
         firstName: result.first_name,
         lastName: result.last_name,
         title: result.title,
@@ -197,9 +201,7 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
     {
       accessorKey: 'team',
       header: 'Team',
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.team}</div>
-      ),
+      cell: ({ row }) => <div className="text-center">{row.original.team}</div>,
     },
     {
       accessorKey: 'run1Time',
@@ -272,15 +274,15 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
     {
       accessorKey: 'team',
       header: 'Team',
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.team}</div>
-      ),
+      cell: ({ row }) => <div className="text-center">{row.original.team}</div>,
     },
     {
       accessorKey: 'position',
       header: 'Position',
       cell: ({ row, table }) => {
-        const rowIndex = table.getSortedRowModel().rows.findIndex(r => r.id === row.id);
+        const rowIndex = table
+          .getSortedRowModel()
+          .rows.findIndex((r) => r.id === row.id);
         return <div className="text-center">{rowIndex + 1}</div>;
       },
     },
@@ -305,8 +307,8 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
         <Card>
           <CardContent>
             <div className="text-center py-8 text-neutral-600">
-              No Competitors found, make sure you&apos;ve marked the previous run as
-              finished.
+              No Competitors found, make sure you&apos;ve marked the previous
+              run as finished.
             </div>
           </CardContent>
         </Card>
@@ -314,7 +316,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {run1Dns.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNS Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNS Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dns}
@@ -327,7 +331,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {run1Dnf.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DNF Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DNF Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dnf}
@@ -340,7 +346,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {run1Dsq.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">DSQ Run 1</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              DSQ Run 1
+            </h2>
             <DataTable
               columns={otherResultsColumns}
               data={run1Dsq}
@@ -353,7 +361,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Junior Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Junior Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_junior).slice(0, 3)}
@@ -366,7 +376,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Novice Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Novice Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_novice).slice(0, 3)}
@@ -379,7 +391,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Veteran Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Veteran Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.is_veteran).slice(0, 3)}
@@ -392,7 +406,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Female Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Female Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.filter((e) => e.gender === 'F').slice(0, 3)}
@@ -405,7 +421,9 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
       {data.length > 0 && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold mb-4 text-center">Open Results</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Open Results
+            </h2>
             <DataTable
               columns={categoryColumns}
               data={data.slice(0, 3)}
@@ -416,9 +434,7 @@ function RaceResultOneRunNew({ raceId, competitionId }) {
         </Card>
       )}
       <div className="flex justify-center">
-        <Button onClick={generatePDF}>
-          Download PDF
-        </Button>
+        <Button onClick={generatePDF}>Download PDF</Button>
       </div>
     </div>
   );
